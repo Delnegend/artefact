@@ -14,6 +14,8 @@ use crate::{
 pub struct Decompressor {
     jerr: Box<jpeg_error_mgr>,
     cinfo: Box<jpeg_decompress_struct>,
+    is_source_set: bool,
+    is_header_read: bool,
 }
 
 #[derive(Debug)]
@@ -31,6 +33,9 @@ pub enum DecompressorErr {
 
     FileNotExist,
     FileIsNotFile,
+
+    SourceNotSet,
+    HeaderNotReadYet,
 
     ParseHeaderErr(String),
     EmptyCoefficientArr,
@@ -67,7 +72,12 @@ impl Decompressor {
         unsafe { jpeg_create_decompress(cinfo.as_mut_ptr()) };
         let cinfo = unsafe { cinfo.assume_init() };
 
-        Ok(Self { cinfo, jerr })
+        Ok(Self {
+            cinfo,
+            jerr,
+            is_source_set: false,
+            is_header_read: false,
+        })
     }
 
     pub fn set_source(&mut self, source: JpegSource) -> Result<(), DecompressorErr> {
@@ -105,10 +115,16 @@ impl Decompressor {
             },
         }
 
+        self.is_source_set = true;
+
         Ok(())
     }
 
     pub fn read_header(&mut self) -> Result<(), DecompressorErr> {
+        if !self.is_source_set {
+            return Err(DecompressorErr::SourceNotSet);
+        }
+
         if unsafe { jpeg_read_header(self.cinfo.as_mut(), true as boolean) } != 1 {
             return Err(DecompressorErr::ParseHeaderErr('get_last_err: {
                 let buffer = [0u8; 80];
@@ -124,10 +140,16 @@ impl Decompressor {
             }))?;
         }
 
+        self.is_header_read = true;
+
         Ok(())
     }
 
     pub fn read_coefficients(&mut self) -> Result<Vec<Coefficient>, DecompressorErr> {
+        if !self.is_header_read {
+            return Err(DecompressorErr::HeaderNotReadYet);
+        }
+
         let coef_arrays = unsafe { jpeg_read_coefficients(self.cinfo.as_mut()) };
         if coef_arrays.is_null() {
             return Err(DecompressorErr::EmptyCoefficientArr);
