@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub struct Decompressor {
+    jerr: Box<jpeg_error_mgr>,
     cinfo: Box<jpeg_decompress_struct>,
 }
 
@@ -41,7 +42,7 @@ pub enum DecompressorErr {
 }
 
 impl Decompressor {
-    pub fn from(jpeg_source: JpegSource) -> Result<Self, DecompressorErr> {
+    pub fn new() -> Result<Self, DecompressorErr> {
         // init new error struct
         let mut jerr = Box::new(MaybeUninit::<jpeg_error_mgr>::uninit());
         let error = unsafe {
@@ -64,10 +65,14 @@ impl Decompressor {
                 .err = error;
         };
         unsafe { jpeg_create_decompress(cinfo.as_mut_ptr()) };
-        let mut cinfo = unsafe { cinfo.assume_init() };
+        let cinfo = unsafe { cinfo.assume_init() };
 
+        Ok(Self { cinfo, jerr })
+    }
+
+    pub fn set_source(&mut self, source: JpegSource) -> Result<(), DecompressorErr> {
         // set jpeg source
-        match jpeg_source {
+        match source {
             JpegSource::File(path) => {
                 let path_ = PathBuf::from(&path);
                 if !path_.exists() {
@@ -88,25 +93,28 @@ impl Decompressor {
                 .map_err(|e| DecompressorErr::Other(format!("{e:?}")))??;
 
                 unsafe {
-                    jpeg_stdio_src(cinfo.as_mut(), file.as_mut());
+                    jpeg_stdio_src(self.cinfo.as_mut(), file.as_mut());
                 }
             }
             JpegSource::Buffer(buffer) => unsafe {
                 jpeg_mem_src(
-                    cinfo.as_mut(),
+                    self.cinfo.as_mut(),
                     buffer.as_ptr(),
                     buffer.len() as core::ffi::c_ulong,
                 );
             },
         }
 
-        // read header
-        if unsafe { jpeg_read_header(cinfo.as_mut(), true as boolean) } != 1 {
+        Ok(())
+    }
+
+    pub fn read_header(&mut self) -> Result<(), DecompressorErr> {
+        if unsafe { jpeg_read_header(self.cinfo.as_mut(), true as boolean) } != 1 {
             return Err(DecompressorErr::ParseHeaderErr('get_last_err: {
                 let buffer = [0u8; 80];
-                if let Some(format_fn) = jerr.format_message {
+                if let Some(format_fn) = self.jerr.format_message {
                     unsafe {
-                        format_fn(&mut cinfo.common, &buffer);
+                        format_fn(&mut self.cinfo.common, &buffer);
                         break 'get_last_err std::ffi::CStr::from_ptr(buffer.as_ptr() as *const i8)
                             .to_string_lossy()
                             .into_owned();
@@ -116,7 +124,7 @@ impl Decompressor {
             }))?;
         }
 
-        Ok(Self { cinfo })
+        Ok(())
     }
 
     pub fn read_coefficients(&mut self) -> Result<Vec<Coefficient>, DecompressorErr> {
