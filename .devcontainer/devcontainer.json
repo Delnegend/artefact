@@ -1,0 +1,27 @@
+{
+	"$schema": "https://github.com/devcontainers/spec/raw/refs/heads/main/schemas/devContainer.schema.json",
+	"name": "Existing Dockerfile",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "zsh"
+			},
+			"extensions": [
+				"rust-lang.rust-analyzer",
+				"ms-vscode.cpptools",
+				"tamasfe.even-better-toml"
+			]
+		}
+	},
+	"mounts": [
+		{
+			"source": "cargo-cache",
+			"target": "/usr/local/cargo",
+			"type": "volume"
+		}
+	],
+	"postCreateCommand": "zsh .devcontainer/postinstall.sh"
+}
