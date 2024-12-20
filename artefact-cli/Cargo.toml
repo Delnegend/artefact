@@ -1,0 +1,16 @@
+[package]
+name = "artefact-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+artefact-lib = { path = "../artefact-lib" }
+clap = { version = "4.5.23", features = ["derive"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[[bin]]
+name = "artefact-cli"
+path = "main.rs"

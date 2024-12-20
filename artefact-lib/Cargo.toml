@@ -1,0 +1,15 @@
+[package]
+name = "artefact-lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rayon = "1.10.0"
+anyhow = "1.0.94"
+mozjpeg-sys = { version = "2.2.1", features = ["nasm_simd_parallel_build"] }
+image = { version = "0.25.5", default-features = false, features = ["png"] }
+libc = "0.2.168"
+
+[lib]
+name = "artefact_lib"
+path = "lib.rs"
