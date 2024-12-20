@@ -2,7 +2,7 @@
 
 Intercept the JPEG image decoding process to achieve an artifact-free output.
 
-~~Pure~~ (not yet) Rust-port of the [jpeg2png](https://github.com/ThioJoe/jpeg2png/)
+~~Pure~~ (not yet) Rust reimplemetation of the [jpeg2png](https://github.com/ThioJoe/jpeg2png/)
 
 ## Directories
 - [`artefact-lib`](./artefact-lib/) - the implementation and pipeline
