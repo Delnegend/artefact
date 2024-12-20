@@ -65,7 +65,7 @@ pub fn compute_projection(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
-                .expect("I'm not supposed to be here!!!"),
+                .expect("Invalid pixel difference data length"),
         );
     }
 
@@ -87,7 +87,7 @@ pub fn compute_projection(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
-                .expect("I'm not supposed to be here!!!"),
+                .expect("Invalid pixel difference data length"),
         );
     }
 
