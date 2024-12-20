@@ -39,7 +39,7 @@ pub enum DecompressorErr {
 
     ParseHeaderErr(String),
     EmptyCoefficientArr,
-    UnsupportedNumberOfComponents,
+    UnsupportedNumberOfChannel,
     AccessVirtualBlockArrayErr,
     NoQuantizationTable,
 
@@ -156,8 +156,8 @@ impl Decompressor {
         }
 
         let num_components = self.cinfo.num_components as usize;
-        if !{ 1..=3 }.contains(&num_components) {
-            return Err(DecompressorErr::UnsupportedNumberOfComponents);
+        if num_components != 1 && num_components != 3 {
+            return Err(DecompressorErr::UnsupportedNumberOfChannel);
         }
 
         let mut coefs = Vec::with_capacity(num_components);

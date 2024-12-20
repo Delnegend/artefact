@@ -114,8 +114,8 @@ fn main() {
 
             DecompressorErr::ParseHeaderErr(e) => eprintln!("Error parsing header: {}", e),
             DecompressorErr::EmptyCoefficientArr => eprintln!("Empty coefficient array"),
-            DecompressorErr::UnsupportedNumberOfComponents => {
-                eprintln!("Unsupported number of components (must be either 1 or 3)")
+            DecompressorErr::UnsupportedNumberOfChannel => {
+                eprintln!("Unsupported number of channels (Y or YCbCr only)")
             }
             DecompressorErr::AccessVirtualBlockArrayErr => {
                 eprintln!("Cannot access virtual block array to extract coefficients")
