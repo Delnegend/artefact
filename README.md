@@ -12,3 +12,10 @@ Intercept the JPEG image decoding process to achieve an artifact-free output.
 
 ## Developement
 - [vscode](https://code.visualstudio.com/) + [`devcontainer`](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+## Build
+```bash
+cargo build --release --package artefact-cli
+```
+
+The binary will be located at `./target/release/artefact-cli`
