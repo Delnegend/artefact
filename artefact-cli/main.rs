@@ -105,8 +105,16 @@ fn main() {
             DecompressorErr::DerefNull(ptr) => {
                 eprintln!("Trying to dereference null pointer: {}", ptr)
             }
+
             DecompressorErr::InitJerrErr => eprintln!("Error initializing jpeg error manager"),
             DecompressorErr::InitCinfoErr => eprintln!("Error initializing jpeg decompressor"),
+
+            DecompressorErr::FileNotExist => eprintln!("Input file does not exist"),
+            DecompressorErr::FileIsNotFile => eprintln!("Input is not a file"),
+
+            DecompressorErr::SourceNotSet => eprintln!("set_source() not called yet"),
+            DecompressorErr::HeaderNotReadYet => eprintln!("read_header() not called yet"),
+
             DecompressorErr::ParseHeaderErr(e) => eprintln!("Error parsing header: {}", e),
             DecompressorErr::EmptyCoefficientArr => eprintln!("Empty coefficient array"),
             DecompressorErr::UnsupportedNumberOfComponents => {
@@ -116,6 +124,7 @@ fn main() {
                 eprintln!("Cannot access virtual block array to extract coefficients")
             }
             DecompressorErr::NoQuantizationTable => eprintln!("Quantization table not found"),
+
             DecompressorErr::Other(e) => eprintln!("Other error: {}", e),
         },
     }
