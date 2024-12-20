@@ -96,11 +96,8 @@ fn main() {
         config.separate_components = spearate_components;
     }
 
-    match pipeline(
-        Some(Config::default()),
-        JpegSource::File("test.jpg".to_string()),
-    ) {
-        Ok(img) => img.save("output.png").unwrap(),
+    match pipeline(Some(Config::default()), JpegSource::File(args.input)) {
+        Ok(img) => img.save(args.output).expect("Cannot save output image"),
         Err(e) => match e {
             DecompressorErr::DerefNull(ptr) => {
                 eprintln!("Trying to dereference null pointer: {}", ptr)
