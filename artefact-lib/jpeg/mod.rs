@@ -16,7 +16,10 @@ pub struct Jpeg {
 
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Self, DecompressorErr> {
-        let mut decoder = Decompressor::from(jpeg_source)?;
+        let mut decoder = Decompressor::new()?;
+
+        decoder.set_source(jpeg_source)?;
+        decoder.read_header()?;
 
         Ok(Jpeg {
             chan_count: decoder.num_components(),
