@@ -18,7 +18,9 @@ pub fn compute_step_prob(
             // Calculate block index and prepare cosine buffer
             let i = (block_y * coef.block_w + block_x) as usize;
             // 8x8 block buffer
-            let mut cosbs: [f32; 64] = cos[i * 64..(i + 1) * 64].try_into().unwrap();
+            let mut cosbs: [f32; 64] = cos[i * 64..(i + 1) * 64]
+                .try_into()
+                .expect("Invalid cosine transform data length");
 
             // Process each coefficient in current block
             for (j, cosb) in cosbs.iter_mut().enumerate() {
