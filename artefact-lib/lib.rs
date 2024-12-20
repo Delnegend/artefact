@@ -79,29 +79,45 @@ pub fn pipeline(
     }
 
     // YCbCr -> RGB
-    let mut rgb: Vec<[u8; 3]> = Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
+    if jpeg.chan_count == 3 {
+        let mut rgb: Vec<[u8; 3]> = Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
+        for i in 0..jpeg.real_px_h {
+            for j in 0..jpeg.real_px_w {
+                let idx = (i * coefs[0].rounded_px_w + j) as usize;
+
+                let yi = coefs[0].image_data[idx];
+                let cbi = coefs[1].image_data[idx];
+                let cri = coefs[2].image_data[idx];
+
+                rgb.push([
+                    clamp(yi + 1.402 * cri),
+                    clamp(yi - 0.34414 * cbi - 0.71414 * cri),
+                    clamp(yi + 1.772 * cbi),
+                ]);
+            }
+        }
+
+        return Ok(image::RgbImage::from_fn(
+            jpeg.real_px_w,
+            jpeg.real_px_h,
+            |x, y| {
+                let i = (y * jpeg.real_px_w + x) as usize;
+                image::Rgb(rgb[i])
+            },
+        ));
+    }
+
+    // Grayscale
+    let mut gray: Vec<u8> = Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
     for i in 0..jpeg.real_px_h {
         for j in 0..jpeg.real_px_w {
             let idx = (i * coefs[0].rounded_px_w + j) as usize;
-
-            let yi = coefs[0].image_data[idx];
-            let cbi = coefs[1].image_data[idx];
-            let cri = coefs[2].image_data[idx];
-
-            rgb.push([
-                clamp(yi + 1.402 * cri),
-                clamp(yi - 0.34414 * cbi - 0.71414 * cri),
-                clamp(yi + 1.772 * cbi),
-            ]);
+            gray.push(clamp(coefs[0].image_data[idx]));
         }
     }
 
-    Ok(image::RgbImage::from_fn(
-        jpeg.real_px_w,
-        jpeg.real_px_h,
-        |x, y| {
-            let i = (y * jpeg.real_px_w + x) as usize;
-            image::Rgb(rgb[i])
-        },
-    ))
+    Ok(image::RgbImage::from_fn(jpeg.real_px_w, jpeg.real_px_h, |x, y| {
+        let i = (y * jpeg.real_px_w + x) as usize;
+        image::Rgb([gray[i], gray[i], gray[i]])
+    }))
 }
