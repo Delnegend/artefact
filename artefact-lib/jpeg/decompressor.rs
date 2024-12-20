@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, panic::catch_unwind, rc::Rc};
+use std::{mem::MaybeUninit, panic::catch_unwind, path::PathBuf, rc::Rc};
 
 use mozjpeg_sys::{
     boolean, jpeg_create_decompress, jpeg_decompress_struct, jpeg_destroy_decompress,
@@ -27,6 +27,9 @@ pub enum DecompressorErr {
 
     InitJerrErr,
     InitCinfoErr,
+
+    FileNotExist,
+    FileIsNotFile,
 
     ParseHeaderErr(String),
     EmptyCoefficientArr,
@@ -66,6 +69,14 @@ impl Decompressor {
         // set jpeg source
         match jpeg_source {
             JpegSource::File(path) => {
+                let path_ = PathBuf::from(&path);
+                if !path_.exists() {
+                    return Err(DecompressorErr::FileNotExist);
+                }
+                if !path_.is_file() {
+                    return Err(DecompressorErr::FileIsNotFile);
+                }
+
                 let mut file = catch_unwind(|| unsafe {
                     let ptr = libc::fopen(path.as_ptr() as *const i8, "rb".as_ptr() as *const i8);
                     if ptr.is_null() {
