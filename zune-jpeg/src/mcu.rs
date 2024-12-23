@@ -85,6 +85,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     pub(crate) fn decode_mcu_ycbcr_baseline(
         &mut self,
         pixels: &mut [u8],
+        dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<(), DecodeErrors> {
         setup_component_params(self)?;
 
@@ -196,7 +197,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             }
             // decode a whole MCU width,
             // this takes into account interleaved components.
-            let terminate = self.decode_mcu_width(mcu_width, &mut tmp, &mut stream)?;
+            let terminate = self.decode_mcu_width(mcu_width, &mut tmp, &mut stream, dct_coefs)?;
             // process that width up until it's impossible
             self.post_process(
                 pixels,
@@ -225,10 +226,11 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         mcu_width: usize,
         tmp: &mut [i32; 64],
         stream: &mut BitStream,
+        dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<bool, DecodeErrors> {
         for j in 0..mcu_width {
             // iterate over components
-            for component in &mut self.components {
+            for (i, component) in &mut self.components.iter_mut().enumerate() {
                 let dc_table = self.dc_huffman_tables[component.dc_huff_table % MAX_COMPONENTS]
                     .as_ref()
                     .unwrap();
@@ -255,6 +257,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             ac_table,
                             qt_table,
                             tmp,
+                            &mut dct_coefs[i],
                             &mut component.dc_pred,
                         )?;
 

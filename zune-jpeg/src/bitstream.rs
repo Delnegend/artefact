@@ -316,10 +316,12 @@ impl BitStream {
     /// - block: A memory region where we will write out the decoded values
     /// - DC prediction: Last DC value for this component
     ///
+    /// Delnegend: this fn only used for baseline jpegs
     #[allow(
         clippy::many_single_char_names,
         clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
+        clippy::cast_sign_loss,
+        clippy::too_many_arguments
     )]
     #[inline(never)]
     pub fn decode_mcu_block<T>(
@@ -329,6 +331,7 @@ impl BitStream {
         ac_table: &HuffmanTable,
         qt_table: &[i32; DCT_BLOCK],
         block: &mut [i32; 64],
+        complete_coef: &mut Vec<i16>,
         dc_prediction: &mut i32,
     ) -> Result<(), DecodeErrors>
     where
@@ -343,9 +346,15 @@ impl BitStream {
 
         // decode DC, dc prediction will contain the value
         self.decode_dc(reader, dc_table, dc_prediction)?;
+        complete_coef.push(*dc_prediction as i16);
 
         // set dc to be the dc prediction.
         block[0] = *dc_prediction * qt_table[0];
+
+        // Fill block with zeros initially
+        for _ in 1..64 {
+            complete_coef.push(0);
+        }
 
         while pos < 64 {
             self.refill(reader)?;
@@ -356,6 +365,9 @@ impl BitStream {
             if fast_ac != 0 {
                 //  FAST AC path
                 pos += ((fast_ac >> 4) & 15) as usize; // run
+
+                complete_coef[pos] = fast_ac >> 8;
+
                 let t_pos = UN_ZIGZAG[min(pos, 63)] & 63;
 
                 block[t_pos] = i32::from(fast_ac >> 8) * (qt_table[t_pos]); // Value
@@ -372,6 +384,8 @@ impl BitStream {
                     r = self.get_bits(symbol as u8);
                     symbol = huff_extend(r, symbol);
                     let t_pos = UN_ZIGZAG[pos & 63] & 63;
+
+                    complete_coef[pos] = symbol as i16;
 
                     block[t_pos] = symbol * qt_table[t_pos];
 

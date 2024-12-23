@@ -32,7 +32,7 @@ pub type UpSampler = fn(
 
 /// Component Data from start of frame
 #[derive(Clone)]
-pub(crate) struct Components {
+pub struct Components {
     /// The type of component that has the metadata below, can be Y,Cb or Cr
     pub component_id: ComponentID,
     /// Sub-sampling ratio of this component in the x-plane
@@ -60,6 +60,7 @@ pub(crate) struct Components {
     pub needed: bool,
     /// Upsample scanline
     pub raw_coeff: Vec<i16>,
+    pub dct_coefs: Vec<i16>,
     /// Upsample destination, stores a scanline worth of sub sampled data
     pub upsample_dest: Vec<i16>,
     /// previous row, used to handle MCU boundaries
@@ -147,6 +148,7 @@ impl Components {
             id: a[0],
             needed: true,
             raw_coeff: vec![],
+            dct_coefs: vec![],
             upsample_dest: vec![],
             row_up: vec![],
             row: vec![],

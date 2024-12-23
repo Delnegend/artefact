@@ -52,13 +52,17 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     pub(crate) fn decode_mcu_ycbcr_progressive(
         &mut self,
         pixels: &mut [u8],
+        dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<(), DecodeErrors> {
         setup_component_params(self)?;
 
         let mut mcu_height;
 
         // memory location for decoded pixels for components
-        let mut block: [Vec<i16>; MAX_COMPONENTS] = [vec![], vec![], vec![], vec![]];
+        // Delnegend: no this is actually the pre-dequantized DCT coefficients
+        // let mut block: [Vec<i16>; MAX_COMPONENTS] = [vec![], vec![], vec![], vec![]];
+        let block = dct_coefs;
+
         let mut mcu_width;
 
         let mut seen_scans = 1;
@@ -123,7 +127,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         );
 
         // there are multiple scans in the stream, this should resolve the first scan
-        self.parse_entropy_coded_data(&mut stream, &mut block)?;
+        self.parse_entropy_coded_data(&mut stream, block)?;
 
         // extract marker
         let mut marker = stream
@@ -152,7 +156,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                     );
 
                     // after every SOS, marker, parse data for that scan.
-                    self.parse_entropy_coded_data(&mut stream, &mut block)?;
+                    self.parse_entropy_coded_data(&mut stream, block)?;
                     // extract marker, might either indicate end of image or we continue
                     // scanning(hence the continue statement to determine).
                     match get_marker(&mut self.stream, &mut stream) {
@@ -196,7 +200,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             }
         }
 
-        self.finish_progressive_decoding(&block, mcu_width, pixels)
+        self.finish_progressive_decoding(block, mcu_width, pixels)
     }
 
     #[allow(clippy::too_many_lines, clippy::cast_sign_loss)]

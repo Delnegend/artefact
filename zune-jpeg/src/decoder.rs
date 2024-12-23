@@ -75,14 +75,6 @@ pub(crate) struct ICCChunk {
     pub(crate) data: Vec<u8>,
 }
 
-#[derive(Debug)]
-pub struct RawChannelData {
-    pub vertical_sample: usize,
-    pub horizontal_sample: usize,
-    pub quantization_table: [i32; 64],
-    pub dct_coefficients: Vec<i16>,
-}
-
 /// A JPEG Decoder Instance.
 #[allow(clippy::upper_case_acronyms, clippy::struct_excessive_bools)]
 pub struct JpegDecoder<T: ZByteReaderTrait> {
@@ -97,7 +89,7 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     pub(crate) ac_huffman_tables: [Option<HuffmanTable>; MAX_COMPONENTS],
     /// Image components, holds information like DC prediction and quantization
     /// tables of a component
-    pub(crate) components: Vec<Components>,
+    pub components: Vec<Components>,
     /// maximum horizontal component of all channels in the image
     pub(crate) h_max: usize,
     // maximum vertical component of all channels in the image
@@ -213,7 +205,20 @@ where
         self.decode_headers()?;
         let size = self.output_buffer_size().unwrap();
         let mut out = vec![0; size];
-        self.decode_into(&mut out)?;
+
+        // init empty dct coefs
+        let mut dct_coefs: [Vec<i16>; MAX_COMPONENTS] = Default::default();
+
+        // decode the image
+        self.decode_into(&mut out, &mut dct_coefs)?;
+
+        // re-assign the dct coefs into the components
+        for (i, dct_coef) in dct_coefs.into_iter().enumerate() {
+            if i < self.components.len() {
+                self.components[i].dct_coefs = dct_coef;
+            }
+        }
+
         Ok(out)
     }
 
@@ -703,7 +708,11 @@ where
     /// ```
     ///
     ///
-    pub fn decode_into(&mut self, out: &mut [u8]) -> Result<(), DecodeErrors> {
+    pub fn decode_into(
+        &mut self,
+        out: &mut [u8],
+        dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
+    ) -> Result<(), DecodeErrors> {
         self.decode_headers_internal()?;
 
         let expected_size = self.output_buffer_size().unwrap();
@@ -718,9 +727,9 @@ where
         let out = &mut out[0..out_len];
 
         if self.is_progressive {
-            self.decode_mcu_ycbcr_progressive(out)
+            self.decode_mcu_ycbcr_progressive(out, dct_coefs)
         } else {
-            self.decode_mcu_ycbcr_baseline(out)
+            self.decode_mcu_ycbcr_baseline(out, dct_coefs)
         }
     }
 
@@ -847,25 +856,6 @@ where
         } else {
             None
         };
-    }
-
-    pub fn get_raw_image_data(&self) -> Result<Vec<RawChannelData>, DecodeErrors> {
-        if !self.headers_decoded {
-            return Err(DecodeErrors::HeadersNotRead);
-        }
-
-        let mut data = Vec::with_capacity(self.components.len());
-
-        for comp in &self.components {
-            data.push(RawChannelData {
-                vertical_sample: comp.vertical_sample,
-                horizontal_sample: comp.horizontal_sample,
-                quantization_table: comp.quantization_table,
-                dct_coefficients: comp.raw_coeff.clone(),
-            });
-        }
-
-        Ok(data)
     }
 }
 
