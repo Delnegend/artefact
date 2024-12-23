@@ -6,7 +6,7 @@ use image::ImageBuffer;
 
 use crate::{compute::compute, jpeg::Jpeg, utils::clamp::clamp};
 
-pub use crate::jpeg::decompressor::{DecompressorErr, JpegSource};
+pub use crate::jpeg::JpegSource;
 
 #[derive(Debug)]
 pub struct Config {
@@ -45,9 +45,14 @@ impl Default for Config {
 pub fn pipeline(
     config: Option<Config>,
     jpeg_source: JpegSource,
-) -> Result<ImageBuffer<image::Rgb<u8>, Vec<u8>>, DecompressorErr> {
+) -> Result<ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
     let config = config.unwrap_or_default();
-    let jpeg = Jpeg::from(jpeg_source)?;
+
+    #[cfg(feature = "mozjpeg")]
+    let jpeg = Jpeg::from_using_moz(jpeg_source.clone())?;
+    #[cfg(not(feature = "mozjpeg"))]
+    let jpeg = Jpeg::from_using_zune(jpeg_source.clone())?;
+
     let mut coefs = jpeg.coefs;
 
     // Smooth
@@ -116,8 +121,12 @@ pub fn pipeline(
         }
     }
 
-    Ok(image::RgbImage::from_fn(jpeg.real_px_w, jpeg.real_px_h, |x, y| {
-        let i = (y * jpeg.real_px_w + x) as usize;
-        image::Rgb([gray[i], gray[i], gray[i]])
-    }))
+    Ok(image::RgbImage::from_fn(
+        jpeg.real_px_w,
+        jpeg.real_px_h,
+        |x, y| {
+            let i = (y * jpeg.real_px_w + x) as usize;
+            image::Rgb([gray[i], gray[i], gray[i]])
+        },
+    ))
 }
