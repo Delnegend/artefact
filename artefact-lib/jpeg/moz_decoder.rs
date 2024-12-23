@@ -7,54 +7,82 @@ use mozjpeg_sys::{
 };
 
 use crate::{
-    jpeg::coefficient::Coefficient,
+    jpeg::{Coefficient, Jpeg, JpegSource, SampFactor},
     utils::{boxing::unboxing, dct::idct8x8s},
 };
 
-pub struct Decompressor {
+struct MozDecoder {
+    pub cinfo: Box<jpeg_decompress_struct>,
+
     jerr: Box<jpeg_error_mgr>,
-    cinfo: Box<jpeg_decompress_struct>,
     is_source_set: bool,
     is_header_read: bool,
 }
 
-#[derive(Debug)]
-pub enum JpegSource {
-    File(String),
-    Buffer(Vec<u8>),
-}
-
-#[derive(Debug)]
-pub enum DecompressorErr {
+#[derive(thiserror::Error, Debug)]
+pub enum MozDecoderErr {
+    #[error("Trying to deref null pointer: {0}")]
     DerefNull(String),
 
+    #[error("Failed to init `jpeg_error_mgr`")]
     InitJerrErr,
+    #[error("Failed to init `jpeg_decompress_struct`")]
     InitCinfoErr,
 
+    #[error("Input file does not exist")]
     FileNotExist,
+    #[error("Input file is not a file")]
     FileIsNotFile,
 
+    #[error("Input source is not set")]
     SourceNotSet,
+    #[error("Header is not read yet")]
     HeaderNotReadYet,
 
+    #[error("Failed to parse header: {0}")]
     ParseHeaderErr(String),
+    #[error("THe coefficient array is empty")]
     EmptyCoefficientArr,
+    #[error("Unsupported number of channel")]
     UnsupportedNumberOfChannel,
+    #[error("Failed to access virtual block array")]
     AccessVirtualBlockArrayErr,
+    #[error("No quantization table")]
     NoQuantizationTable,
 
+    #[error("Invalid horizontal sampling factor")]
+    InvalidHorizontalSampFactor,
+    #[error("Invalid vertical sampling factor")]
+    InvalidVerticalSampFactor,
+
+    #[error("Other error: {0}")]
     Other(String),
 }
 
-impl Decompressor {
-    pub fn new() -> Result<Self, DecompressorErr> {
+impl Jpeg {
+    pub fn from_using_moz(jpeg_source: JpegSource) -> Result<Self, String> {
+        let mut decoder = MozDecoder::new().map_err(|e| e.to_string())?;
+        decoder.set_source(jpeg_source).map_err(|e| e.to_string())?;
+        decoder.read_header().map_err(|e| e.to_string())?;
+
+        Ok(Self {
+            chan_count: decoder.cinfo.num_components as u32,
+            real_px_w: decoder.cinfo.image_width,
+            real_px_h: decoder.cinfo.image_height,
+            coefs: decoder.read_coefficients().map_err(|e| e.to_string())?,
+        })
+    }
+}
+
+impl MozDecoder {
+    fn new() -> Result<Self, MozDecoderErr> {
         // init new error struct
         let mut jerr = Box::new(MaybeUninit::<jpeg_error_mgr>::uninit());
         let error = unsafe {
             jpeg_std_error(
                 jerr.as_mut_ptr()
                     .as_mut()
-                    .ok_or(DecompressorErr::InitJerrErr)?,
+                    .ok_or(MozDecoderErr::InitJerrErr)?,
             )
         };
         let jerr = unsafe { jerr.assume_init() };
@@ -65,7 +93,7 @@ impl Decompressor {
             cinfo
                 .as_mut_ptr()
                 .as_mut()
-                .ok_or(DecompressorErr::InitCinfoErr)?
+                .ok_or(MozDecoderErr::InitCinfoErr)?
                 .common
                 .err = error;
         };
@@ -80,27 +108,27 @@ impl Decompressor {
         })
     }
 
-    pub fn set_source(&mut self, source: JpegSource) -> Result<(), DecompressorErr> {
+    fn set_source(&mut self, source: JpegSource) -> Result<(), MozDecoderErr> {
         // set jpeg source
         match source {
             JpegSource::File(path) => {
                 let path_ = PathBuf::from(&path);
                 if !path_.exists() {
-                    return Err(DecompressorErr::FileNotExist);
+                    return Err(MozDecoderErr::FileNotExist);
                 }
                 if !path_.is_file() {
-                    return Err(DecompressorErr::FileIsNotFile);
+                    return Err(MozDecoderErr::FileIsNotFile);
                 }
 
                 let mut file = catch_unwind(|| unsafe {
                     let ptr = libc::fopen(path.as_ptr() as *const i8, "rb".as_ptr() as *const i8);
                     if ptr.is_null() {
-                        return Err(DecompressorErr::DerefNull("libc::open".to_string()))?;
+                        return Err(MozDecoderErr::DerefNull("libc::open".to_string()))?;
                     }
 
                     Ok(Box::from_raw(ptr))
                 })
-                .map_err(|e| DecompressorErr::Other(format!("{e:?}")))??;
+                .map_err(|e| MozDecoderErr::Other(format!("{e:?}")))??;
 
                 unsafe {
                     jpeg_stdio_src(self.cinfo.as_mut(), file.as_mut());
@@ -120,13 +148,13 @@ impl Decompressor {
         Ok(())
     }
 
-    pub fn read_header(&mut self) -> Result<(), DecompressorErr> {
+    fn read_header(&mut self) -> Result<(), MozDecoderErr> {
         if !self.is_source_set {
-            return Err(DecompressorErr::SourceNotSet);
+            return Err(MozDecoderErr::SourceNotSet);
         }
 
         if unsafe { jpeg_read_header(self.cinfo.as_mut(), true as boolean) } != 1 {
-            return Err(DecompressorErr::ParseHeaderErr('get_last_err: {
+            return Err(MozDecoderErr::ParseHeaderErr('get_last_err: {
                 let buffer = [0u8; 80];
                 if let Some(format_fn) = self.jerr.format_message {
                     unsafe {
@@ -145,19 +173,19 @@ impl Decompressor {
         Ok(())
     }
 
-    pub fn read_coefficients(&mut self) -> Result<Vec<Coefficient>, DecompressorErr> {
+    fn read_coefficients(&mut self) -> Result<Vec<Coefficient>, MozDecoderErr> {
         if !self.is_header_read {
-            return Err(DecompressorErr::HeaderNotReadYet);
+            return Err(MozDecoderErr::HeaderNotReadYet);
         }
 
         let coef_arrays = unsafe { jpeg_read_coefficients(self.cinfo.as_mut()) };
         if coef_arrays.is_null() {
-            return Err(DecompressorErr::EmptyCoefficientArr);
+            return Err(MozDecoderErr::EmptyCoefficientArr);
         }
 
         let num_components = self.cinfo.num_components as usize;
         if num_components != 1 && num_components != 3 {
-            return Err(DecompressorErr::UnsupportedNumberOfChannel);
+            return Err(MozDecoderErr::UnsupportedNumberOfChannel);
         }
 
         let mut coefs = Vec::with_capacity(num_components);
@@ -165,7 +193,7 @@ impl Decompressor {
             let comp_info = unsafe {
                 let ptr = self.cinfo.comp_info.add(c);
                 if ptr.is_null() {
-                    return Err(DecompressorErr::DerefNull("comp_info.add".to_string()));
+                    return Err(MozDecoderErr::DerefNull("comp_info.add".to_string()));
                 }
 
                 Rc::from_raw(ptr)
@@ -183,20 +211,30 @@ impl Decompressor {
                 block_h: comp_info.height_in_blocks,
                 block_count,
 
-                w_samp_factor: (self.cinfo.max_h_samp_factor / comp_info.h_samp_factor) as u32,
-                h_samp_factor: (self.cinfo.max_v_samp_factor / comp_info.v_samp_factor) as u32,
+                w_samp_factor: match (self.cinfo.max_h_samp_factor / comp_info.h_samp_factor) as u32
+                {
+                    1 => SampFactor::One,
+                    2 => SampFactor::Two,
+                    _ => return Err(MozDecoderErr::InvalidHorizontalSampFactor),
+                },
+                h_samp_factor: match (self.cinfo.max_v_samp_factor / comp_info.v_samp_factor) as u32
+                {
+                    1 => SampFactor::One,
+                    2 => SampFactor::Two,
+                    _ => return Err(MozDecoderErr::InvalidVerticalSampFactor),
+                },
 
                 dct_coefs: {
                     let mut data = Vec::with_capacity(rounded_px_count as usize);
                     for y in 0..comp_info.height_in_blocks {
                         let block_arr = unsafe {
                             if self.cinfo.common.mem.is_null() {
-                                return Err(DecompressorErr::DerefNull("common.mem".to_string()));
+                                return Err(MozDecoderErr::DerefNull("common.mem".to_string()));
                             }
 
                             let virt_barray = (*self.cinfo.common.mem)
                                 .access_virt_barray
-                                .ok_or(DecompressorErr::AccessVirtualBlockArrayErr)?;
+                                .ok_or(MozDecoderErr::AccessVirtualBlockArrayErr)?;
 
                             let block_arr_ptr = virt_barray(
                                 &mut self.cinfo.as_mut().common,
@@ -207,7 +245,7 @@ impl Decompressor {
                             );
 
                             if block_arr_ptr.is_null() {
-                                return Err(DecompressorErr::DerefNull("block_arr".to_string()));
+                                return Err(MozDecoderErr::DerefNull("block_arr".to_string()));
                             }
 
                             *block_arr_ptr
@@ -217,7 +255,7 @@ impl Decompressor {
                             let block = unsafe {
                                 let block_ptr = block_arr.add(x as usize);
                                 if block_ptr.is_null() {
-                                    return Err(DecompressorErr::DerefNull("block".to_string()));
+                                    return Err(MozDecoderErr::DerefNull("block".to_string()));
                                 }
 
                                 *block_ptr
@@ -232,12 +270,10 @@ impl Decompressor {
                 quant_table: unsafe {
                     self.cinfo.quant_tbl_ptrs[comp_info.quant_tbl_no as usize]
                         .as_ref()
-                        .ok_or(DecompressorErr::NoQuantizationTable)?
+                        .ok_or(MozDecoderErr::NoQuantizationTable)?
                         .quantval
                 },
             };
-
-            // the 2 below steps are done in the jpeg2png.c
 
             // DCT coefs + quantization table -> image data
             for i in 0..(block_count as usize) {
@@ -269,21 +305,9 @@ impl Decompressor {
 
         Ok(coefs)
     }
-
-    pub fn width(&self) -> u32 {
-        self.cinfo.image_width
-    }
-
-    pub fn height(&self) -> u32 {
-        self.cinfo.image_height
-    }
-
-    pub fn num_components(&self) -> u32 {
-        self.cinfo.num_components as u32
-    }
 }
 
-impl Drop for Decompressor {
+impl Drop for MozDecoder {
     fn drop(&mut self) {
         unsafe {
             jpeg_destroy_decompress(self.cinfo.as_mut());
