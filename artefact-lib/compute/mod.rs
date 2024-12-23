@@ -9,7 +9,7 @@ use rayon::prelude::*;
 
 use crate::{
     compute::{aux::Aux, compute_projection::compute_projection, compute_step::compute_step},
-    jpeg::coefficient::Coefficient,
+    jpeg::Coefficient,
 };
 
 pub fn compute(

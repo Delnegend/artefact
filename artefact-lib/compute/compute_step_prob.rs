@@ -1,4 +1,4 @@
-use crate::{jpeg::coefficient::Coefficient, utils::dct::idct8x8s};
+use crate::{jpeg::Coefficient, utils::dct::idct8x8s};
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos
@@ -45,10 +45,10 @@ pub fn compute_step_prob(
                     let cy = block_y * 8 + in_y;
 
                     // Apply sampling factors (upsampling)
-                    for sy in 0..coef.h_samp_factor {
-                        for sx in 0..coef.w_samp_factor {
-                            let y = cy * coef.h_samp_factor + sy;
-                            let x = cx * coef.w_samp_factor + sx;
+                    for sy in 0..*coef.h_samp_factor {
+                        for sx in 0..*coef.w_samp_factor {
+                            let y = cy * *coef.h_samp_factor + sy;
+                            let x = cx * *coef.w_samp_factor + sx;
 
                             // Bounds checking
                             assert!(y < max_rounded_px_h);

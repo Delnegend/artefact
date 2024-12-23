@@ -1,4 +1,4 @@
-use crate::jpeg::coefficient::Coefficient;
+use crate::jpeg::Coefficient;
 
 use super::{
     aux::Aux, compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
