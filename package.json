@@ -1,0 +1,16 @@
+{
+	"name": "artefact",
+	"version": "1.0.0",
+	"description": "Intercept the JPEG image decoding process to achieve an artifact-free output.",
+	"main": "index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Delnegend/artefact.git"
+	},
+	"author": "Delnegend",
+	"license": "GPL-3.0-only",
+	"bugs": {
+		"url": "https://github.com/Delnegend/artefact/issues"
+	},
+	"homepage": "https://github.com/Delnegend/artefact#readme"
+}
