@@ -1,4 +1,4 @@
-use artefact_lib::{pipeline, Config, DecompressorErr, JpegSource};
+use artefact_lib::{pipeline, Config, JpegSource};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -98,31 +98,6 @@ fn main() {
 
     match pipeline(Some(Config::default()), JpegSource::File(args.input)) {
         Ok(img) => img.save(args.output).expect("Cannot save output image"),
-        Err(e) => match e {
-            DecompressorErr::DerefNull(ptr) => {
-                eprintln!("Trying to dereference null pointer: {}", ptr)
-            }
-
-            DecompressorErr::InitJerrErr => eprintln!("Error initializing jpeg error manager"),
-            DecompressorErr::InitCinfoErr => eprintln!("Error initializing jpeg decompressor"),
-
-            DecompressorErr::FileNotExist => eprintln!("Input file does not exist"),
-            DecompressorErr::FileIsNotFile => eprintln!("Input is not a file"),
-
-            DecompressorErr::SourceNotSet => eprintln!("set_source() not called yet"),
-            DecompressorErr::HeaderNotReadYet => eprintln!("read_header() not called yet"),
-
-            DecompressorErr::ParseHeaderErr(e) => eprintln!("Error parsing header: {}", e),
-            DecompressorErr::EmptyCoefficientArr => eprintln!("Empty coefficient array"),
-            DecompressorErr::UnsupportedNumberOfChannel => {
-                eprintln!("Unsupported number of channels (Y or YCbCr only)")
-            }
-            DecompressorErr::AccessVirtualBlockArrayErr => {
-                eprintln!("Cannot access virtual block array to extract coefficients")
-            }
-            DecompressorErr::NoQuantizationTable => eprintln!("Quantization table not found"),
-
-            DecompressorErr::Other(e) => eprintln!("Other error: {}", e),
-        },
+        Err(e) => eprintln!("Error: {e:?}"),
     }
 }

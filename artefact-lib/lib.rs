@@ -47,11 +47,7 @@ pub fn pipeline(
     jpeg_source: JpegSource,
 ) -> Result<ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
     let config = config.unwrap_or_default();
-
-    #[cfg(feature = "mozjpeg")]
-    let jpeg = Jpeg::from_using_moz(jpeg_source.clone())?;
-    #[cfg(not(feature = "mozjpeg"))]
-    let jpeg = Jpeg::from_using_zune(jpeg_source.clone())?;
+    let jpeg = Jpeg::from(jpeg_source)?;
 
     let mut coefs = jpeg.coefs;
 

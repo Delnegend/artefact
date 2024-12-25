@@ -1,7 +1,7 @@
 use zune_jpeg::{zune_core::bytestream::ZCursor, JpegDecoder};
 
 use crate::{
-    jpeg::{Coefficient, Jpeg, JpegSource},
+    jpeg_::{Coefficient, Jpeg, JpegSource},
     utils::{boxing::unboxing, dct::idct8x8s},
 };
 
