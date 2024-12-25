@@ -94,9 +94,9 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     pub(crate) h_max: usize,
     // maximum vertical component of all channels in the image
     pub(crate) v_max: usize,
-    /// mcu's  width (interleaved scans)
+    /// MCU's width (interleaved scans)
     pub(crate) mcu_width: usize,
-    /// MCU height(interleaved scans
+    /// MCU height (interleaved scans)
     pub(crate) mcu_height: usize,
     /// Number of MCU's in the x plane
     pub(crate) mcu_x: usize,
