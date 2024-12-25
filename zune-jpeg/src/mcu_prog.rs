@@ -22,11 +22,10 @@ is one hell of a ride.
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::{format, vec};
-use core::cmp::min;
 
 use zune_core::bytestream::{ZByteReaderTrait, ZReader};
 use zune_core::colorspace::ColorSpace;
-use zune_core::log::{debug, error, warn};
+use zune_core::log::{error, warn};
 
 use crate::bitstream::BitStream;
 use crate::components::{ComponentID, SampleRatios};
@@ -35,8 +34,7 @@ use crate::errors::DecodeErrors;
 use crate::errors::DecodeErrors::Format;
 use crate::headers::{parse_huffman, parse_sos};
 use crate::marker::Marker;
-use crate::mcu::DCT_BLOCK;
-use crate::misc::{calculate_padded_width, setup_component_params};
+use crate::misc::setup_component_params;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
     /// Decode a progressive image
@@ -51,7 +49,6 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     #[inline(never)]
     pub(crate) fn decode_mcu_ycbcr_progressive(
         &mut self,
-        pixels: &mut [u8],
         dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<(), DecodeErrors> {
         setup_component_params(self)?;
@@ -200,7 +197,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             }
         }
 
-        self.finish_progressive_decoding(block, mcu_width, pixels)
+        Ok(())
     }
 
     #[allow(clippy::too_many_lines, clippy::cast_sign_loss)]
@@ -423,156 +420,6 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         return Ok(());
     }
 
-    #[allow(clippy::too_many_lines)]
-    #[allow(clippy::needless_range_loop, clippy::cast_sign_loss)]
-    fn finish_progressive_decoding(
-        &mut self,
-        block: &[Vec<i16>; MAX_COMPONENTS],
-        _mcu_width: usize,
-        pixels: &mut [u8],
-    ) -> Result<(), DecodeErrors> {
-        // This function is complicated because we need to replicate
-        // the function in mcu.rs
-        //
-        // The advantage is that we do very little allocation and very lot
-        // channel reusing.
-        // The trick is to notice that we repeat the same procedure per MCU
-        // width.
-        //
-        // So we can set it up that we only allocate temporary storage large enough
-        // to store a single mcu width, then reuse it per invocation.
-        //
-        // This is advantageous to us.
-        //
-        // Remember we need to have the whole MCU buffer so we store 3 unprocessed
-        // channels in memory, and then we allocate the whole output buffer in memory, both of
-        // which are huge.
-        //
-        //
-
-        let mcu_height = if self.is_interleaved {
-            self.mcu_y
-        } else {
-            // For non-interleaved images( (1*1) subsampling)
-            // number of MCU's are the widths (+7 to account for paddings) divided by 8.
-            ((self.info.height + 7) / 8) as usize
-        };
-
-        // Size of our output image(width*height)
-        let is_hv = usize::from(self.is_interleaved);
-        let upsampler_scratch_size = is_hv * self.components[0].width_stride;
-        let width = usize::from(self.info.width);
-        let padded_width = calculate_padded_width(width, self.sub_sample_ratio);
-
-        //let mut pixels = vec![0; capacity * out_colorspace_components];
-        let mut upsampler_scratch_space = vec![0; upsampler_scratch_size];
-        let mut tmp = [0_i32; DCT_BLOCK];
-
-        for (pos, comp) in self.components.iter_mut().enumerate() {
-            // Allocate only needed components.
-            //
-            // For special colorspaces i.e YCCK and CMYK, just allocate all of the needed
-            // components.
-            if min(
-                self.options.jpeg_get_out_colorspace().num_components() - 1,
-                pos,
-            ) == pos
-                || self.input_colorspace == ColorSpace::YCCK
-                || self.input_colorspace == ColorSpace::CMYK
-            {
-                // allocate enough space to hold a whole MCU width
-                // this means we should take into account sampling ratios
-                // `*8` is because each MCU spans 8 widths.
-                let len = comp.width_stride * comp.vertical_sample * 8;
-
-                comp.needed = true;
-                comp.raw_coeff = vec![0; len];
-            } else {
-                comp.needed = false;
-            }
-        }
-
-        let mut pixels_written = 0;
-
-        // dequantize, idct and color convert.
-        for i in 0..mcu_height {
-            'component: for (position, component) in &mut self.components.iter_mut().enumerate() {
-                if !component.needed {
-                    continue 'component;
-                }
-                let qt_table = &component.quantization_table;
-
-                // step is the number of pixels this iteration wil be handling
-                // Given by the number of mcu's height and the length of the component block
-                // Since the component block contains the whole channel as raw pixels
-                // we this evenly divides the pixels into MCU blocks
-                //
-                // For interleaved images, this gives us the exact pixels comprising a whole MCU
-                // block
-                let step = block[position].len() / mcu_height;
-                // where we will be reading our pixels from.
-                let start = i * step;
-
-                let slice = &block[position][start..start + step];
-
-                let temp_channel = &mut component.raw_coeff;
-
-                // The next logical step is to iterate width wise.
-                // To figure out how many pixels we iterate by we use effective pixels
-                // Given to us by component.x
-                // iterate per effective pixels.
-                let mcu_x = component.width_stride / 8;
-
-                // iterate per every vertical sample.
-                for k in 0..component.vertical_sample {
-                    for j in 0..mcu_x {
-                        // after writing a single stride, we need to skip 8 rows.
-                        // This does the row calculation
-                        let width_stride = k * 8 * component.width_stride;
-                        let start = j * 64 + width_stride;
-
-                        // dequantize
-                        for ((x, out), qt_val) in slice[start..start + 64]
-                            .iter()
-                            .zip(tmp.iter_mut())
-                            .zip(qt_table.iter())
-                        {
-                            *out = i32::from(*x) * qt_val;
-                        }
-                        // determine where to write.
-                        let sl = &mut temp_channel[component.idct_pos..];
-
-                        component.idct_pos += 8;
-                        // tmp now contains a dequantized block so idct it
-                        (self.idct_func)(&mut tmp, sl, component.width_stride);
-                    }
-                    // after every write of 8, skip 7 since idct write stride wise 8 times.
-                    //
-                    // Remember each MCU is 8x8 block, so each idct will write 8 strides into
-                    // sl
-                    //
-                    // and component.idct_pos is one stride long
-                    component.idct_pos += 7 * component.width_stride;
-                }
-                component.idct_pos = 0;
-            }
-
-            // process that width up until it's impossible
-            self.post_process(
-                pixels,
-                i,
-                mcu_height,
-                width,
-                padded_width,
-                &mut pixels_written,
-                &mut upsampler_scratch_space,
-            )?;
-        }
-
-        debug!("Finished decoding image");
-
-        return Ok(());
-    }
     pub(crate) fn reset_params(&mut self) {
         /*
         Apparently, grayscale images which can be down sampled exists, which is weird in the sense

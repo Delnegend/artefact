@@ -118,16 +118,8 @@ pub mod decoder;
 pub mod errors;
 mod headers;
 mod huffman;
-#[cfg(not(fuzzing))]
-mod idct;
-#[cfg(fuzzing)]
-pub mod idct;
 mod marker;
 mod mcu;
 mod mcu_prog;
 mod misc;
-mod unsafe_utils;
-mod unsafe_utils_avx2;
-mod unsafe_utils_neon;
 mod upsampler;
-mod worker;

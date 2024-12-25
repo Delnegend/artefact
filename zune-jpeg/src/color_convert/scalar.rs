@@ -111,14 +111,3 @@ pub fn ycbcr_to_rgb_inner_16_scalar<const BGRA: bool>(
     // Increment pos
     *pos += 48;
 }
-
-pub fn ycbcr_to_grayscale(y: &[i16], width: usize, padded_width: usize, output: &mut [u8]) {
-    for (y_in, out) in y
-        .chunks_exact(padded_width)
-        .zip(output.chunks_exact_mut(width))
-    {
-        for (y, out) in y_in.iter().zip(out.iter_mut()) {
-            *out = *y as u8;
-        }
-    }
-}

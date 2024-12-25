@@ -47,7 +47,6 @@
 //!
 //! Therefore if your looking to optimize some routines, probably start there.
 
-pub use scalar::ycbcr_to_grayscale;
 use zune_core::colorspace::ColorSpace;
 use zune_core::options::DecoderOptions;
 

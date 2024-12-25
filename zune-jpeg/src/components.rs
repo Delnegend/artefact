@@ -202,6 +202,7 @@ pub enum SampleRatios {
 }
 
 impl SampleRatios {
+    #[must_use]
     pub fn sample(self) -> usize {
         match self {
             SampleRatios::HV => 4,

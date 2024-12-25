@@ -25,7 +25,6 @@ use crate::headers::{
     parse_app1, parse_app14, parse_app2, parse_dqt, parse_huffman, parse_sos, parse_start_of_frame,
 };
 use crate::huffman::HuffmanTable;
-use crate::idct::choose_idct_func;
 use crate::marker::Marker;
 use crate::misc::SOFMarkers;
 use crate::upsampler::{
@@ -122,13 +121,6 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     pub(crate) succ_low: u8,
     /// Number of components.
     pub(crate) num_scans: u8,
-    // Function pointers, for pointy stuff.
-    /// Dequantize and idct function
-    // This is determined at runtime which function to run, statically it's
-    // initialized to a platform independent one and during initialization
-    // of this struct, we check if we can switch to a faster one which
-    // depend on certain CPU extensions.
-    pub(crate) idct_func: IDCTPtr,
     // Color convert function which acts on 16 YCbCr values
     pub(crate) color_convert_16: ColorConvert16Ptr,
     pub(crate) z_order: [usize; MAX_COMPONENTS],
@@ -156,7 +148,6 @@ where
 {
     #[allow(clippy::redundant_field_names)]
     fn default(options: DecoderOptions, buffer: T) -> Self {
-        let color_convert = choose_ycbcr_to_rgb_convert_func(ColorSpace::RGB, &options).unwrap();
         JpegDecoder {
             info: ImageInfo::default(),
             qt_tables: [None, None, None, None],
@@ -178,8 +169,7 @@ where
             succ_high: 0,
             succ_low: 0,
             num_scans: 0,
-            idct_func: choose_idct_func(&options),
-            color_convert_16: color_convert,
+            color_convert_16: choose_ycbcr_to_rgb_convert_func(ColorSpace::RGB, &options).unwrap(),
             input_colorspace: ColorSpace::YCbCr,
             z_order: [0; MAX_COMPONENTS],
             restart_interval: 0,
@@ -201,16 +191,20 @@ where
     ///
     /// # Errors
     /// See DecodeErrors for an explanation
-    pub fn decode(&mut self) -> Result<Vec<u8>, DecodeErrors> {
-        self.decode_headers()?;
-        let size = self.output_buffer_size().unwrap();
-        let mut out = vec![0; size];
+    pub fn decode(&mut self) -> Result<(), DecodeErrors> {
+        self.decode_headers_internal()?;
 
         // init empty dct coefs
         let mut dct_coefs: [Vec<i16>; MAX_COMPONENTS] = Default::default();
 
         // decode the image
-        self.decode_into(&mut out, &mut dct_coefs)?;
+        // self.decode_into(&mut out, &mut dct_coefs)?;
+
+        if self.is_progressive {
+            self.decode_mcu_ycbcr_progressive(&mut dct_coefs)?;
+        } else {
+            self.decode_mcu_ycbcr_baseline(&mut dct_coefs)?;
+        }
 
         // re-assign the dct coefs into the components
         for (i, dct_coef) in dct_coefs.into_iter().enumerate() {
@@ -219,7 +213,7 @@ where
             }
         }
 
-        Ok(out)
+        Ok(())
     }
 
     /// Create a new Decoder instance
@@ -683,79 +677,6 @@ where
         };
     }
 
-    /// Decode into a pre-allocated buffer
-    ///
-    /// It is an error if the buffer size is smaller than
-    /// [`output_buffer_size()`](Self::output_buffer_size)
-    ///
-    /// If the buffer is bigger than expected, we ignore the end padding bytes
-    ///
-    /// # Example
-    ///
-    /// - Read  headers and then alloc a buffer big enough to hold the image
-    ///
-    /// ```no_run
-    /// use zune_core::bytestream::ZCursor;
-    /// use zune_jpeg::JpegDecoder;
-    /// let mut decoder = JpegDecoder::new(ZCursor::new(&[]));
-    /// // before we get output, we must decode the headers to get width
-    /// // height, and input colorspace
-    /// decoder.decode_headers().unwrap();
-    ///
-    /// let mut out = vec![0;decoder.output_buffer_size().unwrap()];
-    /// // write into out
-    /// decoder.decode_into(&mut out).unwrap();
-    /// ```
-    ///
-    ///
-    pub fn decode_into(
-        &mut self,
-        out: &mut [u8],
-        dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
-    ) -> Result<(), DecodeErrors> {
-        self.decode_headers_internal()?;
-
-        let expected_size = self.output_buffer_size().unwrap();
-
-        if out.len() < expected_size {
-            // too small of a size
-            return Err(DecodeErrors::TooSmallOutput(expected_size, out.len()));
-        }
-
-        // ensure we don't touch anyone else's scratch space
-        let out_len = core::cmp::min(out.len(), expected_size);
-        let out = &mut out[0..out_len];
-
-        if self.is_progressive {
-            self.decode_mcu_ycbcr_progressive(out, dct_coefs)
-        } else {
-            self.decode_mcu_ycbcr_baseline(out, dct_coefs)
-        }
-    }
-
-    /// Read only headers from a jpeg image buffer
-    ///
-    /// This allows you to extract important information like
-    /// image width and height without decoding the full image
-    ///
-    /// # Examples
-    /// ```no_run
-    /// use zune_core::bytestream::ZCursor;
-    /// use zune_jpeg::{JpegDecoder};
-    ///
-    /// let img_data = std::fs::read("a_valid.jpeg").unwrap();
-    /// let mut decoder = JpegDecoder::new(ZCursor::new(&img_data));
-    /// decoder.decode_headers().unwrap();
-    ///
-    /// println!("Total decoder dimensions are : {:?} pixels",decoder.dimensions());
-    /// println!("Number of components in the image are {}", decoder.info().unwrap().components);
-    /// ```
-    /// # Errors
-    /// See DecodeErrors enum for list of possible errors during decoding
-    pub fn decode_headers(&mut self) -> Result<(), DecodeErrors> {
-        self.decode_headers_internal()?;
-        Ok(())
-    }
     /// Create a new decoder with the specified options to be used for decoding
     /// an image
     ///
