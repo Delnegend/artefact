@@ -69,9 +69,13 @@ pub struct Components {
     pub row: Vec<i16>,
     pub first_row_upsample_dest: Vec<i16>,
     pub idct_pos: usize,
-    pub real_px_w: usize,
     pub w2: usize,
+
+    /// DO NOT derive rounded pixel width from this
+    pub real_px_w: usize,
+    /// DO NOT derive rounded pixel height from this
     pub real_px_h: usize,
+
     pub sample_ratio: SampleRatios,
     // a very annoying bug
     pub fix_an_annoying_bug: usize,
