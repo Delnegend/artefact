@@ -1,25 +1,6 @@
-use std::ops::Deref;
-
-use zune_jpeg::{zune_core::bytestream::ZCursor, JpegDecoder};
+use zune_jpeg::{sample_factor::SampleFactor, zune_core::bytestream::ZCursor, JpegDecoder};
 
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
-
-#[derive(Debug, Clone)]
-pub enum SampFactor {
-    One,
-    Two,
-}
-
-impl Deref for SampFactor {
-    type Target = u32;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            SampFactor::One => &1,
-            SampFactor::Two => &2,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Coefficient {
@@ -35,8 +16,8 @@ pub struct Coefficient {
     pub block_h: u32,
     pub block_count: u32,
 
-    pub horizontal_samp_factor: SampFactor,
-    pub vertical_samp_factor: SampFactor,
+    pub horizontal_samp_factor: SampleFactor,
+    pub vertical_samp_factor: SampleFactor,
 
     pub dct_coefs: Vec<i16>,
     pub image_data: Vec<f32>,
@@ -90,16 +71,8 @@ impl Jpeg {
                         block_w,
                         block_h,
                         block_count,
-                        horizontal_samp_factor: match comp.horizontal_samp_factor {
-                            1 => SampFactor::One,
-                            2 => SampFactor::Two,
-                            _ => return Err("Invalid horizontal sample factor".to_string()),
-                        },
-                        vertical_samp_factor: match comp.vertical_samp_factor {
-                            1 => SampFactor::One,
-                            2 => SampFactor::Two,
-                            _ => return Err("Invalid vertical sample factor".to_string()),
-                        },
+                        horizontal_samp_factor: comp.horizontal_samp_factor,
+                        vertical_samp_factor: comp.vertical_samp_factor,
                         dct_coefs: comp.dct_coefs,
                         image_data: vec![0.0; comp.rounded_px_count],
                         quant_table: comp
