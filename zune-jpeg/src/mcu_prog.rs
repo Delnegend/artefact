@@ -28,7 +28,7 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, warn};
 
 use crate::bitstream::BitStream;
-use crate::components::{ComponentID, SampleRatios};
+use crate::components::{ComponentID, SampleRatioNum, SampleRatios};
 use crate::decoder::{JpegDecoder, MAX_COMPONENTS};
 use crate::errors::DecodeErrors;
 use crate::errors::DecodeErrors::Format;
@@ -90,8 +90,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             //
             // set coeff to be 2 to ensure that we increment two rows
             // for every mcu processed also
-            mcu_height *= self.max_vertical_samp;
-            mcu_height /= self.max_horizontal_samp;
+            mcu_height *= self.max_vertical_samp as usize;
+            mcu_height /= self.max_horizontal_samp as usize;
             self.coeff = 2;
         }
 
@@ -233,8 +233,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             let (mcu_width, mcu_height);
 
             if self.components[k].component_id == ComponentID::Y
-                && (self.components[k].vertical_samp != 1
-                    || self.components[k].horizontal_samp != 1)
+                && (*self.components[k].vertical_samp != 1
+                    || *self.components[k].horizontal_samp != 1)
                 || !self.is_interleaved
             {
                 // For Y channel  or non interleaved scans ,
@@ -382,8 +382,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                                 "Huffman table at index not initialized",
                             ))?;
 
-                        for v_samp in 0..component.vertical_samp {
-                            for h_samp in 0..component.horizontal_samp {
+                        for v_samp in 0..*component.vertical_samp as usize {
+                            for h_samp in 0..*component.horizontal_samp as usize {
                                 let x2 = j * component.horizontal_samp + h_samp;
                                 let y2 = i * component.vertical_samp + v_samp;
                                 let position = 64 * (x2 + y2 * component.width_stride / 8);
@@ -430,9 +430,9 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         self.max_vertical_samp = 1;
         self.sub_sample_ratio = SampleRatios::None;
         self.is_interleaved = false;
-        self.components[0].vertical_samp = 1;
+        self.components[0].vertical_samp = SampleRatioNum::One;
         self.components[0].width_stride = (((self.info.width as usize) + 7) / 8) * 8;
-        self.components[0].horizontal_samp = 1;
+        self.components[0].horizontal_samp = SampleRatioNum::One;
     }
 }
 
