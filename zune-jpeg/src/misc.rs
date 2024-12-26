@@ -253,14 +253,13 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
             _ => unreachable!(),
         };
 
-        comp.rounded_px_w = rounded_px_w as usize / comp.horizontal_samp_factor;
-        comp.rounded_px_h = rounded_px_h as usize / comp.vertical_samp_factor;
+        comp.rounded_px_w = rounded_px_w / comp.horizontal_samp_factor.u16();
+        comp.rounded_px_h = rounded_px_h / comp.vertical_samp_factor.u16();
+        assert!(comp.rounded_px_w % 8 == 0);
+        assert!(comp.rounded_px_h % 8 == 0);
 
-        comp.dct_coefs = vec![0; comp.rounded_px_w * comp.rounded_px_h];
+        comp.rounded_px_count = comp.rounded_px_w as usize * comp.rounded_px_h as usize;
     }
-
-    // println!("h_max: {}, v_max: {}, mcu_width: {}, mcu_height: {}, mcu_x: {}, mcu_y: {}, is_interleaved: {}",
-    //     img.max_horizontal_samp, img.max_vertical_samp, img.mcu_width, img.mcu_height, img.mcu_x, img.mcu_y, img.is_interleaved);
 
     {
         // Sampling factors are one thing that suck
