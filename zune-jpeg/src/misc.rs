@@ -182,16 +182,6 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     let real_px_w = img.width();
     let real_px_h = img.height();
 
-    // round to the nearest multiple of 8
-    //
-    // Input: 10
-    // 10 + 7 = 17
-    // 17 in binary     = 0001 0001
-    // !7 in binary     = 1111 1000
-    // 17 & !7
-    let rounded_px_w = (real_px_w + 7) & !7;
-    let rounded_px_h = (real_px_h + 7) & !7;
-
     // in case of adobe app14 being present, zero may indicate
     // either CMYK if components are 4 or RGB if components are 3,
     // see https://docs.oracle.com/javase/6/docs/api/javax/imageio/metadata/doc-files/jpeg_metadata.html
