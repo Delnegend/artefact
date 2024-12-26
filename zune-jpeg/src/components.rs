@@ -11,14 +11,12 @@
 //!
 //! The data is extracted from a SOF header.
 
-use alloc::vec::Vec;
-use alloc::{format, vec};
-
 use zune_core::log::trace;
 
-use crate::decoder::MAX_COMPONENTS;
-use crate::errors::DecodeErrors;
-use crate::upsampler::upsample_no_op;
+use crate::{
+    decoder::MAX_COMPONENTS, errors::DecodeErrors, sample_factor::SampleFactor,
+    upsampler::upsample_no_op,
+};
 
 /// Represents an up-sampler function, this function will be called to upsample
 /// a down-sampled image
