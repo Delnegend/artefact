@@ -84,7 +84,6 @@
 #![warn(
     clippy::correctness,
     clippy::perf,
-    clippy::pedantic,
     clippy::inline_always,
     clippy::missing_errors_doc,
     clippy::panic
