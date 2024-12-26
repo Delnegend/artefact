@@ -11,10 +11,4 @@ console_error_panic_hook = "0.1.7"
 [lib]
 name = "artefact_wasm"
 path = "lib.rs"
-crate-type = ["cdylib", "rlib"]
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.15", features = ["js"] }
-
-[build-dependencies]
-cc = "1.2.5"
+crate-type = ["cdylib"]
