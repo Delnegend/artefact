@@ -11,9 +11,6 @@
 //!
 //! The data is extracted from a SOF header.
 
-use core::fmt::Display;
-use core::ops::{Deref, Div, Mul};
-
 use alloc::vec::Vec;
 use alloc::{format, vec};
 
@@ -32,76 +29,6 @@ pub type UpSampler = fn(
     scratch_space: &mut [i16],
     output: &mut [i16],
 );
-
-#[derive(Clone, Copy)]
-pub enum SampleRatioNum {
-    One,
-    Two,
-}
-
-impl Deref for SampleRatioNum {
-    type Target = u16;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            SampleRatioNum::One => &1,
-            SampleRatioNum::Two => &2,
-        }
-    }
-}
-
-impl Display for SampleRatioNum {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SampleRatioNum::One => write!(f, "1"),
-            SampleRatioNum::Two => write!(f, "2"),
-        }
-    }
-}
-
-impl Mul<usize> for SampleRatioNum {
-    type Output = usize;
-
-    fn mul(self, rhs: usize) -> Self::Output {
-        match self {
-            SampleRatioNum::One => rhs,
-            SampleRatioNum::Two => 2 * rhs,
-        }
-    }
-}
-
-impl Mul<SampleRatioNum> for usize {
-    type Output = usize;
-
-    fn mul(self, rhs: SampleRatioNum) -> Self::Output {
-        match rhs {
-            SampleRatioNum::One => self,
-            SampleRatioNum::Two => self * 2,
-        }
-    }
-}
-
-impl Div<u16> for SampleRatioNum {
-    type Output = u16;
-
-    fn div(self, rhs: u16) -> Self::Output {
-        match self {
-            SampleRatioNum::One => 1 / rhs,
-            SampleRatioNum::Two => 2 / rhs,
-        }
-    }
-}
-
-impl Div<SampleRatioNum> for u16 {
-    type Output = u16;
-
-    fn div(self, rhs: SampleRatioNum) -> Self::Output {
-        match rhs {
-            SampleRatioNum::One => self,
-            SampleRatioNum::Two => self / 2,
-        }
-    }
-}
 
 /// Component Data from start of frame
 #[derive(Clone)]
