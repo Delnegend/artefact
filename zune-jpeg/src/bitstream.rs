@@ -334,6 +334,11 @@ impl BitStream {
     where
         T: ZByteReaderTrait,
     {
+        // TODO: do something about this, maybe a custom error
+        if dct_coefs.is_empty() {
+            return Ok(());
+        }
+
         // Get fast AC table as a reference before we enter the hot path
         let ac_lookup = ac_table.ac_lookup.as_ref().unwrap();
 
