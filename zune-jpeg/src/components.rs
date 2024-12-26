@@ -71,11 +71,6 @@ pub struct Components {
     pub idct_pos: usize,
     pub w2: usize,
 
-    /// DO NOT derive rounded pixel width from this
-    pub real_px_w: usize,
-    /// DO NOT derive rounded pixel height from this
-    pub real_px_h: usize,
-
     pub sample_ratio: SampleRatios,
     // a very annoying bug
     pub fix_an_annoying_bug: usize,
@@ -162,8 +157,6 @@ impl Components {
             row_up: vec![],
             row: vec![],
             idct_pos: 0,
-            real_px_w: 0,
-            real_px_h: 0,
             w2: 0,
             sample_ratio: SampleRatios::None,
             fix_an_annoying_bug: 1,

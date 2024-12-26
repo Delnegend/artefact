@@ -229,13 +229,6 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img.min_mcu_h = usize::from(img.info.height).div_ceil(img.mcu_height_wtf);
 
     for comp in &mut img.components {
-        // Extract quantization tables from the arrays into components
-        comp.real_px_w =
-            (real_px_w as usize * comp.horizontal_samp).div_ceil(img.max_horizontal_samp);
-        // probably not needed. :)
-        comp.real_px_h = (real_px_h as usize * comp.horizontal_samp + img.max_horizontal_samp - 1)
-            / img.max_vertical_samp;
-
         comp.w2 = img.min_mcu_w * comp.horizontal_samp * 8;
         comp.quant_table = *img.qt_tables[comp.quant_table_number as usize]
             .as_ref()
