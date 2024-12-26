@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use artefact_lib::{pipeline, Config, JpegSource};
 use clap::Parser;
 
@@ -10,7 +12,11 @@ struct Args {
 
     /// The output png file
     #[arg(short, long)]
-    output: String,
+    output: Option<String>,
+
+    /// Overwrite existing output file
+    #[arg(short = 'y', long, default_value = "false")]
+    overwrite: bool,
 
     /// Second order weight
     ///
@@ -82,6 +88,15 @@ fn main() {
             .expect("Invalid number of iterations values")
     });
 
+    let output = args.output.map(PathBuf::from).unwrap_or_else(|| {
+        let input_path = PathBuf::from(&args.input);
+        input_path.with_extension("png")
+    });
+    if output.exists() && !args.overwrite {
+        eprintln!("Output file already exists, use -y to overwrite");
+        return;
+    }
+
     let mut config = Config::default();
     if let Some(weight) = weight {
         config.weight = weight;
@@ -97,7 +112,7 @@ fn main() {
     }
 
     match pipeline(Some(Config::default()), JpegSource::File(args.input)) {
-        Ok(img) => img.save(args.output).expect("Cannot save output image"),
+        Ok(img) => img.save(output).expect("Cannot save output image"),
         Err(e) => eprintln!("Error: {e:?}"),
     }
 }
