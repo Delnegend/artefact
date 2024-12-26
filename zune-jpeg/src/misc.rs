@@ -209,6 +209,16 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         .unwrap();
     img.is_interleaved = img.max_horizontal_samp != 1 || img.max_vertical_samp != 1;
 
+    let nearest_multiple_w = 8 * img.max_horizontal_samp - 1;
+    let nearest_multiple_h = 8 * img.max_vertical_samp - 1;
+
+    // round to the nearest multiple of 8 or 16
+    let rounded_px_w = (real_px_w + nearest_multiple_w) & !nearest_multiple_w;
+    let rounded_px_h = (real_px_h + nearest_multiple_h) & !nearest_multiple_h;
+
+    assert!(rounded_px_w % 8 == 0);
+    assert!(rounded_px_h % 8 == 0);
+
     // compute interleaved image info
     img.mcu_width_wtf = img.max_horizontal_samp * 8;
     img.mcu_height_wtf = img.max_vertical_samp * 8;
