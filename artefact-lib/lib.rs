@@ -4,7 +4,7 @@ mod utils;
 
 pub use image;
 
-use crate::{compute::compute, jpeg::Jpeg, utils::clamp::clamp};
+use crate::{compute::compute, jpeg::Jpeg};
 
 pub use crate::jpeg::JpegSource;
 
@@ -91,9 +91,9 @@ pub fn pipeline(
                 let cri = coefs[2].image_data[idx];
 
                 rgb.push([
-                    clamp(yi + 1.402 * cri),
-                    clamp(yi - 0.34414 * cbi - 0.71414 * cri),
-                    clamp(yi + 1.772 * cbi),
+                    (yi + 1.402 * cri).clamp(0.0, 255.0) as u8,
+                    (yi - 0.34414 * cbi - 0.71414 * cri).clamp(0.0, 255.0) as u8,
+                    (yi + 1.772 * cbi).clamp(0.0, 255.0) as u8,
                 ]);
             }
         }
@@ -113,7 +113,7 @@ pub fn pipeline(
     for i in 0..jpeg.real_px_h {
         for j in 0..jpeg.real_px_w {
             let idx = (i * coefs[0].rounded_px_w + j) as usize;
-            gray.push(clamp(coefs[0].image_data[idx]));
+            gray.push(coefs[0].image_data[idx].clamp(0.0, 255.0) as u8);
         }
     }
 
