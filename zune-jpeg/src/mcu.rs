@@ -14,10 +14,11 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, trace, warn};
 
 use crate::bitstream::BitStream;
-use crate::components::{SampleRatioNum, SampleRatios};
+use crate::components::SampleRatios;
 use crate::decoder::MAX_COMPONENTS;
 use crate::errors::DecodeErrors;
 use crate::marker::Marker;
+use crate::sample_factor::SampleFactor;
 use crate::JpegDecoder;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
@@ -157,7 +158,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // allocate enough space to hold a whole MCU width
                 // this means we should take into account sampling ratios
                 // `*8` is because each MCU spans 8 widths.
-                let len = comp.width_stride * comp.vertical_samp * 8;
+                let len = comp.width_stride * comp.vertical_samp.usize() * 8;
 
                 comp.needed = true;
                 comp.raw_coeff = vec![0; len];
@@ -218,7 +219,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // otherwise if it-s non-interleaved, these routines iterate in
                 // trivial scanline order(Y,Cb,Cr)
                 match (comp.horizontal_samp, comp.vertical_samp) {
-                    (SampleRatioNum::One, SampleRatioNum::One) => {
+                    (SampleFactor::One, SampleFactor::One) => {
                         let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
                         let start_idx = (mcu_idx * 64).clamp(0, max_lens[comp_idx]);
                         let end_idx = ((mcu_idx + 1) * 64).clamp(0, max_lens[comp_idx]);
@@ -231,7 +232,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             &mut comp.dc_pred,
                         )?;
                     }
-                    (SampleRatioNum::One, SampleRatioNum::Two) => {
+                    (SampleFactor::One, SampleFactor::Two) => {
                         // TODO: need sample image to test this
                         let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
                         for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
@@ -247,7 +248,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             )?;
                         }
                     }
-                    (SampleRatioNum::Two, SampleRatioNum::One) => {
+                    (SampleFactor::Two, SampleFactor::One) => {
                         let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
                         for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
                             let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
@@ -262,7 +263,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             )?;
                         }
                     }
-                    (SampleRatioNum::Two, SampleRatioNum::Two) => {
+                    (SampleFactor::Two, SampleFactor::Two) => {
                         let mcu_idx = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
                         for idx in [
                             2 * mcu_idx,

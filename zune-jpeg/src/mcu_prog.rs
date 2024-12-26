@@ -28,12 +28,13 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, warn};
 
 use crate::bitstream::BitStream;
-use crate::components::{ComponentID, SampleRatioNum, SampleRatios};
+use crate::components::{ComponentID, SampleRatios};
 use crate::decoder::{JpegDecoder, MAX_COMPONENTS};
 use crate::errors::DecodeErrors;
 use crate::errors::DecodeErrors::Format;
 use crate::headers::{parse_huffman, parse_sos};
 use crate::marker::Marker;
+use crate::sample_factor::SampleFactor;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
     /// Decode a progressive image
@@ -107,7 +108,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         }
         for i in 0..self.input_colorspace.num_components() {
             let comp = &self.components[i];
-            let len = mcu_width * comp.vertical_samp * comp.horizontal_samp * mcu_height;
+            let len =
+                mcu_width * comp.vertical_samp.usize() * comp.horizontal_samp.usize() * mcu_height;
 
             block[i] = vec![0; len];
         }
@@ -233,8 +235,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             let (mcu_width, mcu_height);
 
             if self.components[k].component_id == ComponentID::Y
-                && (*self.components[k].vertical_samp != 1
-                    || *self.components[k].horizontal_samp != 1)
+                && (self.components[k].vertical_samp.u8() != 1
+                    || self.components[k].horizontal_samp.u8() != 1)
                 || !self.is_interleaved
             {
                 // For Y channel  or non interleaved scans ,
@@ -382,10 +384,10 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                                 "Huffman table at index not initialized",
                             ))?;
 
-                        for v_samp in 0..*component.vertical_samp as usize {
-                            for h_samp in 0..*component.horizontal_samp as usize {
-                                let x2 = j * component.horizontal_samp + h_samp;
-                                let y2 = i * component.vertical_samp + v_samp;
+                        for v_samp in 0..component.vertical_samp.usize() {
+                            for h_samp in 0..component.horizontal_samp.usize() {
+                                let x2 = j * component.horizontal_samp.usize() + h_samp;
+                                let y2 = i * component.vertical_samp.usize() + v_samp;
                                 let position = 64 * (x2 + y2 * component.width_stride / 8);
 
                                 let data = &mut buffer[n][position];
@@ -430,9 +432,9 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         self.max_vertical_samp = 1;
         self.sub_sample_ratio = SampleRatios::None;
         self.is_interleaved = false;
-        self.components[0].vertical_samp = SampleRatioNum::One;
+        self.components[0].vertical_samp = SampleFactor::One;
         self.components[0].width_stride = (((self.info.width as usize) + 7) / 8) * 8;
-        self.components[0].horizontal_samp = SampleRatioNum::One;
+        self.components[0].horizontal_samp = SampleFactor::One;
     }
 }
 
