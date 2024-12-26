@@ -11,6 +11,9 @@
 //!
 //! The data is extracted from a SOF header.
 
+use core::fmt::Display;
+use core::ops::{Deref, Div, Mul};
+
 use alloc::vec::Vec;
 use alloc::{format, vec};
 
@@ -30,15 +33,85 @@ pub type UpSampler = fn(
     output: &mut [i16],
 );
 
+#[derive(Clone, Copy)]
+pub enum SampleRatioNum {
+    One,
+    Two,
+}
+
+impl Deref for SampleRatioNum {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            SampleRatioNum::One => &1,
+            SampleRatioNum::Two => &2,
+        }
+    }
+}
+
+impl Display for SampleRatioNum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SampleRatioNum::One => write!(f, "1"),
+            SampleRatioNum::Two => write!(f, "2"),
+        }
+    }
+}
+
+impl Mul<usize> for SampleRatioNum {
+    type Output = usize;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        match self {
+            SampleRatioNum::One => rhs,
+            SampleRatioNum::Two => 2 * rhs,
+        }
+    }
+}
+
+impl Mul<SampleRatioNum> for usize {
+    type Output = usize;
+
+    fn mul(self, rhs: SampleRatioNum) -> Self::Output {
+        match rhs {
+            SampleRatioNum::One => self,
+            SampleRatioNum::Two => self * 2,
+        }
+    }
+}
+
+impl Div<u16> for SampleRatioNum {
+    type Output = u16;
+
+    fn div(self, rhs: u16) -> Self::Output {
+        match self {
+            SampleRatioNum::One => 1 / rhs,
+            SampleRatioNum::Two => 2 / rhs,
+        }
+    }
+}
+
+impl Div<SampleRatioNum> for u16 {
+    type Output = u16;
+
+    fn div(self, rhs: SampleRatioNum) -> Self::Output {
+        match rhs {
+            SampleRatioNum::One => self,
+            SampleRatioNum::Two => self / 2,
+        }
+    }
+}
+
 /// Component Data from start of frame
 #[derive(Clone)]
 pub struct Components {
     /// The type of component that has the metadata below, can be Y,Cb or Cr
     pub component_id: ComponentID,
     /// Sub-sampling ratio of this component in the x-plane
-    pub vertical_samp: usize,
+    pub vertical_samp: SampleRatioNum,
     /// Sub-sampling ratio of this component in the y-plane
-    pub horizontal_samp: usize,
+    pub horizontal_samp: SampleRatioNum,
     /// DC huffman table position
     pub dc_huff_table: usize,
     /// AC huffman table position for this element.
@@ -75,10 +148,11 @@ pub struct Components {
     // a very annoying bug
     pub fix_an_annoying_bug: usize,
 
-    pub horizontal_samp_factor: usize,
-    pub vertical_samp_factor: usize,
-    pub rounded_px_w: usize,
-    pub rounded_px_h: usize,
+    pub horizontal_samp_factor: u16,
+    pub vertical_samp_factor: u16,
+    pub rounded_px_w: u16,
+    pub rounded_px_h: u16,
+    pub rounded_px_count: usize,
 }
 
 impl Components {
@@ -104,26 +178,29 @@ impl Components {
             }
         };
 
-        let horizontal_samp = (a[1] >> 4) as usize;
-        let vertical_samp = (a[1] & 0x0f) as usize;
+        let horizontal_samp = match a[1] >> 4 {
+            1 => SampleRatioNum::One,
+            2 => SampleRatioNum::Two,
+            x => {
+                return Err(DecodeErrors::Format(format!(
+                    "Unknown horizontal sample found: {x}, expected either 1 or 2"
+                )))
+            }
+        };
+        let vertical_samp = match a[1] & 0x0f {
+            1 => SampleRatioNum::One,
+            2 => SampleRatioNum::Two,
+            x => {
+                return Err(DecodeErrors::Format(format!(
+                    "Unknown vertical sample found: {x}, expected either 1 or 2"
+                )))
+            }
+        };
         let quant_table_number = a[2];
         // confirm quantization number is between 0 and MAX_COMPONENTS
         if usize::from(quant_table_number) >= MAX_COMPONENTS {
             return Err(DecodeErrors::Format(format!(
                 "Too large quantization number :{quant_table_number}, expected value between 0 and {MAX_COMPONENTS}"
-            )));
-        }
-        // check that upsampling ratios are powers of two
-        // if these fail, it's probably a corrupt image.
-        if !horizontal_samp.is_power_of_two() {
-            return Err(DecodeErrors::Format(format!(
-                "Horizontal sample is not a power of two({horizontal_samp}) cannot decode"
-            )));
-        }
-
-        if !vertical_samp.is_power_of_two() {
-            return Err(DecodeErrors::Format(format!(
-                "Vertical sub-sample is not power of two({vertical_samp}) cannot decode"
             )));
         }
 
@@ -148,7 +225,7 @@ impl Components {
             dc_pred: 0,
             up_sampler: upsample_no_op,
             // set later
-            width_stride: horizontal_samp,
+            width_stride: *horizontal_samp as usize,
             id: a[0],
             needed: true,
             raw_coeff: vec![],
@@ -164,6 +241,7 @@ impl Components {
             vertical_samp_factor: 0,
             rounded_px_w: 0,
             rounded_px_h: 0,
+            rounded_px_count: 0,
         })
     }
     /// Setup space for upsampling
