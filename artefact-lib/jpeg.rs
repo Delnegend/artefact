@@ -60,7 +60,7 @@ pub enum JpegSource {
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Jpeg, String> {
         let buffer = match jpeg_source {
-            JpegSource::File(file) => std::fs::read(file).map_err(|e| e.to_string())?,
+            JpegSource::File(path) => std::fs::read(path).map_err(|e| e.to_string())?,
             JpegSource::Buffer(buffer) => buffer,
         };
 
