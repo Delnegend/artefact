@@ -112,8 +112,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 //
                 // set coeff to be 2 to ensure that we increment two rows
                 // for every mcu processed also
-                mcu_height *= self.max_vertical_samp;
-                mcu_height /= self.max_horizontal_samp;
+                mcu_height *= self.max_vertical_samp as usize;
+                mcu_height /= self.max_horizontal_samp as usize;
                 self.coeff = 2;
             }
 
