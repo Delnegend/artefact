@@ -19,6 +19,7 @@ use zune_core::log::trace;
 use crate::components::{ComponentID, SampleRatios};
 use crate::errors::DecodeErrors;
 use crate::huffman::HuffmanTable;
+use crate::sample_factor::SampleFactor;
 use crate::JpegDecoder;
 
 /// Start of baseline DCT Huffman coding
@@ -198,13 +199,13 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img.max_horizontal_samp = img
         .components
         .iter()
-        .map(|c| c.horizontal_samp)
+        .map(|c| c.horizontal_samp.u16())
         .max()
         .unwrap();
     img.max_vertical_samp = img
         .components
         .iter()
-        .map(|c| c.vertical_samp)
+        .map(|c| c.vertical_samp.u16())
         .max()
         .unwrap();
     img.is_interleaved = img.max_horizontal_samp != 1 || img.max_vertical_samp != 1;
@@ -229,7 +230,7 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img.min_mcu_h = usize::from(img.info.height).div_ceil(img.mcu_height_wtf);
 
     for comp in &mut img.components {
-        comp.w2 = img.min_mcu_w * comp.horizontal_samp * 8;
+        comp.w2 = img.min_mcu_w * comp.horizontal_samp.usize() * 8;
         comp.quant_table = *img.qt_tables[comp.quant_table_number as usize]
             .as_ref()
             .ok_or_else(|| {
@@ -241,8 +242,16 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         // initially stride contains its horizontal sub-sampling
         comp.width_stride *= img.min_mcu_w * 8;
 
-        comp.horizontal_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
-        comp.vertical_samp_factor = img.max_vertical_samp / comp.vertical_samp;
+        comp.horizontal_samp_factor = match img.max_horizontal_samp / comp.horizontal_samp.u16() {
+            1 => SampleFactor::One,
+            2 => SampleFactor::Two,
+            _ => unreachable!(),
+        };
+        comp.vertical_samp_factor = match img.max_vertical_samp / comp.vertical_samp.u16() {
+            1 => SampleFactor::One,
+            2 => SampleFactor::Two,
+            _ => unreachable!(),
+        };
 
         comp.rounded_px_w = rounded_px_w as usize / comp.horizontal_samp_factor;
         comp.rounded_px_h = rounded_px_h as usize / comp.vertical_samp_factor;
@@ -277,14 +286,14 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
             .iter()
             .find(|c| c.component_id == ComponentID::Y)
         {
-            if y_component.horizontal_samp == 2 || y_component.vertical_samp == 2 {
+            if y_component.horizontal_samp.u8() == 2 || y_component.vertical_samp.u8() == 2 {
                 handle_that_annoying_bug = true;
             }
         }
         if handle_that_annoying_bug {
             for comp in &mut img.components {
                 if (comp.component_id != ComponentID::Y)
-                    && (comp.horizontal_samp != 1 || comp.vertical_samp != 1)
+                    && (comp.horizontal_samp.u8() != 1 || comp.vertical_samp.u8() != 1)
                 {
                     comp.fix_an_annoying_bug = 2;
                 }
