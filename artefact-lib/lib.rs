@@ -2,7 +2,7 @@ mod compute;
 mod jpeg;
 mod utils;
 
-use image::ImageBuffer;
+pub use image;
 
 use crate::{compute::compute, jpeg::Jpeg, utils::clamp::clamp};
 
@@ -45,7 +45,7 @@ impl Default for Config {
 pub fn pipeline(
     config: Option<Config>,
     jpeg_source: JpegSource,
-) -> Result<ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
+) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
     let config = config.unwrap_or_default();
     let jpeg = Jpeg::from(jpeg_source)?;
 
