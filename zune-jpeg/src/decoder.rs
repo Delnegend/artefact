@@ -90,9 +90,9 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     /// tables of a component
     pub components: Vec<Components>,
     /// maximum horizontal component of all channels in the image
-    pub max_horizontal_samp: usize,
+    pub max_horizontal_samp: u16,
     // maximum vertical component of all channels in the image
-    pub max_vertical_samp: usize,
+    pub max_vertical_samp: u16,
     /// MCU's width (interleaved scans)
     pub(crate) mcu_width_wtf: usize,
     /// MCU height (interleaved scans)
@@ -197,7 +197,7 @@ where
 
         let mut dct_coefs: [Vec<i16>; MAX_COMPONENTS] = Default::default();
         for (i, comp) in self.components.iter().enumerate() {
-            dct_coefs[i] = vec![0; comp.rounded_px_w * comp.rounded_px_h];
+            dct_coefs[i] = vec![0; comp.rounded_px_count];
         }
 
         if self.is_progressive {
