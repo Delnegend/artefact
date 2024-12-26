@@ -79,8 +79,6 @@ impl Jpeg {
             coefs: {
                 let mut coefs = Vec::with_capacity(img.components.len());
                 for comp in img.components {
-                    let rounded_px_count = comp.rounded_px_w * comp.rounded_px_h;
-
                     let block_w = comp.rounded_px_w as u32 / 8;
                     let block_h = comp.rounded_px_h as u32 / 8;
                     let block_count = block_w * block_h;
@@ -88,7 +86,7 @@ impl Jpeg {
                     let mut coef = Coefficient {
                         rounded_px_w: comp.rounded_px_w as u32,
                         rounded_px_h: comp.rounded_px_h as u32,
-                        rounded_px_count: rounded_px_count as u32,
+                        rounded_px_count: comp.rounded_px_count as u32,
                         block_w,
                         block_h,
                         block_count,
@@ -103,7 +101,7 @@ impl Jpeg {
                             _ => return Err("Invalid vertical sample factor".to_string()),
                         },
                         dct_coefs: comp.dct_coefs,
-                        image_data: vec![0.0; rounded_px_count],
+                        image_data: vec![0.0; comp.rounded_px_count],
                         quant_table: comp
                             .quant_table
                             .iter()
