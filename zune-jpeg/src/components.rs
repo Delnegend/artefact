@@ -36,9 +36,9 @@ pub struct Components {
     /// The type of component that has the metadata below, can be Y,Cb or Cr
     pub component_id: ComponentID,
     /// Sub-sampling ratio of this component in the x-plane
-    pub vertical_samp: SampleRatioNum,
+    pub vertical_samp: SampleFactor,
     /// Sub-sampling ratio of this component in the y-plane
-    pub horizontal_samp: SampleRatioNum,
+    pub horizontal_samp: SampleFactor,
     /// DC huffman table position
     pub dc_huff_table: usize,
     /// AC huffman table position for this element.
@@ -75,8 +75,8 @@ pub struct Components {
     // a very annoying bug
     pub fix_an_annoying_bug: usize,
 
-    pub horizontal_samp_factor: u16,
-    pub vertical_samp_factor: u16,
+    pub horizontal_samp_factor: SampleFactor,
+    pub vertical_samp_factor: SampleFactor,
     pub rounded_px_w: u16,
     pub rounded_px_h: u16,
     pub rounded_px_count: usize,
@@ -106,8 +106,8 @@ impl Components {
         };
 
         let horizontal_samp = match a[1] >> 4 {
-            1 => SampleRatioNum::One,
-            2 => SampleRatioNum::Two,
+            1 => SampleFactor::One,
+            2 => SampleFactor::Two,
             x => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown horizontal sample found: {x}, expected either 1 or 2"
@@ -115,8 +115,8 @@ impl Components {
             }
         };
         let vertical_samp = match a[1] & 0x0f {
-            1 => SampleRatioNum::One,
-            2 => SampleRatioNum::Two,
+            1 => SampleFactor::One,
+            2 => SampleFactor::Two,
             x => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown vertical sample found: {x}, expected either 1 or 2"
@@ -152,7 +152,7 @@ impl Components {
             dc_pred: 0,
             up_sampler: upsample_no_op,
             // set later
-            width_stride: *horizontal_samp as usize,
+            width_stride: horizontal_samp.usize(),
             id: a[0],
             needed: true,
             raw_coeff: vec![],
@@ -164,8 +164,8 @@ impl Components {
             w2: 0,
             sample_ratio: SampleRatios::None,
             fix_an_annoying_bug: 1,
-            horizontal_samp_factor: 0,
-            vertical_samp_factor: 0,
+            horizontal_samp_factor: SampleFactor::One,
+            vertical_samp_factor: SampleFactor::One,
             rounded_px_w: 0,
             rounded_px_h: 0,
             rounded_px_count: 0,
@@ -182,10 +182,10 @@ impl Components {
     /// # Requirements
     ///  - width stride of this element is set for the component.
     pub fn setup_upsample_scanline(&mut self) {
-        self.row = vec![0; self.width_stride * self.vertical_samp];
-        self.row_up = vec![0; self.width_stride * self.vertical_samp];
+        self.row = vec![0; self.width_stride * self.vertical_samp.usize()];
+        self.row_up = vec![0; self.width_stride * self.vertical_samp.usize()];
         self.first_row_upsample_dest =
-            vec![128; self.vertical_samp * self.width_stride * self.sample_ratio.sample()];
+            vec![128; self.vertical_samp.usize() * self.width_stride * self.sample_ratio.sample()];
         self.upsample_dest =
             vec![0; self.width_stride * self.sample_ratio.sample() * self.fix_an_annoying_bug * 8];
     }
