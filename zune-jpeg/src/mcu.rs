@@ -14,7 +14,7 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, trace, warn};
 
 use crate::bitstream::BitStream;
-use crate::components::SampleRatios;
+use crate::components::{SampleRatioNum, SampleRatios};
 use crate::decoder::MAX_COMPONENTS;
 use crate::errors::DecodeErrors;
 use crate::marker::Marker;
@@ -202,6 +202,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         curr_mcu_row: usize,
         dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<bool, DecodeErrors> {
+        let max_lens = dct_coefs.iter().map(|x| x.len()).collect::<Vec<_>>();
+
         for curr_mcu_col in 0..mcu_width {
             // iterate over components
             for (comp_idx, comp) in &mut self.components.iter_mut().enumerate() {
@@ -215,20 +217,52 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // If image is interleaved iterate over scan components,
                 // otherwise if it-s non-interleaved, these routines iterate in
                 // trivial scanline order(Y,Cb,Cr)
-                match comp.sample_ratio {
-                    SampleRatios::HV => {
+                match (comp.horizontal_samp, comp.vertical_samp) {
+                    (SampleRatioNum::One, SampleRatioNum::One) => {
                         let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
+                        let start_idx = (mcu_idx * 64).clamp(0, max_lens[comp_idx]);
+                        let end_idx = ((mcu_idx + 1) * 64).clamp(0, max_lens[comp_idx]);
+
                         stream.decode_mcu_block(
                             &mut self.stream,
                             dc_table,
                             ac_table,
-                            &mut dct_coefs[comp_idx][mcu_idx * 64..(mcu_idx + 1) * 64],
+                            &mut dct_coefs[comp_idx][start_idx..end_idx],
                             &mut comp.dc_pred,
                         )?;
                     }
-                    SampleRatios::V => todo!(),
-                    SampleRatios::H => todo!(),
-                    SampleRatios::None => {
+                    (SampleRatioNum::One, SampleRatioNum::Two) => {
+                        // TODO: need sample image to test this
+                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
+                        for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
+                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
+                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
+
+                            stream.decode_mcu_block(
+                                &mut self.stream,
+                                dc_table,
+                                ac_table,
+                                &mut dct_coefs[comp_idx][start_idx..end_idx],
+                                &mut comp.dc_pred,
+                            )?;
+                        }
+                    }
+                    (SampleRatioNum::Two, SampleRatioNum::One) => {
+                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
+                        for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
+                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
+                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
+
+                            stream.decode_mcu_block(
+                                &mut self.stream,
+                                dc_table,
+                                ac_table,
+                                &mut dct_coefs[comp_idx][start_idx..end_idx],
+                                &mut comp.dc_pred,
+                            )?;
+                        }
+                    }
+                    (SampleRatioNum::Two, SampleRatioNum::Two) => {
                         let mcu_idx = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
                         for idx in [
                             2 * mcu_idx,
@@ -236,11 +270,14 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             2 * mcu_idx + mcu_width * 2,
                             2 * mcu_idx + mcu_width * 2 + 1,
                         ] {
+                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
+                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
+
                             stream.decode_mcu_block(
                                 &mut self.stream,
                                 dc_table,
                                 ac_table,
-                                &mut dct_coefs[comp_idx][idx * 64..(idx + 1) * 64],
+                                &mut dct_coefs[comp_idx][start_idx..end_idx],
                                 &mut comp.dc_pred,
                             )?;
                         }
