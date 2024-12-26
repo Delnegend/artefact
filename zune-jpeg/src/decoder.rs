@@ -90,9 +90,9 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     /// tables of a component
     pub components: Vec<Components>,
     /// maximum horizontal component of all channels in the image
-    pub(crate) max_horizontal_samp: usize,
+    pub max_horizontal_samp: usize,
     // maximum vertical component of all channels in the image
-    pub(crate) max_vertical_samp: usize,
+    pub max_vertical_samp: usize,
     /// MCU's width (interleaved scans)
     pub(crate) mcu_width_wtf: usize,
     /// MCU height (interleaved scans)
