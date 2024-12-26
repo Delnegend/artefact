@@ -1,3 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["artefact-cli", "artefact-lib", "artefact-wasm", "zune-jpeg"]
+
+[profile.release]
+lto = true
+codegen-units = 1
