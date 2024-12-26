@@ -44,9 +44,9 @@ impl Aux {
         for y in 0..max_rounded_px_h as usize {
             for x in 0..max_rounded_px_w as usize {
                 let cy =
-                    (y / *coef.vertical_samp_factor as usize).min(coef.rounded_px_h as usize - 1);
+                    (y / coef.vertical_samp_factor.usize()).min(coef.rounded_px_h as usize - 1);
                 let cx =
-                    (x / *coef.horizontal_samp_factor as usize).min(coef.rounded_px_w as usize - 1);
+                    (x / coef.horizontal_samp_factor.usize()).min(coef.rounded_px_w as usize - 1);
 
                 let fdata_idx = y * max_rounded_px_w as usize + x;
                 let img_data_idx = cy * coef.rounded_px_w as usize + cx;

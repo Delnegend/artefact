@@ -45,10 +45,10 @@ pub fn compute_step_prob(
                     let cy = block_y * 8 + in_y;
 
                     // Apply sampling factors (upsampling)
-                    for sy in 0..*coef.vertical_samp_factor {
-                        for sx in 0..*coef.horizontal_samp_factor {
-                            let y = cy * *coef.vertical_samp_factor + sy;
-                            let x = cx * *coef.horizontal_samp_factor + sx;
+                    for sy in 0..coef.vertical_samp_factor.u32() {
+                        for sx in 0..coef.horizontal_samp_factor.u32() {
+                            let y = cy * coef.vertical_samp_factor.u32() + sy;
+                            let x = cx * coef.horizontal_samp_factor.u32() + sx;
 
                             // Bounds checking
                             assert!(y < max_rounded_px_h);

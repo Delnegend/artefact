@@ -21,23 +21,23 @@ pub fn compute_projection(
         for cy in 0..coef.rounded_px_h {
             for cx in 0..coef.rounded_px_w {
                 let mut mean = 0.0;
-                for sy in 0..*coef.vertical_samp_factor {
-                    for sx in 0..*coef.horizontal_samp_factor {
-                        let y = cy * *coef.vertical_samp_factor + sy;
-                        let x = cx * *coef.horizontal_samp_factor + sx;
+                for sy in 0..coef.vertical_samp_factor.u32() {
+                    for sx in 0..coef.horizontal_samp_factor.u32() {
+                        let y = cy * coef.vertical_samp_factor.u32() + sy;
+                        let x = cx * coef.horizontal_samp_factor.u32() + sx;
                         assert!(y < max_rounded_px_h && x < max_rounded_px_w);
                         mean += aux.fdata[(y * max_rounded_px_w + x) as usize];
                     }
                 }
-                mean /= (*coef.horizontal_samp_factor * *coef.vertical_samp_factor) as f32;
+                mean /= (coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8()) as f32;
 
                 assert!(cx < coef.rounded_px_w && cy < coef.rounded_px_h);
                 aux.pixel_diff.y[(cy * coef.rounded_px_w + cx) as usize] = mean;
 
-                for sy in 0..*coef.vertical_samp_factor {
-                    for sx in 0..*coef.horizontal_samp_factor {
-                        let y = cy * *coef.vertical_samp_factor + sy;
-                        let x = cx * *coef.horizontal_samp_factor + sx;
+                for sy in 0..coef.vertical_samp_factor.u32() {
+                    for sx in 0..coef.horizontal_samp_factor.u32() {
+                        let y = cy * coef.vertical_samp_factor.u32() + sy;
+                        let x = cx * coef.horizontal_samp_factor.u32() + sx;
 
                         assert!(y < max_rounded_px_h && x < max_rounded_px_w);
                         aux.fdata[(y * max_rounded_px_w + x) as usize] -= mean;
@@ -108,10 +108,10 @@ pub fn compute_projection(
         for cy in 0..coef.rounded_px_h {
             for cx in 0..coef.rounded_px_w {
                 let mean = aux.pixel_diff.y[(cy * coef.rounded_px_w + cx) as usize];
-                for sy in 0..*coef.vertical_samp_factor {
-                    for sx in 0..*coef.horizontal_samp_factor {
-                        let y = cy * *coef.vertical_samp_factor + sy;
-                        let x = cx * *coef.horizontal_samp_factor + sx;
+                for sy in 0..coef.vertical_samp_factor.u32() {
+                    for sx in 0..coef.horizontal_samp_factor.u32() {
+                        let y = cy * coef.vertical_samp_factor.u32() + sy;
+                        let x = cx * coef.horizontal_samp_factor.u32() + sx;
                         aux.fdata[(y * max_rounded_px_w + x) as usize] += mean;
                     }
                 }
