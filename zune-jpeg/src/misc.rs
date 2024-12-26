@@ -223,13 +223,13 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
 
     for comp in &mut img.components {
         // Extract quantization tables from the arrays into components
-        let x = (usize::from(real_px_w) * comp.horizontal_samp).div_ceil(img.max_horizontal_samp);
-        let y = (usize::from(real_px_h) * comp.horizontal_samp + img.max_horizontal_samp - 1)
-            / img.max_vertical_samp;
-        comp.real_px_w = x;
-        comp.w2 = img.min_mcu_w * comp.horizontal_samp * 8;
+        comp.real_px_w =
+            (real_px_w as usize * comp.horizontal_samp).div_ceil(img.max_horizontal_samp);
         // probably not needed. :)
-        comp.real_px_h = y;
+        comp.real_px_h = (real_px_h as usize * comp.horizontal_samp + img.max_horizontal_samp - 1)
+            / img.max_vertical_samp;
+
+        comp.w2 = img.min_mcu_w * comp.horizontal_samp * 8;
         comp.quant_table = *img.qt_tables[comp.quant_table_number as usize]
             .as_ref()
             .ok_or_else(|| {
@@ -241,11 +241,11 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         // initially stride contains its horizontal sub-sampling
         comp.width_stride *= img.min_mcu_w * 8;
 
-        comp.h_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
-        comp.v_samp_factor = img.max_vertical_samp / comp.vertical_samp;
+        comp.horizontal_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
+        comp.vertical_samp_factor = img.max_vertical_samp / comp.vertical_samp;
 
-        comp.rounded_px_w = rounded_px_w as usize * comp.h_samp_factor;
-        comp.rounded_px_h = rounded_px_h as usize * comp.v_samp_factor;
+        comp.rounded_px_w = rounded_px_w as usize / comp.horizontal_samp_factor;
+        comp.rounded_px_h = rounded_px_h as usize / comp.vertical_samp_factor;
 
         comp.dct_coefs = vec![0; comp.rounded_px_w * comp.rounded_px_h];
     }

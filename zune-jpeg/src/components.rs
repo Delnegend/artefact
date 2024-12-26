@@ -80,8 +80,8 @@ pub struct Components {
     // a very annoying bug
     pub fix_an_annoying_bug: usize,
 
-    pub h_samp_factor: usize,
-    pub v_samp_factor: usize,
+    pub horizontal_samp_factor: usize,
+    pub vertical_samp_factor: usize,
     pub rounded_px_w: usize,
     pub rounded_px_h: usize,
 }
@@ -167,8 +167,8 @@ impl Components {
             w2: 0,
             sample_ratio: SampleRatios::None,
             fix_an_annoying_bug: 1,
-            h_samp_factor: 0,
-            v_samp_factor: 0,
+            horizontal_samp_factor: 0,
+            vertical_samp_factor: 0,
             rounded_px_w: 0,
             rounded_px_h: 0,
         })
