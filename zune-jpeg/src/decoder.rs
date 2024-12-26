@@ -713,8 +713,8 @@ where
         }
 
         for comp in &mut self.components {
-            let hs = self.max_horizontal_samp / comp.horizontal_samp;
-            let vs = self.max_vertical_samp / comp.vertical_samp;
+            let hs = self.max_horizontal_samp / comp.horizontal_samp.u16();
+            let vs = self.max_vertical_samp / comp.vertical_samp.u16();
 
             let samp_factor = match (hs, vs) {
                 (1, 1) => {
