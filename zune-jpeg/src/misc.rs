@@ -221,8 +221,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     assert!(rounded_px_h % 8 == 0);
 
     // compute interleaved image info
-    img.mcu_width_wtf = img.max_horizontal_samp * 8;
-    img.mcu_height_wtf = img.max_vertical_samp * 8;
+    img.mcu_width_wtf = img.max_horizontal_samp as usize * 8;
+    img.mcu_height_wtf = img.max_vertical_samp as usize * 8;
 
     // Number of MCU's per width
     img.min_mcu_w = usize::from(img.info.width).div_ceil(img.mcu_width_wtf);
