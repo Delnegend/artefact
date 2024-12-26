@@ -18,11 +18,7 @@ use crate::components::SampleRatios;
 use crate::decoder::MAX_COMPONENTS;
 use crate::errors::DecodeErrors;
 use crate::marker::Marker;
-use crate::misc::setup_component_params;
 use crate::JpegDecoder;
-
-/// The size of a DC block for a MCU.
-pub const DCT_BLOCK: usize = 64;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
     /// Check for existence of DC and AC Huffman Tables
@@ -84,8 +80,6 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         &mut self,
         dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<(), DecodeErrors> {
-        setup_component_params(self)?;
-
         // check dc and AC tables
         self.check_tables()?;
 
@@ -96,8 +90,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // set upsampling functions
                 self.set_upsampling()?;
 
-                mcu_width = self.mcu_x;
-                mcu_height = self.mcu_y;
+                mcu_width = self.min_mcu_w;
+                mcu_height = self.min_mcu_h;
             } else {
                 // For non-interleaved images( (1*1) subsampling)
                 // number of MCU's are the widths (+7 to account for paddings) divided bu 8.
@@ -118,8 +112,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 //
                 // set coeff to be 2 to ensure that we increment two rows
                 // for every mcu processed also
-                mcu_height *= self.v_max;
-                mcu_height /= self.h_max;
+                mcu_height *= self.max_vertical_samp;
+                mcu_height /= self.max_horizontal_samp;
                 self.coeff = 2;
             }
 
@@ -145,7 +139,6 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         };
 
         let mut stream = BitStream::new();
-        let mut tmp = [0_i32; DCT_BLOCK];
 
         let comp_len = self.components.len();
 
@@ -164,7 +157,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // allocate enough space to hold a whole MCU width
                 // this means we should take into account sampling ratios
                 // `*8` is because each MCU spans 8 widths.
-                let len = comp.width_stride * comp.vertical_sample * 8;
+                let len = comp.width_stride * comp.vertical_samp * 8;
 
                 comp.needed = true;
                 comp.raw_coeff = vec![0; len];
@@ -189,7 +182,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             }
             // decode a whole MCU width,
             // this takes into account interleaved components.
-            if self.decode_mcu_width(mcu_width, &mut tmp, &mut stream, dct_coefs)? {
+            if self.decode_mcu_width(mcu_width, &mut stream, curr_mcu_row, dct_coefs)? {
                 warn!("Got terminate signal, will not process further");
                 return Ok(());
             };
@@ -205,38 +198,56 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     fn decode_mcu_width(
         &mut self,
         mcu_width: usize,
-        tmp: &mut [i32; 64],
         stream: &mut BitStream,
+        curr_mcu_row: usize,
         dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<bool, DecodeErrors> {
         for curr_mcu_col in 0..mcu_width {
             // iterate over components
-            for (i, component) in &mut self.components.iter_mut().enumerate() {
+            for (comp_idx, comp) in &mut self.components.iter_mut().enumerate() {
+                let dc_table = self.dc_huffman_tables[comp.dc_huff_table % MAX_COMPONENTS]
+                    .as_ref()
+                    .unwrap();
+                let ac_table = self.ac_huffman_tables[comp.ac_huff_table % MAX_COMPONENTS]
+                    .as_ref()
+                    .unwrap();
+
                 // If image is interleaved iterate over scan components,
                 // otherwise if it-s non-interleaved, these routines iterate in
                 // trivial scanline order(Y,Cb,Cr)
-                for v_samp in 0..component.vertical_sample {
-                    for h_samp in 0..component.horizontal_sample {
-                        // Fill the array with zeroes, decode_mcu_block expects
-                        // a zero based array.
-                        tmp.fill(0);
-
+                match comp.sample_ratio {
+                    SampleRatios::HV => {
+                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
                         stream.decode_mcu_block(
                             &mut self.stream,
-                            self.dc_huffman_tables[component.dc_huff_table % MAX_COMPONENTS]
-                                .as_ref()
-                                .unwrap(),
-                            self.ac_huffman_tables[component.ac_huff_table % MAX_COMPONENTS]
-                                .as_ref()
-                                .unwrap(),
-                            &component.quantization_table,
-                            tmp,
-                            &mut dct_coefs[i],
-                            &mut component.dc_pred,
+                            dc_table,
+                            ac_table,
+                            &mut dct_coefs[comp_idx][mcu_idx * 64..(mcu_idx + 1) * 64],
+                            &mut comp.dc_pred,
                         )?;
+                    }
+                    SampleRatios::V => todo!(),
+                    SampleRatios::H => todo!(),
+                    SampleRatios::None => {
+                        let mcu_idx = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
+                        for idx in [
+                            2 * mcu_idx,
+                            2 * mcu_idx + 1,
+                            2 * mcu_idx + mcu_width * 2,
+                            2 * mcu_idx + mcu_width * 2 + 1,
+                        ] {
+                            stream.decode_mcu_block(
+                                &mut self.stream,
+                                dc_table,
+                                ac_table,
+                                &mut dct_coefs[comp_idx][idx * 64..(idx + 1) * 64],
+                                &mut comp.dc_pred,
+                            )?;
+                        }
                     }
                 }
             }
+
             self.todo = self.todo.saturating_sub(1);
             // After all interleaved components, that's an MCU
             // handle stream markers

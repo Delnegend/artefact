@@ -26,7 +26,7 @@ use crate::headers::{
 };
 use crate::huffman::HuffmanTable;
 use crate::marker::Marker;
-use crate::misc::SOFMarkers;
+use crate::misc::{setup_component_params, SOFMarkers};
 use crate::upsampler::{
     choose_horizontal_samp_function, choose_hv_samp_function, choose_v_samp_function,
     upsample_no_op,
@@ -90,17 +90,17 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     /// tables of a component
     pub components: Vec<Components>,
     /// maximum horizontal component of all channels in the image
-    pub(crate) h_max: usize,
+    pub(crate) max_horizontal_samp: usize,
     // maximum vertical component of all channels in the image
-    pub(crate) v_max: usize,
+    pub(crate) max_vertical_samp: usize,
     /// MCU's width (interleaved scans)
-    pub(crate) mcu_width: usize,
+    pub(crate) mcu_width_wtf: usize,
     /// MCU height (interleaved scans)
-    pub(crate) mcu_height: usize,
+    pub(crate) mcu_height_wtf: usize,
     /// Number of MCU's in the x plane
-    pub(crate) mcu_x: usize,
+    pub(crate) min_mcu_w: usize,
     /// Number of MCU's in the y plane
-    pub(crate) mcu_y: usize,
+    pub(crate) min_mcu_h: usize,
     /// Is the image interleaved?
     pub(crate) is_interleaved: bool,
     pub(crate) sub_sample_ratio: SampleRatios,
@@ -155,12 +155,12 @@ where
             ac_huffman_tables: [None, None, None, None],
             components: vec![],
             // Interleaved information
-            h_max: 1,
-            v_max: 1,
-            mcu_height: 0,
-            mcu_width: 0,
-            mcu_x: 0,
-            mcu_y: 0,
+            max_horizontal_samp: 1,
+            max_vertical_samp: 1,
+            mcu_height_wtf: 0,
+            mcu_width_wtf: 0,
+            min_mcu_w: 0,
+            min_mcu_h: 0,
             is_interleaved: false,
             sub_sample_ratio: SampleRatios::None,
             is_progressive: false,
@@ -193,12 +193,12 @@ where
     /// See DecodeErrors for an explanation
     pub fn decode(&mut self) -> Result<(), DecodeErrors> {
         self.decode_headers_internal()?;
+        setup_component_params(self)?;
 
-        // init empty dct coefs
         let mut dct_coefs: [Vec<i16>; MAX_COMPONENTS] = Default::default();
-
-        // decode the image
-        // self.decode_into(&mut out, &mut dct_coefs)?;
+        for (i, comp) in self.components.iter().enumerate() {
+            dct_coefs[i] = vec![0; comp.rounded_px_w * comp.rounded_px_h];
+        }
 
         if self.is_progressive {
             self.decode_mcu_ycbcr_progressive(&mut dct_coefs)?;
@@ -206,11 +206,8 @@ where
             self.decode_mcu_ycbcr_baseline(&mut dct_coefs)?;
         }
 
-        // re-assign the dct coefs into the components
-        for (i, dct_coef) in dct_coefs.into_iter().enumerate() {
-            if i < self.components.len() {
-                self.components[i].dct_coefs = dct_coef;
-            }
+        for (i, comp) in self.components.iter_mut().enumerate() {
+            comp.dct_coefs = std::mem::take(&mut dct_coefs[i]);
         }
 
         Ok(())
@@ -692,10 +689,10 @@ where
     pub(crate) fn set_upsampling(&mut self) -> Result<(), DecodeErrors> {
         // no sampling, return early
         // check if horizontal max ==1
-        if self.h_max == self.v_max && self.h_max == 1 {
+        if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp == 1 {
             return Ok(());
         }
-        match (self.h_max, self.v_max) {
+        match (self.max_horizontal_samp, self.max_vertical_samp) {
             (1, 1) => {
                 self.sub_sample_ratio = SampleRatios::None;
             }
@@ -716,8 +713,8 @@ where
         }
 
         for comp in &mut self.components {
-            let hs = self.h_max / comp.horizontal_sample;
-            let vs = self.v_max / comp.vertical_sample;
+            let hs = self.max_horizontal_samp / comp.horizontal_samp;
+            let vs = self.max_vertical_samp / comp.vertical_samp;
 
             let samp_factor = match (hs, vs) {
                 (1, 1) => {

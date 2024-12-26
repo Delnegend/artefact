@@ -56,7 +56,6 @@ use zune_core::bytestream::{ZByteReaderTrait, ZReader};
 use crate::errors::DecodeErrors;
 use crate::huffman::{HuffmanTable, HUFF_LOOKAHEAD};
 use crate::marker::Marker;
-use crate::mcu::DCT_BLOCK;
 use crate::misc::UN_ZIGZAG;
 
 macro_rules! decode_huff {
@@ -329,9 +328,7 @@ impl BitStream {
         reader: &mut ZReader<T>,
         dc_table: &HuffmanTable,
         ac_table: &HuffmanTable,
-        qt_table: &[i32; DCT_BLOCK],
-        block: &mut [i32; 64],
-        complete_coef: &mut Vec<i16>,
+        dct_coefs: &mut [i16],
         dc_prediction: &mut i32,
     ) -> Result<(), DecodeErrors>
     where
@@ -346,15 +343,7 @@ impl BitStream {
 
         // decode DC, dc prediction will contain the value
         self.decode_dc(reader, dc_table, dc_prediction)?;
-        complete_coef.push(*dc_prediction as i16);
-
-        // set dc to be the dc prediction.
-        block[0] = *dc_prediction * qt_table[0];
-
-        // Fill block with zeros initially
-        for _ in 1..64 {
-            complete_coef.push(0);
-        }
+        dct_coefs[0] = *dc_prediction as i16;
 
         while pos < 64 {
             self.refill(reader)?;
@@ -366,11 +355,9 @@ impl BitStream {
                 //  FAST AC path
                 pos += ((fast_ac >> 4) & 15) as usize; // run
 
-                complete_coef[pos] = fast_ac >> 8;
-
                 let t_pos = UN_ZIGZAG[min(pos, 63)] & 63;
+                dct_coefs[t_pos] = fast_ac >> 8;
 
-                block[t_pos] = i32::from(fast_ac >> 8) * (qt_table[t_pos]); // Value
                 self.drop_bits((fast_ac & 15) as u8);
                 pos += 1;
             } else {
@@ -385,9 +372,7 @@ impl BitStream {
                     symbol = huff_extend(r, symbol);
                     let t_pos = UN_ZIGZAG[pos & 63] & 63;
 
-                    complete_coef[pos] = symbol as i16;
-
-                    block[t_pos] = symbol * qt_table[t_pos];
+                    dct_coefs[t_pos] = symbol as i16;
 
                     pos += 1;
                 } else if r != 15 {

@@ -10,7 +10,6 @@
 #![allow(dead_code)]
 
 use alloc::format;
-use core::cmp::max;
 use core::fmt;
 
 use zune_core::bytestream::ZByteReaderTrait;
@@ -180,8 +179,11 @@ impl fmt::Debug for SOFMarkers {
 pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img: &mut JpegDecoder<T>,
 ) -> Result<(), DecodeErrors> {
-    let img_width = img.width();
-    let img_height = img.height();
+    let real_px_w = img.width();
+    let real_px_h = img.height();
+
+    let rounded_px_w = (real_px_w + 7) & !7;
+    let rounded_px_h = (real_px_h + 7) & !7;
 
     // in case of adobe app14 being present, zero may indicate
     // either CMYK if components are 4 or RGB if components are 3,
@@ -196,44 +198,61 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         img.input_colorspace = ColorSpace::RGB;
     }
 
-    for component in &mut img.components {
-        // compute interleaved image info
-        // h_max contains the maximum horizontal component
-        img.h_max = max(img.h_max, component.horizontal_sample);
-        // v_max contains the maximum vertical component
-        img.v_max = max(img.v_max, component.vertical_sample);
-        img.mcu_width = img.h_max * 8;
-        img.mcu_height = img.v_max * 8;
-        // Number of MCU's per width
-        img.mcu_x = usize::from(img.info.width).div_ceil(img.mcu_width);
-        // Number of MCU's per height
-        img.mcu_y = usize::from(img.info.height).div_ceil(img.mcu_height);
+    img.max_horizontal_samp = img
+        .components
+        .iter()
+        .map(|c| c.horizontal_samp)
+        .max()
+        .unwrap();
+    img.max_vertical_samp = img
+        .components
+        .iter()
+        .map(|c| c.vertical_samp)
+        .max()
+        .unwrap();
+    img.is_interleaved = img.max_horizontal_samp != 1 || img.max_vertical_samp != 1;
 
-        if img.h_max != 1 || img.v_max != 1 {
-            // interleaved images have horizontal and vertical sampling factors
-            // not equal to 1.
-            img.is_interleaved = true;
-        }
+    // compute interleaved image info
+    img.mcu_width_wtf = img.max_horizontal_samp * 8;
+    img.mcu_height_wtf = img.max_vertical_samp * 8;
+
+    // Number of MCU's per width
+    img.min_mcu_w = usize::from(img.info.width).div_ceil(img.mcu_width_wtf);
+    // Number of MCU's per height
+    img.min_mcu_h = usize::from(img.info.height).div_ceil(img.mcu_height_wtf);
+
+    for comp in &mut img.components {
         // Extract quantization tables from the arrays into components
-        let qt_table = *img.qt_tables[component.quantization_table_number as usize]
+        let x = (usize::from(real_px_w) * comp.horizontal_samp).div_ceil(img.max_horizontal_samp);
+        let y = (usize::from(real_px_h) * comp.horizontal_samp + img.max_horizontal_samp - 1)
+            / img.max_vertical_samp;
+        comp.real_px_w = x;
+        comp.w2 = img.min_mcu_w * comp.horizontal_samp * 8;
+        // probably not needed. :)
+        comp.real_px_h = y;
+        comp.quant_table = *img.qt_tables[comp.quant_table_number as usize]
             .as_ref()
             .ok_or_else(|| {
                 DecodeErrors::DqtError(format!(
                     "No quantization table for component {:?}",
-                    component.component_id
+                    comp.component_id
                 ))
             })?;
-
-        let x = (usize::from(img_width) * component.horizontal_sample).div_ceil(img.h_max);
-        let y = (usize::from(img_height) * component.horizontal_sample + img.h_max - 1) / img.v_max;
-        component.x = x;
-        component.w2 = img.mcu_x * component.horizontal_sample * 8;
-        // probably not needed. :)
-        component.y = y;
-        component.quantization_table = qt_table;
         // initially stride contains its horizontal sub-sampling
-        component.width_stride *= img.mcu_x * 8;
+        comp.width_stride *= img.min_mcu_w * 8;
+
+        comp.h_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
+        comp.v_samp_factor = img.max_vertical_samp / comp.vertical_samp;
+
+        comp.rounded_px_w = rounded_px_w as usize * comp.h_samp_factor;
+        comp.rounded_px_h = rounded_px_h as usize * comp.v_samp_factor;
+
+        comp.dct_coefs = vec![0; comp.rounded_px_w * comp.rounded_px_h];
     }
+
+    // println!("h_max: {}, v_max: {}, mcu_width: {}, mcu_height: {}, mcu_x: {}, mcu_y: {}, is_interleaved: {}",
+    //     img.max_horizontal_samp, img.max_vertical_samp, img.mcu_width, img.mcu_height, img.mcu_x, img.mcu_y, img.is_interleaved);
+
     {
         // Sampling factors are one thing that suck
         // this fixes a specific problem with images like
@@ -258,14 +277,14 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
             .iter()
             .find(|c| c.component_id == ComponentID::Y)
         {
-            if y_component.horizontal_sample == 2 || y_component.vertical_sample == 2 {
+            if y_component.horizontal_samp == 2 || y_component.vertical_samp == 2 {
                 handle_that_annoying_bug = true;
             }
         }
         if handle_that_annoying_bug {
             for comp in &mut img.components {
                 if (comp.component_id != ComponentID::Y)
-                    && (comp.horizontal_sample != 1 || comp.vertical_sample != 1)
+                    && (comp.horizontal_samp != 1 || comp.vertical_samp != 1)
                 {
                     comp.fix_an_annoying_bug = 2;
                 }
