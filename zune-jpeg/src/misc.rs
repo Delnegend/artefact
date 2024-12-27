@@ -199,19 +199,19 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img.max_horizontal_samp = img
         .components
         .iter()
-        .map(|c| c.horizontal_samp.u16())
+        .map(|c| c.horizontal_samp)
         .max()
         .unwrap();
     img.max_vertical_samp = img
         .components
         .iter()
-        .map(|c| c.vertical_samp.u16())
+        .map(|c| c.vertical_samp)
         .max()
         .unwrap();
-    img.is_interleaved = img.max_horizontal_samp != 1 || img.max_vertical_samp != 1;
+    img.is_interleaved = img.max_horizontal_samp != SampleFactor::One || img.max_vertical_samp != SampleFactor::One;
 
-    let nearest_multiple_w = 8 * img.max_horizontal_samp - 1;
-    let nearest_multiple_h = 8 * img.max_vertical_samp - 1;
+    let nearest_multiple_w = 8 * img.max_horizontal_samp.u16() - 1;
+    let nearest_multiple_h = 8 * img.max_vertical_samp.u16() - 1;
 
     // round to the nearest multiple of 8 or 16
     let rounded_px_w = (real_px_w + nearest_multiple_w) & !nearest_multiple_w;
@@ -221,8 +221,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     assert!(rounded_px_h % 8 == 0);
 
     // compute interleaved image info
-    img.mcu_width_wtf = img.max_horizontal_samp as usize * 8;
-    img.mcu_height_wtf = img.max_vertical_samp as usize * 8;
+    img.mcu_width_wtf = img.max_horizontal_samp.usize() * 8;
+    img.mcu_height_wtf = img.max_vertical_samp.usize() * 8;
 
     // Number of MCU's per width
     img.min_mcu_w = usize::from(img.info.width).div_ceil(img.mcu_width_wtf);
@@ -242,16 +242,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         // initially stride contains its horizontal sub-sampling
         comp.width_stride *= img.min_mcu_w * 8;
 
-        comp.horizontal_samp_factor = match img.max_horizontal_samp / comp.horizontal_samp.u16() {
-            1 => SampleFactor::One,
-            2 => SampleFactor::Two,
-            _ => unreachable!(),
-        };
-        comp.vertical_samp_factor = match img.max_vertical_samp / comp.vertical_samp.u16() {
-            1 => SampleFactor::One,
-            2 => SampleFactor::Two,
-            _ => unreachable!(),
-        };
+        comp.horizontal_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
+        comp.vertical_samp_factor = img.max_vertical_samp / comp.vertical_samp;
 
         comp.rounded_px_w = rounded_px_w / comp.horizontal_samp_factor.u16();
         comp.rounded_px_h = rounded_px_h / comp.vertical_samp_factor.u16();
