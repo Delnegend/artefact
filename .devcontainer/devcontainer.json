@@ -23,5 +23,9 @@
 			"type": "volume"
 		}
 	],
+	"runArgs": [
+		"--cap-add",
+		"PERFMON"
+	],
 	"postCreateCommand": "zsh .devcontainer/postinstall.sh"
 }
