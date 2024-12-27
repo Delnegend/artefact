@@ -2,7 +2,7 @@ FROM debian:12
 
 RUN apt-get update && apt-get install -y \
     curl git zsh xz-utils \
-    libomp-dev libjpeg-dev libpng-dev clang make cmake sudo nasm && \
+    clang sudo nasm linux-perf && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1000 jpeg2png && \
