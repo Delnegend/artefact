@@ -17,3 +17,5 @@ fi
 # configure cargo to use mold
 rm -f /usr/local/cargo/config.toml
 printf "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/cargo/mold-$MOLD_VERSION-x86_64-linux/bin/mold\"]" > /usr/local/cargo/config.toml
+
+cargo install flamegraph
