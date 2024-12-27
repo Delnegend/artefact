@@ -10,9 +10,7 @@ ooura/
 *.o
 *.png
 *.jpg
-icon*
-Makefile
-Changelog.md
-Benches.md
+perf.*
+*.svg
 
 jpeg2png
