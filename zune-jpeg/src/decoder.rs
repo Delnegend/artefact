@@ -27,6 +27,7 @@ use crate::headers::{
 use crate::huffman::HuffmanTable;
 use crate::marker::Marker;
 use crate::misc::{setup_component_params, SOFMarkers};
+use crate::sample_factor::SampleFactor;
 use crate::upsampler::{
     choose_horizontal_samp_function, choose_hv_samp_function, choose_v_samp_function,
     upsample_no_op,
@@ -90,9 +91,9 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     /// tables of a component
     pub components: Vec<Components>,
     /// maximum horizontal component of all channels in the image
-    pub max_horizontal_samp: u16,
+    pub max_horizontal_samp: SampleFactor,
     // maximum vertical component of all channels in the image
-    pub max_vertical_samp: u16,
+    pub max_vertical_samp: SampleFactor,
     /// MCU's width (interleaved scans)
     pub(crate) mcu_width_wtf: usize,
     /// MCU height (interleaved scans)
@@ -155,8 +156,8 @@ where
             ac_huffman_tables: [None, None, None, None],
             components: vec![],
             // Interleaved information
-            max_horizontal_samp: 1,
-            max_vertical_samp: 1,
+            max_horizontal_samp: SampleFactor::One,
+            max_vertical_samp: SampleFactor::One,
             mcu_height_wtf: 0,
             mcu_width_wtf: 0,
             min_mcu_w: 0,
@@ -689,54 +690,44 @@ where
     pub(crate) fn set_upsampling(&mut self) -> Result<(), DecodeErrors> {
         // no sampling, return early
         // check if horizontal max ==1
-        if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp == 1 {
+        if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp.u8() == 1 {
             return Ok(());
         }
         match (self.max_horizontal_samp, self.max_vertical_samp) {
-            (1, 1) => {
+            (SampleFactor::One, SampleFactor::One) => {
                 self.sub_sample_ratio = SampleRatios::None;
             }
-            (1, 2) => {
+            (SampleFactor::One, SampleFactor::Two) => {
                 self.sub_sample_ratio = SampleRatios::V;
             }
-            (2, 1) => {
+            (SampleFactor::Two, SampleFactor::One) => {
                 self.sub_sample_ratio = SampleRatios::H;
             }
-            (2, 2) => {
+            (SampleFactor::Two, SampleFactor::Two) => {
                 self.sub_sample_ratio = SampleRatios::HV;
-            }
-            _ => {
-                return Err(DecodeErrors::Format(
-                    "Unknown down-sampling method, cannot continue".to_string(),
-                ))
             }
         }
 
         for comp in &mut self.components {
-            let hs = self.max_horizontal_samp / comp.horizontal_samp.u16();
-            let vs = self.max_vertical_samp / comp.vertical_samp.u16();
+            let hs = self.max_horizontal_samp / comp.horizontal_samp;
+            let vs = self.max_vertical_samp / comp.vertical_samp;
 
             let samp_factor = match (hs, vs) {
-                (1, 1) => {
+                (SampleFactor::One, SampleFactor::One) => {
                     comp.sample_ratio = SampleRatios::None;
                     upsample_no_op
                 }
-                (2, 1) => {
+                (SampleFactor::Two, SampleFactor::One) => {
                     comp.sample_ratio = SampleRatios::H;
                     choose_horizontal_samp_function(self.options.use_unsafe())
                 }
-                (1, 2) => {
+                (SampleFactor::One, SampleFactor::Two) => {
                     comp.sample_ratio = SampleRatios::V;
                     choose_v_samp_function(self.options.use_unsafe())
                 }
-                (2, 2) => {
+                (SampleFactor::Two, SampleFactor::Two) => {
                     comp.sample_ratio = SampleRatios::HV;
                     choose_hv_samp_function(self.options.use_unsafe())
-                }
-                _ => {
-                    return Err(DecodeErrors::Format(
-                        "Unknown down-sampling method, cannot continue".to_string(),
-                    ))
                 }
             };
             comp.setup_upsample_scanline();
