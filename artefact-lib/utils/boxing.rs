@@ -1,3 +1,5 @@
+use wide::f32x8;
+
 /// Convert from 8x8 block to 64x1 block
 pub fn unboxing(
     input: &[f32],
@@ -16,12 +18,11 @@ pub fn unboxing(
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                for in_x in 0..8 {
-                    output[((block_y * 8 + in_y) * rounded_px_w + (block_x * 8 + in_x)) as usize] =
-                        input[index];
+                let result = f32x8::from(&input[index..index + 8]).to_array();
 
-                    index += 1;
-                }
+                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
+                output[row_start..row_start + 8].copy_from_slice(&result);
+                index += 8;
             }
         }
     }
@@ -45,12 +46,10 @@ pub fn boxing(
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                for in_x in 0..8 {
-                    output[index] = input
-                        [((block_y * 8 + in_y) * rounded_px_w + (block_x * 8 + in_x)) as usize];
-
-                    index += 1;
-                }
+                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
+                let result = f32x8::from(&input[row_start..row_start + 8]).to_array();
+                output[index..index + 8].copy_from_slice(&result);
+                index += 8;
             }
         }
     }
