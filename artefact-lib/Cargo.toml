@@ -7,7 +7,17 @@ edition = "2021"
 rayon = "1.10.0"
 image = { version = "0.25.5", default-features = false, features = ["png"] }
 zune-jpeg = { path = "../zune-jpeg" }
+wide = "0.7.30"
+
+[dev-dependencies]
+criterion = "0.5.1"
+rand_core = "0.6.4"
+rand = "0.8.5"
 
 [lib]
 name = "artefact_lib"
 path = "lib.rs"
+
+[[bench]]
+name = "bench"
+harness = false
