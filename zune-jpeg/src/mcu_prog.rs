@@ -427,9 +427,9 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         for such occurrences, warn and reset the image info to appear as if it were
         a non-sampled image to ensure decoding works
         */
-        self.max_horizontal_samp = 1;
+        self.max_horizontal_samp = SampleFactor::One;
         self.options = self.options.jpeg_set_out_colorspace(ColorSpace::Luma);
-        self.max_vertical_samp = 1;
+        self.max_vertical_samp = SampleFactor::One;
         self.sub_sample_ratio = SampleRatios::None;
         self.is_interleaved = false;
         self.components[0].vertical_samp = SampleFactor::One;
