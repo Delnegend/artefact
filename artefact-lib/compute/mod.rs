@@ -55,7 +55,7 @@ pub fn compute(
 
         term = next_term;
 
-        // // Take a step
+        // Take a step
         compute_step(
             max_rounded_px_w,
             max_rounded_px_h,
