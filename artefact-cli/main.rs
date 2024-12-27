@@ -37,7 +37,7 @@ struct Args {
     /// Higher values give better results but take more time
     ///
     /// Default: 50 for all channels, use comma separated values for each channel
-    #[arg(short, long)]
+    #[arg(long)]
     iterations: Option<String>,
 
     /// Separate components
