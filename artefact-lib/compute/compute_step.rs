@@ -1,4 +1,5 @@
 use crate::jpeg::Coefficient;
+use rayon::prelude::*;
 
 use super::{
     aux::Aux, compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
@@ -20,63 +21,64 @@ pub fn compute_step(
     let mut total_alpha = 0.0;
     let mut prob_dist = 0.0;
 
-    // // Process channels in parallel
-    // let results: Vec<(f32, f64)> = auxs
-    //     .par_iter_mut()
-    //     .zip(coefs.par_iter())
-    //     .enumerate()
-    //     .map(|(c, (aux, coef))| {
-    //         // Initialize gradient
-    //         for i in aux.obj_gradient.iter_mut() {
-    //             *i = 0.0;
-    //         }
+    // // Scalar
+    // for c in 0..nchannel {
+    //     let aux = &mut auxs[c];
+    //     let coef = &coefs[c];
 
-    //         let mut channel_alpha = 0.0;
-    //         let mut channel_prob_dist = 0.0;
+    //     aux.obj_gradient = vec![0.0; max_rounded_px_count];
 
-    //         // DCT coefficient distance
-    //         if pweight[c] != 0.0 {
-    //             let p_alpha = pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt();
-    //             channel_alpha = p_alpha;
-    //             channel_prob_dist = compute_step_prob(
-    //                 max_rounded_px_w,
-    //                 max_rounded_px_h,
-    //                 p_alpha,
-    //                 coef,
-    //                 &aux.cos,
-    //                 &mut aux.obj_gradient,
-    //             );
-    //         }
-
-    //         (channel_alpha, channel_prob_dist)
-    //     })
-    //     .collect();
-
-    // // Sum up the results
-    // for (alpha, dist) in results {
-    //     total_alpha += alpha;
-    //     prob_dist += dist;
+    //     // DCT coefficient distance
+    //     if pweight[c] != 0.0 {
+    //         let p_alpha = pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt();
+    //         total_alpha += p_alpha;
+    //         prob_dist += compute_step_prob(
+    //             max_rounded_px_w,
+    //             max_rounded_px_h,
+    //             p_alpha,
+    //             coef,
+    //             &aux.cos,
+    //             &mut aux.obj_gradient,
+    //         );
+    //     }
     // }
 
-    for c in 0..nchannel {
-        let aux = &mut auxs[c];
-        let coef = &coefs[c];
+    // Process channels in parallel
+    let results: Vec<(f32, f64)> = auxs
+        .par_iter_mut()
+        .zip(coefs.par_iter())
+        .enumerate()
+        .map(|(c, (aux, coef))| {
+            // Initialize gradient
+            for i in aux.obj_gradient.iter_mut() {
+                *i = 0.0;
+            }
 
-        aux.obj_gradient = vec![0.0; max_rounded_px_count];
+            let mut channel_alpha = 0.0;
+            let mut channel_prob_dist = 0.0;
 
-        // DCT coefficient distance
-        if pweight[c] != 0.0 {
-            let p_alpha = pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt();
-            total_alpha += p_alpha;
-            prob_dist += compute_step_prob(
-                max_rounded_px_w,
-                max_rounded_px_h,
-                p_alpha,
-                coef,
-                &aux.cos,
-                &mut aux.obj_gradient,
-            );
-        }
+            // DCT coefficient distance
+            if pweight[c] != 0.0 {
+                let p_alpha = pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt();
+                channel_alpha = p_alpha;
+                channel_prob_dist = compute_step_prob(
+                    max_rounded_px_w,
+                    max_rounded_px_h,
+                    p_alpha,
+                    coef,
+                    &aux.cos,
+                    &mut aux.obj_gradient,
+                );
+            }
+
+            (channel_alpha, channel_prob_dist)
+        })
+        .collect();
+
+    // Sum up the results
+    for (alpha, dist) in results {
+        total_alpha += alpha;
+        prob_dist += dist;
     }
 
     // TV computation
