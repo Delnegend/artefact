@@ -8,7 +8,6 @@ ooura/
 *.d
 *.h
 *.o
-*.png
 *.jpg
 perf.*
 *.svg
