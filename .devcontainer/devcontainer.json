@@ -11,8 +11,10 @@
 			},
 			"extensions": [
 				"rust-lang.rust-analyzer",
-				"ms-vscode.cpptools",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"Vue.volar",
+				"bradlc.vscode-tailwindcss",
+				"naumovs.color-highlight"
 			]
 		}
 	},
@@ -21,11 +23,20 @@
 			"source": "cargo-cache",
 			"target": "/usr/local/cargo",
 			"type": "volume"
+		},
+		{
+			"source": "global-pnpm-store",
+			"target": "/home/vscode/.pnpm-store",
+			"type": "volume"
 		}
 	],
 	"runArgs": [
 		"--cap-add",
-		"PERFMON"
+		"PERFMON",
+		"-p",
+		"3000:3000",
+		"-p",
+		"3001:3001"
 	],
 	"postCreateCommand": "zsh .devcontainer/postinstall.sh"
 }
