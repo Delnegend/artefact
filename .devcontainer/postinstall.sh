@@ -19,3 +19,21 @@ rm -f /usr/local/cargo/config.toml
 printf "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/cargo/mold-$MOLD_VERSION-x86_64-linux/bin/mold\"]" > /usr/local/cargo/config.toml
 
 cargo install flamegraph
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+# Install and setup volta
+curl https://get.volta.sh | bash
+
+# Setup volta in current shell
+export VOLTA_HOME="$HOME/.volta"
+export PATH="$VOLTA_HOME/bin:$PATH"
+
+# Install node and pnpm
+volta install node@23
+volta install pnpm
+
+# change pnpm store
+pnpm config set store-dir ~/.pnpm-store
+
+pnpm i
+
