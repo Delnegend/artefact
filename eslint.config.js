@@ -1,0 +1,25 @@
+import hagemanto from "eslint-plugin-hagemanto";
+import globals from "globals";
+
+import withNuxt from "./.nuxt/eslint.config.mjs";
+
+export default withNuxt().prepend(
+	{ files: ["**/*.{ts,vue}"] },
+	{ ignores: ["artefact-wasm/**/*", "src/composables/artefact-wasm/**/*"] },
+	{ languageOptions: { globals: globals.browser } },
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
+	...hagemanto({
+		enableJsx: false,
+		enableTailwind: false,
+		enableTs: true,
+		sortImports: true,
+		styler: "stylistic",
+	}),
+	{
+		languageOptions: {
+			globals: globals.browser, parserOptions: {
+				project: "tsconfig.json", parser: "@typescript-eslint/parser", extraFileExtensions: [".vue"],
+			},
+		},
+	},
+);
