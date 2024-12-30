@@ -3,13 +3,20 @@ fuzz/
 gopt/
 notes/
 ooura/
+.nuxt/
+node_modules/
+.pnpm-store/
+.output/
 
 *.c
 *.d
 *.h
 *.o
 *.jpg
+*.png
+!assets/*.png
 perf.*
 *.svg
+.eslintcache
 
 jpeg2png
