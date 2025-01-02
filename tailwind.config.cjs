@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-	// darkMode: ["class"],
-	// safelist: ["dark"],
+	darkMode: ["class"],
+	safelist: ["dark"],
 	prefix: "",
 
 	theme: {
