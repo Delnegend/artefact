@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { defineNuxtConfig } from "nuxt/config";
-import topLevelAwait from "vite-plugin-top-level-await";
+import { VitePWA } from "vite-plugin-pwa";
 import wasm from "vite-plugin-wasm";
 
 export default defineNuxtConfig({
@@ -26,7 +26,26 @@ export default defineNuxtConfig({
 	srcDir: "src",
 	compatibilityDate: "2024-12-29",
 	vite: {
-		plugins: [wasm(), topLevelAwait()],
+		build: { target: "esnext" },
+		worker: {
+			format: "es",
+			rollupOptions: { output: { format: "es" } },
+		},
+		plugins: [
+			wasm(),
+			VitePWA({
+				registerType: "autoUpdate",
+				manifest: {
+					name: "Artefact",
+					short_name: "Artefact",
+					theme_color: "#000000",
+					background_color: "#000000",
+				},
+				devOptions: {
+					enabled: true,
+				},
+			}),
+		],
 	},
 	postcss: {
 		plugins: {
