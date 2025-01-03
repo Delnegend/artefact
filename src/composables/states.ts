@@ -4,12 +4,8 @@ import type { ImageItemForDisplay } from "./types";
 
 export const displayMode = ref("horizontal" as "horizontal" | "vertical");
 
-export const imageDisplayList = reactive({
-
-	/** Key: hash */
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-	value: {} as Record<string, ImageItemForDisplay>,
-});
+export type JpegFileHash = string;
+export const imageDisplayList: Ref<Map<JpegFileHash, ImageItemForDisplay>> = ref(new Map());
 
 export const db = await openDB("artefact", 20241231, {
 	upgrade(db) {

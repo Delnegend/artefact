@@ -13,13 +13,13 @@ try {
 	const files = await store.getAll() as ImageItemForDB[];
 
 	for (const file of files) {
-		imageDisplayList.value[file.jpegFileHash] = {
+		imageDisplayList.value.set(file.jpegFileHash, {
 			name: file.jpegFileName,
 			dateAdded: file.dateAdded,
 			size: file.jpegFileSize,
 			jpegBlobUrl: URL.createObjectURL(new Blob([file.jpegArrayBuffer], { type: "image/jpeg" })),
 			pngBlobUrl: file.pngArrayBuffer ? URL.createObjectURL(new Blob([file.pngArrayBuffer], { type: "image/png" })) : undefined,
-		};
+		});
 	}
 } catch (error) {
 	toast.error("Failed to load files", {
@@ -31,10 +31,9 @@ try {
 <template>
 	<div class="flex flex-col gap-4 overflow-y-auto">
 		<ImageItem
-			v-for="[jpegFileHash, info] in Object.entries(imageDisplayList.value)"
+			v-for="[jpegFileHash, info] in imageDisplayList"
 			:key="jpegFileHash"
 			:jpeg-file-hash="jpegFileHash"
-			:info="info"
-		/>
+			:info="info" />
 	</div>
 </template>
