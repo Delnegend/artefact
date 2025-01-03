@@ -8,6 +8,7 @@ node_modules/
 .pnpm-store/
 .output/
 
+dist
 *.c
 *.d
 *.h
@@ -18,5 +19,6 @@ node_modules/
 perf.*
 *.svg
 .eslintcache
+sw.*
 
 jpeg2png
