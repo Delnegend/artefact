@@ -54,10 +54,11 @@ fileDialog.onChange(async (files) => {
 
 <template>
 	<Button
-		class="h-28 border w-[calc(100%-2rem)] m-4 text-balance text-xl border-neutral-300 border-dashed text-center"
+		class="h-28 border w-[calc(100%-2rem)] flex flex-col m-4 text-balance text-xl border-neutral-300 border-dashed text-center"
 		variant="secondary"
 		@click="fileDialog.open()"
 	>
-		Select or drop JPEG(s) here
+		Click to select JPEG(s)
+		<div class="opacity-80 text-base">drag n drop will be support in the future</div>
 	</Button>
 </template>
