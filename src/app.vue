@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import "@coddicat/vue-pinch-scroll-zoom/style.css";
-
 import ActionButtons from "./components/ActionButtons.vue";
 import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
