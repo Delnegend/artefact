@@ -5,26 +5,28 @@ import wasm from "vite-plugin-wasm";
 
 export default defineNuxtConfig({
 	modules: ["@nuxt/eslint", "@vueuse/nuxt", "@nuxtjs/tailwindcss", "@nuxtjs/color-mode", "shadcn-nuxt"],
-	srcDir: "src",
 	ssr: false,
-	css: ["~/assets/css/main.css"],
+	components: {
+		dirs: [],
+	},
+	imports: {
+		scan: false,
+	},
 	app: {
 		head: {
+			style: ["html { background-color: black; }"],
 			title: "Artefact",
 			meta: [
 				{ charset: "utf-8" },
 				{ name: "viewport", content: "width=device-width, initial-scale=1" },
 			],
-			script: [
-				{ src: "/icat.js", fetchpriority: "high" },
-			],
 		},
 	},
+	css: ["~/assets/css/main.css"],
+	srcDir: "src",
+	compatibilityDate: "2024-12-29",
 	vite: {
 		plugins: [wasm(), topLevelAwait()],
-	},
-	experimental: {
-		typedPages: true,
 	},
 	postcss: {
 		plugins: {
@@ -35,5 +37,4 @@ export default defineNuxtConfig({
 	shadcn: {
 		componentDir: "./src/components/ui",
 	},
-	compatibilityDate: "2024-12-29",
 });
