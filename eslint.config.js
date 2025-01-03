@@ -3,7 +3,13 @@ import globals from "globals";
 
 import withNuxt from "./.nuxt/eslint.config.mjs";
 
-export default withNuxt().prepend(
+export default withNuxt(
+	{
+		rules: {
+			"vue/multi-word-component-names": "off",
+		},
+	},
+).prepend(
 	{ files: ["**/*.{ts,vue}"] },
 	{ ignores: ["artefact-wasm/**/*", "src/composables/artefact-wasm/**/*"] },
 	{ languageOptions: { globals: globals.browser } },
