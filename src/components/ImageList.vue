@@ -19,6 +19,8 @@ try {
 			size: file.jpegFileSize,
 			jpegBlobUrl: URL.createObjectURL(new Blob([file.jpegArrayBuffer], { type: "image/jpeg" })),
 			pngBlobUrl: file.pngArrayBuffer ? URL.createObjectURL(new Blob([file.pngArrayBuffer], { type: "image/png" })) : undefined,
+			width: file.width,
+			height: file.height,
 		});
 	}
 } catch (error) {

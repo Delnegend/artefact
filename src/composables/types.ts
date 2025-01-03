@@ -5,6 +5,8 @@ export interface ImageItemForDB {
 	jpegFileSize: number;
 	jpegArrayBuffer: ArrayBuffer;
 	pngArrayBuffer?: ArrayBuffer;
+	width: number;
+	height: number;
 }
 
 export interface ImageItemForDisplay {
@@ -13,4 +15,6 @@ export interface ImageItemForDisplay {
 	size: number;
 	jpegBlobUrl: string;
 	pngBlobUrl?: string;
+	width: number;
+	height: number;
 }

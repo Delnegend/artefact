@@ -18,7 +18,12 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 			Array.from(files).map(async (file) => {
 				const jpegArrayBuffer = await file.arrayBuffer();
 				const hash = await hashArrayBuffer(jpegArrayBuffer);
-				return { file, jpegArrayBuffer, hash };
+
+				const img = new Image();
+				img.src = URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" }));
+				await new Promise((resolve) => { img.onload = resolve; });
+
+				return { file, jpegArrayBuffer, hash, width: img.width, height: img.height };
 			}),
 		);
 
@@ -26,8 +31,9 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 		const store = tx.objectStore("files");
 
 		await Promise.all(
-			fileOps.map(async ({ file, jpegArrayBuffer, hash }) => {
+			fileOps.map(async ({ file, jpegArrayBuffer, hash, width, height }) => {
 				const now = new Date();
+
 
 				const itemToInsert: ImageItemForDB = {
 					jpegFileHash: hash,
@@ -35,6 +41,8 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 					dateAdded: now,
 					jpegFileSize: jpegArrayBuffer.byteLength,
 					jpegArrayBuffer,
+					width: width,
+					height: height,
 				};
 				await store.put(itemToInsert);
 
@@ -43,6 +51,8 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 					dateAdded: now,
 					size: jpegArrayBuffer.byteLength,
 					jpegBlobUrl: URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" })),
+					width: width,
+					height: height,
 				});
 			}),
 		);

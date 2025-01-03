@@ -123,11 +123,13 @@ function remove(): void {
 					{{ info.name }}
 				</div>
 				<div class="text-neutral-500 flex flex-col text-sm">
-					<span class="-mb-1">{{ humanReadableSize(info.size) }}</span>
-					<span>{{ new Date(info.dateAdded).toLocaleDateString("en-US", {
+					<span class="-mb-1">{{ humanReadableSize(info.size) }} | {{ info.width }}x{{ info.height }}</span>
+					<span>{{ new Date(info.dateAdded).toLocaleTimeString("en-US", {
 						year: "numeric",
 						month: "short",
 						day: "numeric",
+						hour: "numeric",
+						minute: "numeric",
 					}) }}</span>
 				</div>
 			</div>
