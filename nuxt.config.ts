@@ -11,6 +11,7 @@ export default defineNuxtConfig({
 	},
 	imports: {
 		scan: false,
+		autoImport: false,
 	},
 	app: {
 		head: {

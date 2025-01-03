@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
+
 import ActionButtons from "./components/ActionButtons.vue";
 import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";

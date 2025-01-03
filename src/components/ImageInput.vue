@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useFileDialog } from "@vueuse/core";
+import { ref } from "vue";
 import { toast } from "vue-sonner";
 
 import { hashArrayBuffer } from "~/composables/hash";

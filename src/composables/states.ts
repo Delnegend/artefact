@@ -1,4 +1,5 @@
 import { openDB } from "idb";
+import { type Ref, ref } from "vue";
 
 import type { ImageItemForDisplay } from "./types";
 

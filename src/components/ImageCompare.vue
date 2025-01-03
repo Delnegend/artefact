@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { clamp } from "@vueuse/core";
 import { ChevronsLeftRight, Columns2, Search, SquareSplitHorizontal } from "lucide-vue-next";
+import { ref, watch } from "vue";
 
 import { imageCompareImages, imageCompareMode } from "~/composables/states";
 
