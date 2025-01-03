@@ -87,19 +87,11 @@ function handleDisplayModeChange(): void {
 			</Button>
 		</div>
 
-		<div class="relative select-none content-center">
-			<h1 class="text-3xl opacity-0">
-				artefact
-			</h1>
-			<h1 class="text-3xl font-black absolute top-2 left-2 dark:text-blue-800 text-blue-600 blur-sm">
-				artefact
-			</h1>
-			<h1 class="text-3xl font-black absolute top-1 left-1 dark:text-red-700 text-red-500 blur-[2px]">
-				artefact
-			</h1>
-			<h1 class="text-3xl font-black absolute top-0 left-0 dark:text-white text-neutral-600">
-				artefact
-			</h1>
+		<div class="select-none relative">
+			<div class="font-black text-4xl italic drop-shadow-xl">artefact</div>
+			<div class="-bottom-6 z-10 whitespace-nowrap left-1/2 -translate-x-1/2 absolute bg-red-600 px-2 py-1 rounded-full text-white text-xs">
+				work-in-progress
+			</div>
 		</div>
 
 		<div class="justify-self-end">
