@@ -27,3 +27,4 @@ export const imageCompareImages = ref({
 	pngBlobUrl: undefined as string | undefined,
 });
 
+export const imageCompareMode = ref("overlay" as "side-by-side" | "overlay");
