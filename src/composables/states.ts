@@ -22,7 +22,8 @@ export const db = await openDB("artefact", 20241231, {
 	},
 });
 
-export const imageCompare = ref({
+export const imageCompareImages = ref({
 	jpegBlobUrl: undefined as string | undefined,
 	pngBlobUrl: undefined as string | undefined,
 });
+

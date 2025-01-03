@@ -2,7 +2,7 @@
 import { toast } from "vue-sonner";
 
 import { humanReadableSize } from "~/composables/human-readable-size";
-import { db, imageCompare, imageDisplayList } from "~/composables/states";
+import { db, imageCompareImages, imageDisplayList } from "~/composables/states";
 import type { ImageItemForDisplay } from "~/composables/types";
 
 const props = defineProps<{ jpegFileHash: string; info: ImageItemForDisplay }>();
@@ -89,7 +89,7 @@ function compare(): void {
 		return;
 	}
 
-	imageCompare.value = {
+	imageCompareImages.value = {
 		jpegBlobUrl: props.info.jpegBlobUrl,
 		pngBlobUrl: pngBlobUrl.value,
 	};
