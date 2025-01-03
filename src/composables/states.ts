@@ -8,8 +8,12 @@ export const displayMode = ref("horizontal" as "horizontal" | "vertical");
 export type JpegFileHash = string;
 export const imageDisplayList: Ref<Map<JpegFileHash, ImageItemForDisplay>> = ref(new Map());
 
-export const db = await openDB("artefact", 20241231, {
-	upgrade(db) {
+export const db = await openDB("artefact", 20250105, {
+	upgrade(db, oldVersion, newVersion) {
+		if (newVersion && oldVersion !== newVersion) {
+			db.deleteObjectStore("files");
+		}
+
 		if (!db.objectStoreNames.contains("files")) {
 			db.createObjectStore("files", {
 				keyPath: "jpegFileHash",
