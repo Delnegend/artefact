@@ -105,8 +105,11 @@ function compare(): void {
 
 function remove(): void {
 	worker.terminate();
-	imageDisplayList.value.delete(props.jpegFileHash);
 	void db.delete("files", props.jpegFileHash);
+	imageDisplayList.value.delete(props.jpegFileHash);
+	if (imageCompareImages.value.jpegBlobUrl === props.info.jpegBlobUrl) {
+		imageCompareImages.value = { jpegBlobUrl: undefined, pngBlobUrl: undefined };
+	}
 }
 </script>
 
@@ -115,8 +118,7 @@ function remove(): void {
 		<div class="grid grid-cols-[4rem,1fr,auto] h-fit gap-4 items-center">
 			<img
 				:src="info.jpegBlobUrl"
-				class="rounded-md size-16 object-cover aspect-square"
-			>
+				class="rounded-md size-16 object-cover aspect-square">
 
 			<div class="flex flex-col h-full justify-between">
 				<div class="font-medium line-clamp-1">
@@ -139,32 +141,30 @@ function remove(): void {
 			<Button
 				v-if="!pngBlobUrl"
 				:disabled="isProcessing"
-				@click="process"
-			>
+				@click="process">
 				<span v-if="!isProcessing">Process</span>
-				<span v-else class="animate-spin"><LoaderCircle /></span>
+				<span v-else class="animate-spin">
+					<LoaderCircle />
+				</span>
 			</Button>
 			<Button
 				v-if="pngBlobUrl"
 				variant="outline"
 				:disabled="!pngBlobUrl"
-				@click="download"
-			>
+				@click="download">
 				Download
 			</Button>
 
 			<Button
 				variant="secondary"
 				:disabled="!pngBlobUrl"
-				@click="compare"
-			>
+				@click="compare">
 				Compare
 			</Button>
 
 			<Button
 				variant="destructive"
-				@click="remove"
-			>
+				@click="remove">
 				<div>Remove</div>
 			</Button>
 		</div>
