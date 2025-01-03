@@ -4,9 +4,11 @@ import { toast } from "vue-sonner";
 import { hashArrayBuffer } from "~/composables/hash";
 import { db, imageDisplayList } from "~/composables/states";
 import type { ImageItemForDB } from "~/composables/types";
+import { cn } from "~/lib/utils";
 
-const fileDialog = useFileDialog({ accept: "image/jpeg" });
-fileDialog.onChange(async (files) => {
+import { buttonBaseClassTw, buttonVariantsTw } from "./ui/button";
+
+async function handleIncomingFiles(files: FileList | null): Promise<void> {
 	if (!files) { return; }
 
 	try {
@@ -34,12 +36,12 @@ fileDialog.onChange(async (files) => {
 				};
 				await store.put(itemToInsert);
 
-				imageDisplayList.value[hash] = {
+				imageDisplayList.value.set(hash, {
 					name: file.name,
 					dateAdded: now,
 					size: jpegArrayBuffer.byteLength,
 					jpegBlobUrl: URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" })),
-				};
+				});
 			}),
 		);
 
@@ -49,16 +51,47 @@ fileDialog.onChange(async (files) => {
 			description: `${error}`,
 		});
 	}
-});
+}
+
+// Drag and drop
+const nothingOver = ref(true);
+function handleOnDrop(event: DragEvent): void {
+	nothingOver.value = true;
+	const files = event.dataTransfer?.files;
+	if (!files) { return; }
+	for (const file of files) {
+		if (file.type !== "image/jpeg") {
+			toast.error("Only JPEG files are supported", {
+				description: `File ${file.name} is not a JPEG file`,
+			});
+			return;
+		}
+	}
+	void handleIncomingFiles(files);
+}
+
+// Click to select
+const fileDialog = useFileDialog({ accept: "image/jpeg" });
+fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
 </script>
 
 <template>
-	<Button
-		class="h-28 border w-[calc(100%-2rem)] flex flex-col m-4 text-balance text-xl border-neutral-300 border-dashed text-center"
-		variant="secondary"
-		@click="fileDialog.open()"
-	>
-		Click to select JPEG(s)
-		<div class="opacity-80 text-base">drag n drop will be support in the future</div>
-	</Button>
+	<div class="relative">
+		<input
+			id="image-input"
+			class="absolute left-0 top-0 bg-transparent w-[calc(100%-2rem)] h-28 m-4 rounded-md"
+			aria-label="image-input"
+			@click.prevent="fileDialog.open()">
+
+		<label
+			for="image-input"
+			:class="cn(buttonBaseClassTw, buttonVariantsTw.secondary, 'h-28 border w-[calc(100%-2rem)] flex flex-col m-4 px-4 py-2 text-balance text-xl border-neutral-300 border-dashed text-center focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 left-0 top-0 absolute select-none', !nothingOver ? 'bg-secondary/80' : '')"
+			@dragover.prevent="nothingOver = false;"
+			@drop.prevent="handleOnDrop"
+			@dragleave.prevent="nothingOver = true;">
+			{{ nothingOver ? "Drag JPEG files here or click to select" : "Drop here" }}
+		</label>
+
+		<div class="w-full h-28 m-4" />
+	</div>
 </template>
