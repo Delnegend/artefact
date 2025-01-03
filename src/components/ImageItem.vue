@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LoaderCircle } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
 import { humanReadableSize } from "~/composables/human-readable-size";
@@ -12,7 +13,7 @@ const isProcessing = ref(false);
 
 const worker = new Worker(
 	new URL("~/composables/artefact-worker.ts", import.meta.url),
-	{ type: "module" },
+	{ type: "module", name: "artefact-worker" },
 );
 
 worker.onmessage = (e): void => {
@@ -34,6 +35,12 @@ worker.onmessage = (e): void => {
 		return;
 	}
 
+	toast.info("Success", {
+		description: h("div", [
+			h("code", props.info.name),
+			" is processed successfully.",
+		]),
+	});
 	pngBlobUrl.value = blobUrl;
 };
 
@@ -94,6 +101,12 @@ function compare(): void {
 		pngBlobUrl: pngBlobUrl.value,
 	};
 }
+
+function remove(): void {
+	worker.terminate();
+	imageDisplayList.value.delete(props.jpegFileHash);
+	void db.delete("files", props.jpegFileHash);
+}
 </script>
 
 <template>
@@ -125,7 +138,8 @@ function compare(): void {
 				:disabled="isProcessing"
 				@click="process"
 			>
-				Process
+				<span v-if="!isProcessing">Process</span>
+				<span v-else class="animate-spin"><LoaderCircle /></span>
 			</Button>
 			<Button
 				v-if="pngBlobUrl"
@@ -146,11 +160,7 @@ function compare(): void {
 
 			<Button
 				variant="destructive"
-				@click="() => {
-					worker.terminate();
-					delete imageDisplayList.value[jpegFileHash];
-					void db.delete('files', jpegFileHash);
-				}"
+				@click="remove"
 			>
 				<div>Remove</div>
 			</Button>
