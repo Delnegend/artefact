@@ -10,7 +10,9 @@ export const imageDisplayList: Ref<Map<JpegFileHash, ImageItemForDisplay>> = ref
 
 export const db = await openDB("artefact", 20250105, {
 	upgrade(db, oldVersion, newVersion) {
-		if (newVersion && oldVersion !== newVersion) {
+		const alreadyExists = db.objectStoreNames.contains("files");
+
+		if (newVersion && alreadyExists && oldVersion !== newVersion) {
 			db.deleteObjectStore("files");
 		}
 
