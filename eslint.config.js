@@ -23,7 +23,7 @@ export default withNuxt(
 	{
 		languageOptions: {
 			globals: globals.browser, parserOptions: {
-				project: "tsconfig.json", parser: "@typescript-eslint/parser", extraFileExtensions: [".vue"],
+				project: true, parser: "@typescript-eslint/parser", extraFileExtensions: [".vue"],
 			},
 		},
 	},
