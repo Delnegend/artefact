@@ -34,15 +34,14 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 			fileOps.map(async ({ file, jpegArrayBuffer, hash, width, height }) => {
 				const now = new Date();
 
-
 				const itemToInsert: ImageItemForDB = {
 					jpegFileHash: hash,
 					jpegFileName: file.name,
 					dateAdded: now,
 					jpegFileSize: jpegArrayBuffer.byteLength,
 					jpegArrayBuffer,
-					width: width,
-					height: height,
+					width,
+					height,
 				};
 				await store.put(itemToInsert);
 
@@ -51,8 +50,8 @@ async function handleIncomingFiles(files: FileList | null): Promise<void> {
 					dateAdded: now,
 					size: jpegArrayBuffer.byteLength,
 					jpegBlobUrl: URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" })),
-					width: width,
-					height: height,
+					width,
+					height,
 				});
 			}),
 		);
