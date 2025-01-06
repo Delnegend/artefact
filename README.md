@@ -2,8 +2,8 @@
 
 ## Decode JPEG without artifacts
 
-- <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code
-- <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser
+- <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code.
+- <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser.
 - ⚡  ***FASTER***, ***SAFER*** implementation of the original [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
 ## Tests
