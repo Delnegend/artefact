@@ -1,12 +1,12 @@
 /* tslint:disable */
 /* eslint-disable */
-export function compute(buffer: Uint8Array): Uint8Array;
+export function compute(buffer: Uint8Array, weight?: number, pweight?: number, iterations?: number, separate_components?: boolean): Uint8Array;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly compute: (a: number, b: number) => [number, number, number, number];
+  readonly compute: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
