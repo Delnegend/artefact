@@ -4,6 +4,8 @@ mod compute_step;
 mod compute_step_prob;
 mod compute_step_tv;
 mod compute_step_tv2;
+mod compute_step_tv2_simd;
+mod compute_step_tv_simd;
 
 use rayon::prelude::*;
 
