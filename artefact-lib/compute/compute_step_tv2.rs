@@ -1,26 +1,7 @@
-use super::aux::Aux;
+use crate::compute::aux::Aux;
 
 /// Computes the Total Generalized Variation (TGV) regularization term and its gradient
-/// for the second order term
-///
-/// This function:
-/// 1. Calculates second order gradients in x and y directions for each channel
-/// 2. Computes the TGV norm of the gradients
-/// 3. Updates the objective function gradient
-/// 4. Stores gradient components for potential second-order TGV computation
-///
-/// # Arguments
-/// * `w` - Width of the image
-/// * `h` - Height of the image
-/// * `nchannel` - Number of color channels
-/// * `auxs` - Array of auxiliary data structures containing image data and working buffers
-/// * `alpha` - Weight of the TGV term
-///
-/// # Returns
-/// Total variation value for the objective function
-///
-/// # Panics
-/// Panics if the number of channels is greater than 3
+#[allow(unused)]
 pub fn compute_step_tv2(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
@@ -124,7 +105,7 @@ fn compute_step_tv2_inner(
     };
 
     let mut alpha = alpha;
-    alpha = (alpha) * 1.0 / (nchannel as f32).sqrt();
+    alpha /= (nchannel as f32).sqrt();
     *tv2 += (alpha * g2_norm) as f64; // objective function
 
     if g2_norm == 0.0 {
