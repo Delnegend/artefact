@@ -1,4 +1,4 @@
-use wide::{f32x8, f64x4};
+use wide::f32x8;
 
 use crate::compute::aux::Aux;
 
@@ -9,9 +9,7 @@ pub fn compute_step_tv2_simd(
     nchannel: usize,
     auxs: &mut [Aux],
     alpha: f32,
-) -> f64 {
-    let mut tv2 = 0.0_f64;
-
+) {
     for curr_row in 0..max_rounded_px_h {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
             compute_step_tv2_inner(
@@ -22,12 +20,9 @@ pub fn compute_step_tv2_simd(
                 alpha,
                 curr_row_px_idx,
                 curr_row,
-                &mut tv2,
             );
         }
     }
-
-    tv2
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -39,7 +34,6 @@ fn compute_step_tv2_inner(
     alpha: f32,
     curr_row_px_idx: u32,
     curr_row: u32,
-    tv2: &mut f64,
 ) {
     let mut g_xxs = [f32x8::splat(0.0); 3];
     let mut g_yys = [f32x8::splat(0.0); 3];
@@ -136,41 +130,17 @@ fn compute_step_tv2_inner(
         g_xy_syms[c] = (g_xy + g_yx) / 2.0;
     }
 
-    let alpha_single = (alpha) * 1.0 / (nchannel as f32).sqrt();
-    let alpha_f32 = f32x8::splat(alpha_single);
-    let alpha_f64 = f64x4::splat(alpha_single as f64);
+    let alpha = (alpha) * 1.0 / (nchannel as f32).sqrt();
+    let alpha_f32 = f32x8::splat(alpha);
 
     // norm
-    let g2_norm_f32 = {
-        let mut f32_ver = f32x8::splat(0.0);
-        let mut f64_ver = (f64x4::splat(0.0), f64x4::splat(0.0));
-
+    let g2_norm = {
+        let mut g2_norm = f32x8::splat(0.0);
         for c in 0..nchannel {
-            f32_ver +=
+            g2_norm +=
                 g_xxs[c] * g_xxs[c] + 2.0 * g_xy_syms[c] * g_xy_syms[c] + g_yys[c] * g_yys[c];
-
-            let g_xxs = {
-                let tmp = g_xxs[c].as_array_ref().map(|x| x as f64);
-                (f64x4::from(&tmp[..4]), f64x4::from(&tmp[4..]))
-            };
-            let g_xy_syms = {
-                let tmp = g_xy_syms[c].as_array_ref().map(|x| x as f64);
-                (f64x4::from(&tmp[..4]), f64x4::from(&tmp[4..]))
-            };
-            let g_yys = {
-                let tmp = g_yys[c].as_array_ref().map(|x| x as f64);
-                (f64x4::from(&tmp[..4]), f64x4::from(&tmp[4..]))
-            };
-
-            f64_ver.0 +=
-                (g_xxs.0 * g_xxs.0) + (2.0 * g_xy_syms.0 * g_xy_syms.0) + (g_yys.0 * g_yys.0);
-            f64_ver.1 +=
-                (g_xxs.1 * g_xxs.1) + (2.0 * g_xy_syms.1 * g_xy_syms.1) + (g_yys.1 * g_yys.1);
         }
-
-        *tv2 += (alpha_f64 * (f64_ver.0.sqrt() + f64_ver.1.sqrt())).reduce_add();
-
-        f32_ver.sqrt()
+        g2_norm.sqrt()
     };
 
     // compute derivatives
@@ -186,19 +156,19 @@ fn compute_step_tv2_inner(
             let original = f32x8::from(&target[..]);
             let update = {
                 let dividend = -(2.0 * g_xx + 2.0 * g_xy_sym + 2.0 * g_yy);
-                match g2_norm_f32.as_array_ref() {
+                match g2_norm.as_array_ref() {
                     g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                         g2_norm
                             .iter()
                             .enumerate()
                             .map(|(i, g_norm)| match g_norm {
                                 0.0 => 0.0,
-                                _ => alpha_single * dividend.as_array_ref()[i] / g_norm,
+                                _ => alpha * dividend.as_array_ref()[i] / g_norm,
                             })
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm_f32,
+                    _ => alpha_f32 * dividend / g2_norm,
                 }
             };
 
@@ -209,19 +179,19 @@ fn compute_step_tv2_inner(
             // the value to be += to the target stays the same
             let update = {
                 let dividend = g_xy_sym + g_xx;
-                match g2_norm_f32.as_array_ref() {
+                match g2_norm.as_array_ref() {
                     g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                         g2_norm
                             .iter()
                             .enumerate()
                             .map(|(i, g2_norm)| match g2_norm {
                                 0.0 => 0.0,
-                                _ => alpha_single * dividend.as_array_ref()[i] / g2_norm,
+                                _ => alpha * dividend.as_array_ref()[i] / g2_norm,
                             })
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm_f32,
+                    _ => alpha_f32 * dividend / g2_norm,
                 }
             };
 
@@ -251,19 +221,19 @@ fn compute_step_tv2_inner(
         'for_shifted_right_1px_group: {
             let update = {
                 let dividend = g_xy_sym + g_xx;
-                match g2_norm_f32.as_array_ref() {
+                match g2_norm.as_array_ref() {
                     g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                         g2_norm
                             .iter()
                             .enumerate()
                             .map(|(i, g2_norm)| match g2_norm {
                                 0.0 => 0.0,
-                                _ => alpha_single * dividend.as_array_ref()[i] / g2_norm,
+                                _ => alpha * dividend.as_array_ref()[i] / g2_norm,
                             })
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm_f32,
+                    _ => alpha_f32 * dividend / g2_norm,
                 }
             };
 
@@ -299,19 +269,19 @@ fn compute_step_tv2_inner(
             let original = f32x8::from(&target[..]);
             let update = {
                 let dividend = g_yys[c] + g_xy_syms[c];
-                match g2_norm_f32.as_array_ref() {
+                match g2_norm.as_array_ref() {
                     g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                         g2_norm
                             .iter()
                             .enumerate()
                             .map(|(i, g2_norm)| match g2_norm {
                                 0.0 => 0.0,
-                                _ => alpha_single * dividend.as_array_ref()[i] / g2_norm,
+                                _ => alpha * dividend.as_array_ref()[i] / g2_norm,
                             })
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm_f32,
+                    _ => alpha_f32 * dividend / g2_norm,
                 }
             };
 
@@ -326,19 +296,19 @@ fn compute_step_tv2_inner(
             let original = f32x8::from(&target[..]);
             let update = {
                 let dividend = g_yy + g_xy_sym;
-                match g2_norm_f32.as_array_ref() {
+                match g2_norm.as_array_ref() {
                     g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                         g2_norm
                             .iter()
                             .enumerate()
                             .map(|(i, g2_norm)| match g2_norm {
                                 0.0 => 0.0,
-                                _ => alpha_single * dividend.as_array_ref()[i] / g2_norm,
+                                _ => alpha * dividend.as_array_ref()[i] / g2_norm,
                             })
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm_f32,
+                    _ => alpha_f32 * dividend / g2_norm,
                 }
             };
 
@@ -351,19 +321,19 @@ fn compute_step_tv2_inner(
                 break 'for_shifted_up_right_1px_group;
             }
 
-            let update = match g2_norm_f32.as_array_ref() {
+            let update = match g2_norm.as_array_ref() {
                 g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                     g2_norm
                         .iter()
                         .enumerate()
                         .map(|(i, g2_norm)| match g2_norm {
                             0.0 => 0.0,
-                            _ => alpha_single * -g_xy_sym.as_array_ref()[i] / g2_norm,
+                            _ => alpha * -g_xy_sym.as_array_ref()[i] / g2_norm,
                         })
                         .collect::<Vec<f32>>()
                         .as_slice(),
                 ),
-                _ => alpha_f32 * -g_xy_sym / g2_norm_f32,
+                _ => alpha_f32 * -g_xy_sym / g2_norm,
             };
 
             // ignore the last pixel in the group because it's out of bounds
@@ -396,19 +366,19 @@ fn compute_step_tv2_inner(
                 break 'for_shifted_down_left_1px_group;
             }
 
-            let update = match g2_norm_f32.as_array_ref() {
+            let update = match g2_norm.as_array_ref() {
                 g2_norm if g2_norm.contains(&0.0) => f32x8::from(
                     g2_norm
                         .iter()
                         .enumerate()
                         .map(|(i, g2_norm)| match g2_norm {
                             0.0 => 0.0,
-                            _ => alpha_single * -g_xy_sym.as_array_ref()[i] / g2_norm,
+                            _ => alpha * -g_xy_sym.as_array_ref()[i] / g2_norm,
                         })
                         .collect::<Vec<f32>>()
                         .as_slice(),
                 ),
-                _ => alpha_f32 * -g_xy_sym / g2_norm_f32,
+                _ => alpha_f32 * -g_xy_sym / g2_norm,
             };
 
             // ignore the first pixel in the group because it's out of bounds

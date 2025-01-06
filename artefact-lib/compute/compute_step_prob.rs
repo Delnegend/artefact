@@ -9,9 +9,7 @@ pub fn compute_step_prob(
     coef: &Coefficient,       // JPEG coefficient data
     cos: &[f32],              // Cosine transform data
     obj_gradient: &mut [f32], // Output gradient buffer
-) -> f64 {
-    let mut prob_dist = 0.0; // Probability distribution accumulator
-
+) {
     // Iterate through each 8x8 block in the image
     for block_y in 0..coef.block_h {
         for block_x in 0..coef.block_w {
@@ -26,9 +24,6 @@ pub fn compute_step_prob(
             for (j, cosb) in cosbs.iter_mut().enumerate() {
                 // Calculate difference from original DCT coefficients
                 *cosb -= coef.dct_coefs[i * 64 + j] as f32 * coef.quant_table[j] as f32;
-
-                // Update probability distribution (objective function)
-                prob_dist += 0.5 * (*cosb as f64 / coef.quant_table[j] as f64).powi(2);
 
                 // Calculate derivative for gradient
                 *cosb /= (coef.quant_table[j] as f32).powi(2);
@@ -62,7 +57,4 @@ pub fn compute_step_prob(
             }
         }
     }
-
-    // Return scaled probability distribution
-    alpha as f64 * prob_dist
 }

@@ -17,10 +17,7 @@ pub fn compute_step(
     step_size: f32,
     weight: f32,
     pweight: &[f32; 3],
-) -> f64 {
-    let mut total_alpha = 0.0;
-    let mut prob_dist = 0.0;
-
+) {
     for c in 0..nchannel {
         let aux = &mut auxs[c];
         let coef = &coefs[c];
@@ -29,12 +26,10 @@ pub fn compute_step(
 
         // DCT coefficient distance
         if pweight[c] != 0.0 {
-            let p_alpha = pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt();
-            total_alpha += p_alpha;
-            prob_dist += compute_step_prob(
+            compute_step_prob(
                 max_rounded_px_w,
                 max_rounded_px_h,
-                p_alpha,
+                pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt(),
                 coef,
                 &aux.cos,
                 &mut aux.obj_gradient,
@@ -43,19 +38,16 @@ pub fn compute_step(
     }
 
     // TV computation
-    total_alpha += nchannel as f32;
-
-    let tv = compute_step_tv_simd(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
+    compute_step_tv_simd(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
 
     // TGV second order
-    let tv2 = match weight {
-        0.0 => 0.0,
-        _ => {
-            let alpha = weight / 2.0_f32.sqrt();
-            total_alpha += alpha * nchannel as f32;
-            compute_step_tv2_simd(max_rounded_px_w, max_rounded_px_h, nchannel, auxs, alpha)
-        }
-    };
+    compute_step_tv2_simd(
+        max_rounded_px_w,
+        max_rounded_px_h,
+        nchannel,
+        auxs,
+        weight / 2.0_f32.sqrt(),
+    );
 
     // Performs a gradient descent step in the direction of the objective gradient
     // with a specified step size. The gradient is normalized before applying the step.
@@ -76,7 +68,4 @@ pub fn compute_step(
             }
         }
     }
-
-    // Calculate objective value
-    (tv + tv2 + prob_dist) / total_alpha as f64
 }

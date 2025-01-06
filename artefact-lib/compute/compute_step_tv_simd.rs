@@ -1,4 +1,4 @@
-use wide::{f32x8, f64x4};
+use wide::f32x8;
 
 use crate::compute::aux::Aux;
 
@@ -7,10 +7,7 @@ pub fn compute_step_tv_simd(
     max_rounded_px_h: u32,
     nchannel: usize,
     auxs: &mut [Aux],
-) -> f64 {
-    // TODO: replace with f64x8 when wide supports it
-    let mut tv = 0.0;
-
+) {
     for curr_row in 0..max_rounded_px_h {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
             compute_step_tv_inner(
@@ -20,12 +17,9 @@ pub fn compute_step_tv_simd(
                 auxs,
                 curr_row_px_idx,
                 curr_row,
-                &mut tv,
             );
         }
     }
-
-    tv
 }
 
 fn compute_step_tv_inner(
@@ -35,7 +29,6 @@ fn compute_step_tv_inner(
     auxs: &mut [Aux],
     curr_row_px_idx: u32,
     curr_row: u32,
-    tv: &mut f64,
 ) {
     // a "group" = 8 consecutive pixels horizontally
 
@@ -99,38 +92,14 @@ fn compute_step_tv_inner(
 
     let alpha = 1.0 / (nchannel as f32).sqrt();
     let alpha_f32 = f32x8::splat(alpha);
-    let alpha_f64 = f64x4::splat(alpha as f64);
 
     // compute gradient normalization
     // f64 for high-precision for tv; f32 for low-precision for derivatives aka obj_gradient
     let g_norm = {
         let mut f32_ver = f32x8::splat(0.0);
-        let mut f64_ver = (f64x4::splat(0.0), f64x4::splat(0.0));
-
         for c in 0..nchannel {
-            // only if there were f64x8 in wide...
-
-            let tmp = g_xs[c].as_array_ref().map(|x| x as f64);
-            let a = f64x4::from(&tmp[..4]);
-            let b = f64x4::from(&tmp[4..]);
-            f64_ver.0 += a * a;
-            f64_ver.1 += b * b;
-
-            f32_ver += g_xs[c] * g_xs[c];
-
-            if !group_at_bottom_edge {
-                let tmp = g_ys[c].as_array_ref().map(|x| x as f64);
-                let a = f64x4::from(&tmp[..4]);
-                let b = f64x4::from(&tmp[4..]);
-                f64_ver.0 += a * a;
-                f64_ver.1 += b * b;
-
-                f32_ver += g_ys[c] * g_ys[c];
-            }
+            f32_ver += g_xs[c] * g_xs[c] + g_ys[c] * g_ys[c];
         }
-
-        *tv += (alpha_f64 * (f64_ver.0.sqrt() + f64_ver.1.sqrt())).reduce_add();
-
         f32_ver.sqrt()
     };
 
