@@ -5,11 +5,11 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn compute(
+    buffer: Vec<u8>,
     weight: Option<f32>,
     pweight: Option<f32>,
     iterations: Option<u32>,
     separate_components: Option<bool>,
-    buffer: Vec<u8>,
 ) -> Result<Vec<u8>, String> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
