@@ -57,7 +57,6 @@ pub fn compute_step_tv_inner(
         if !px_at_bottom_edge {
             g_ys[c] = aux.fdata[below_px_idx] - aux.fdata[curr_px_idx];
         }
-
     }
 
     // norm
