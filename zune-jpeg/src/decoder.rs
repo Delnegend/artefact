@@ -690,7 +690,8 @@ where
     pub(crate) fn set_upsampling(&mut self) -> Result<(), DecodeErrors> {
         // no sampling, return early
         // check if horizontal max ==1
-        if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp.u8() == 1 {
+        if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp.u8() == 1
+        {
             return Ok(());
         }
         match (self.max_horizontal_samp, self.max_vertical_samp) {

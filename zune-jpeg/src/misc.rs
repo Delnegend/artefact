@@ -208,7 +208,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         .map(|c| c.vertical_samp)
         .max()
         .unwrap();
-    img.is_interleaved = img.max_horizontal_samp != SampleFactor::One || img.max_vertical_samp != SampleFactor::One;
+    img.is_interleaved =
+        img.max_horizontal_samp != SampleFactor::One || img.max_vertical_samp != SampleFactor::One;
 
     let nearest_multiple_w = 8 * img.max_horizontal_samp.u16() - 1;
     let nearest_multiple_h = 8 * img.max_vertical_samp.u16() - 1;
