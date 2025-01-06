@@ -18,7 +18,6 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, trace, warn};
 use zune_core::options::DecoderOptions;
 
-use crate::color_convert::choose_ycbcr_to_rgb_convert_func;
 use crate::components::{Components, SampleRatios};
 use crate::errors::{DecodeErrors, UnsupportedSchemes};
 use crate::headers::{
@@ -28,10 +27,6 @@ use crate::huffman::HuffmanTable;
 use crate::marker::Marker;
 use crate::misc::{setup_component_params, SOFMarkers};
 use crate::sample_factor::SampleFactor;
-use crate::upsampler::{
-    choose_horizontal_samp_function, choose_hv_samp_function, choose_v_samp_function,
-    upsample_no_op,
-};
 
 /// Maximum components
 pub(crate) const MAX_COMPONENTS: usize = 4;
@@ -122,8 +117,6 @@ pub struct JpegDecoder<T: ZByteReaderTrait> {
     pub(crate) succ_low: u8,
     /// Number of components.
     pub(crate) num_scans: u8,
-    // Color convert function which acts on 16 YCbCr values
-    pub(crate) color_convert_16: ColorConvert16Ptr,
     pub(crate) z_order: [usize; MAX_COMPONENTS],
     /// restart markers
     pub(crate) restart_interval: usize,
@@ -170,7 +163,6 @@ where
             succ_high: 0,
             succ_low: 0,
             num_scans: 0,
-            color_convert_16: choose_ycbcr_to_rgb_convert_func(ColorSpace::RGB, &options).unwrap(),
             input_colorspace: ColorSpace::YCbCr,
             z_order: [0; MAX_COMPONENTS],
             restart_interval: 0,
@@ -356,24 +348,7 @@ where
             trace!("Headers decoded!");
             return Ok(());
         }
-        // match output colorspace here
-        // we know this will only be called once per image
-        // so makes sense
-        // We only care for ycbcr to rgb/rgba here
-        // in case one is using another colorspace.
-        // May god help you
-        let out_colorspace = self.options.jpeg_get_out_colorspace();
 
-        if matches!(
-            out_colorspace,
-            ColorSpace::BGR | ColorSpace::BGRA | ColorSpace::RGB | ColorSpace::RGBA
-        ) {
-            self.color_convert_16 = choose_ycbcr_to_rgb_convert_func(
-                self.options.jpeg_get_out_colorspace(),
-                &self.options,
-            )
-            .unwrap();
-        }
         // First two bytes should be jpeg soi marker
         let magic_bytes = self.stream.get_u16_be_err()?;
 
@@ -710,29 +685,7 @@ where
         }
 
         for comp in &mut self.components {
-            let hs = self.max_horizontal_samp / comp.horizontal_samp;
-            let vs = self.max_vertical_samp / comp.vertical_samp;
-
-            let samp_factor = match (hs, vs) {
-                (SampleFactor::One, SampleFactor::One) => {
-                    comp.sample_ratio = SampleRatios::None;
-                    upsample_no_op
-                }
-                (SampleFactor::Two, SampleFactor::One) => {
-                    comp.sample_ratio = SampleRatios::H;
-                    choose_horizontal_samp_function(self.options.use_unsafe())
-                }
-                (SampleFactor::One, SampleFactor::Two) => {
-                    comp.sample_ratio = SampleRatios::V;
-                    choose_v_samp_function(self.options.use_unsafe())
-                }
-                (SampleFactor::Two, SampleFactor::Two) => {
-                    comp.sample_ratio = SampleRatios::HV;
-                    choose_hv_samp_function(self.options.use_unsafe())
-                }
-            };
             comp.setup_upsample_scanline();
-            comp.up_sampler = samp_factor;
         }
 
         return Ok(());

@@ -13,10 +13,7 @@
 
 use zune_core::log::trace;
 
-use crate::{
-    decoder::MAX_COMPONENTS, errors::DecodeErrors, sample_factor::SampleFactor,
-    upsampler::upsample_no_op,
-};
+use crate::{decoder::MAX_COMPONENTS, errors::DecodeErrors, sample_factor::SampleFactor};
 
 /// Represents an up-sampler function, this function will be called to upsample
 /// a down-sampled image
@@ -47,9 +44,6 @@ pub struct Components {
     pub quant_table: [i32; 64],
     /// dc prediction for the component
     pub dc_pred: i32,
-    /// An up-sampling function, can be basic or SSE, depending
-    /// on the platform
-    pub up_sampler: UpSampler,
     /// How pixels do we need to go to get to the next line?
     pub width_stride: usize,
     /// Component ID for progressive
@@ -148,7 +142,6 @@ impl Components {
             ac_huff_table: 0,
             quant_table: [0; 64],
             dc_pred: 0,
-            up_sampler: upsample_no_op,
             // set later
             width_stride: horizontal_samp.usize(),
             id: a[0],
