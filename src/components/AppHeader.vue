@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Columns2, Menu as MenuIcon, Moon, Rows2, Sun } from "lucide-vue-next";
+import { Columns2, Moon, Rows2, Sun } from "lucide-vue-next";
 import { onBeforeMount, ref, watch } from "vue";
 
 import Button from "~/components/ui/button/Button.vue";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
+// import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
 import { displayMode } from "~/composables/states";
 
 const colorScheme = ref<"light" | "dark">("light");
@@ -44,7 +44,7 @@ function handleDisplayModeChange(): void {
 <template>
 	<header class="w-full h-16 px-4 grid grid-cols-[1fr,auto,1fr] items-center border-b">
 		<div class="[&>button]:size-10 [&>button]:aspect-square [&>button]:p-0 flex gap-3">
-			<Sheet>
+			<!-- <Sheet>
 				<SheetTrigger as-child>
 					<Button
 						variant="outline"
@@ -62,7 +62,7 @@ function handleDisplayModeChange(): void {
 						</SheetDescription>
 					</SheetHeader>
 				</SheetContent>
-			</Sheet>
+			</Sheet> -->
 
 			<Button
 				variant="outline"
