@@ -1,49 +1,83 @@
 # artefact
 
-No AI, no machine learning, just un-rounding numbers to achieve the smoothest, compression-artifact-free images from JPEGs.
+## Decode JPEG without artifacts
 
-> Works best on illustrations but cannot help with JPEGs that have been re-encoded multiple times.
->
-> This application is a pure Rust 🦀 port of the original [jpeg2png](https://github.com/ThioJoe/jpeg2png/) project.
+- <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code
+- <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser
+- ⚡  ***FASTER***, ***SAFER*** implementation of the original [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
-## Results
+## Tests
 
-|![](assets/01.png)|
-|:---:|
-|Image by [ANDRI TEGAR MAHARDIKA](https://pixabay.com/users/andsproject-26081561/) from [Pixabay](https://pixabay.com/)|
+![](assets/01.png)
+![](assets/02.png)
+> [Photo by Aleksandar Pasaric](https://www.pexels.com/photo/photo-of-neon-signage-1820770/)
 
-|![](assets/02.png)|
-|:---:|
-|Image by [HANSUAN FABREGAS](https://pixabay.com/users/hansuan_fabregas-2902307/) from [Pixabay](https://pixabay.com/)|
+![](assets/03.png)
+![](assets/04.png)
+> [Photo by Toa Heftiba Şinca](https://www.pexels.com/photo/selective-photograph-of-a-wall-with-grafitti-1194420/)
 
-|![](assets/03.png)|
-|:---:|
-|Image [fruits.bmp](https://www.hlevkin.com/hlevkin/TestImages/fruits.bmp) from <a href="https://www.hlevkin.com/hlevkin/06testimages.htm">Mathship Technologies</a>|
-
-## Web version
-WIP
+## [Web version](https://artefact.delnegend.com/)
 
 ## CLI version
 
+### Pre-build binaries
+WIP
+
 ### Build
+Pre-requisites: [Rust toolchain](https://www.rust-lang.org/learn/get-started)
+
 ```bash
 cargo build --release --package artefact-cli
 ```
 
 ### Usage
 ```
-Usage: artefact-cli.exe [OPTIONS] --input <INPUT>
+Usage: artefact-cli [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>
+          The input jpeg file
 
 Options:
-  -i, --input <INPUT>                              The input jpeg file
-  -o, --output <OUTPUT>                            The output png file
-  -y, --overwrite                                  Overwrite existing output file
-  -w, --weight <WEIGHT>                            Second order weight
-  -p, --pweight <PWEIGHT>                          Probability weight
-      --iterations <ITERATIONS>                    Iterations
-  -s, --spearate-components <SPEARATE_COMPONENTS>  Separate components [possible values: true, false]
-  -h, --help                                       Print help (see more with '--help')
-  -V, --version                                    Print version
+  -o, --output <OUTPUT>
+          The output png file
+
+          Default: input file with png extension
+
+  -y, --overwrite
+          Overwrite existing output file
+
+  -w, --weight <WEIGHT>
+          Second order weight
+          Higher values give smoother transitions with less staircasing
+
+          Default: 0.3 for all channels, use comma separated values for each channel
+
+  -p, --pweight <PWEIGHT>
+          Probability weight
+          Higher values make the result more similar to the source JPEG
+
+          Default: 0.001 for all channels, use comma separated values for each channel
+
+  -i, --iterations <ITERATIONS>
+          Iterations
+          Higher values give better results but take more time
+
+          Default: 50 for all channels, use comma separated values for each channel
+
+  -s, --spearate-components <SPEARATE_COMPONENTS>
+          Separate components
+          Separately optimize components instead of all together
+
+          Default: false
+
+          [possible values: true, false]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 ```
 
 ## Developement
@@ -53,7 +87,7 @@ Options:
 - [`artefact-lib`](./artefact-lib/) - the implementation and pipeline
 - [`artefact-cli`](./artefact-cli/) - command-line interface wrapper
 - [`artefact-wasm`](./artefact-wasm/) - the [`wasm-pack`](https://github.com/rustwasm/wasm-pack) wrapper designed to build WebAssembly (WASM) modules compatible with modern browsers (work in progress)
-- [`zune-jpeg`](./zune-jpeg/) - a modified fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables, replacing the original `libjpeg` implementation.
+- [`zune-jpeg`](./zune-jpeg/) - a minimized fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables.
 
 The binary will be located at `./target/release/artefact-cli`
 
