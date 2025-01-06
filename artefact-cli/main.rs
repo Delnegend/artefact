@@ -7,10 +7,12 @@ use clap::Parser;
 #[command(version, about)]
 struct Args {
     /// The input jpeg file
-    #[arg(short, long)]
+    #[arg(index = 1)]
     input: String,
 
     /// The output png file
+    ///
+    /// Default: input file with png extension
     #[arg(short, long)]
     output: Option<String>,
 
@@ -19,33 +21,31 @@ struct Args {
     overwrite: bool,
 
     /// Second order weight
-    ///
     /// Higher values give smoother transitions with less staircasing
-    #[arg(short, long)]
+    ///
+    /// Default: 0.3 for all channels, use comma separated values for each channel
+    #[arg(short, long, verbatim_doc_comment)]
     weight: Option<String>,
 
     /// Probability weight
-    ///
     /// Higher values make the result more similar to the source JPEG
     ///
     /// Default: 0.001 for all channels, use comma separated values for each channel
-    #[arg(short, long)]
+    #[arg(short, long, verbatim_doc_comment)]
     pweight: Option<String>,
 
     /// Iterations
-    ///
     /// Higher values give better results but take more time
     ///
     /// Default: 50 for all channels, use comma separated values for each channel
-    #[arg(long)]
+    #[arg(short, long, verbatim_doc_comment)]
     iterations: Option<String>,
 
     /// Separate components
-    ///
     /// Separately optimize components instead of all together
     ///
     /// Default: false
-    #[arg(short, long)]
+    #[arg(short, long, verbatim_doc_comment)]
     spearate_components: Option<bool>,
 }
 
