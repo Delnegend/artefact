@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { clamp } from "@vueuse/core";
-import { ChevronsLeftRight, Columns2, Search, SquareSplitHorizontal } from "lucide-vue-next";
+import { ChevronsLeftRight, Columns2, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen, Search, SquareSplitHorizontal } from "lucide-vue-next";
 import { ref, watch } from "vue";
 
-import { imageCompareImages, imageCompareMode } from "~/composables/states";
+import { displayMode, imageCompareImages, imageCompareMode, imageInputPanelRef } from "~/composables/states";
 
 import Button from "./ui/button/Button.vue";
+
+defineEmits(["toggle-image-input-panel"]);
 
 const containerRef = ref<HTMLDivElement | null>(null);
 
@@ -178,37 +180,37 @@ watch(imageCompareImages, () => {
 		<!-- control buttons, bottom left -->
 		<div
 			class="flex absolute bottom-4 left-5 backdrop-blur bg-black/60 rounded-md">
-				<Button
-					size="lg"
-					variant="secondary"
-					class="p-4 shadow-sm hover:shadow-md transition-all"
-					:disabled="scale === 1 && position.x === 0 && position.y === 0"
-					@click="{ scale = 1; position = { x: 0, y: 0 }; }">
-					<Search />
-					<span class="w-7">x{{ Math.round(scale * 10) / 10 }}</span>
-				</Button>
-			</div>
+			<Button
+				size="lg"
+				variant="secondary"
+				class="p-4 shadow-sm hover:shadow-md transition-all"
+				:disabled="scale === 1 && position.x === 0 && position.y === 0"
+				@click="{ scale = 1; position = { x: 0, y: 0 }; }">
+				<Search />
+				<span class="w-7">x{{ Math.round(scale * 10) / 10 }}</span>
+			</Button>
+		</div>
 
 		<!-- control buttons, bottom right -->
 		<div
 			class="flex absolute bottom-4 right-5 backdrop-blur bg-black/60 rounded-md gap-[1px]">
-				<Button
-					size="lg"
-					variant="secondary"
-					class="shadow-sm hover:shadow-md rounded-r-none p-4"
-					:disabled="imageCompareMode === 'side-by-side'"
-					@click="imageCompareMode = 'side-by-side'">
-					<Columns2 />
-				</Button>
-				<Button
-					size="lg"
-					variant="secondary"
-					class="shadow-sm hover:shadow-md rounded-l-none p-4"
-					:disabled="imageCompareMode === 'overlay'"
-					@click="imageCompareMode = 'overlay'">
-					<SquareSplitHorizontal />
-				</Button>
-			</div>
+			<Button
+				size="lg"
+				variant="secondary"
+				class="shadow-sm hover:shadow-md rounded-r-none p-4"
+				:disabled="imageCompareMode === 'side-by-side'"
+				@click="imageCompareMode = 'side-by-side'">
+				<Columns2 />
+			</Button>
+			<Button
+				size="lg"
+				variant="secondary"
+				class="shadow-sm hover:shadow-md rounded-l-none p-4"
+				:disabled="imageCompareMode === 'overlay'"
+				@click="imageCompareMode = 'overlay'">
+				<SquareSplitHorizontal />
+			</Button>
+		</div>
 
 		<!-- collapse image input btn -->
 		<Button
