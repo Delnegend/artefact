@@ -115,15 +115,21 @@ function remove(): void {
 
 <template>
 	<div class="px-4 flex flex-col gap-3">
-		<div class="grid grid-cols-[4rem,1fr,auto] h-fit gap-4 items-center">
+		<div class="flex flex-row h-fit gap-4 items-center">
 			<img
 				:src="info.jpegBlobUrl"
 				class="rounded-md size-16 object-cover aspect-square">
 
-			<div class="flex flex-col h-full justify-between">
-				<div class="font-medium line-clamp-1">
+			<div class="flex flex-col h-full w-full justify-between overflow-hidden">
+				<div
+				class="font-medium text-transparent bg-clip-text line-clamp-1 text-ellipsis overflow-hidden"
+				:style="{
+					backgroundImage: 'linear-gradient(90deg, hsl(var(--primary)) 70%, transparent 100%)'
+				}"
+				>
 					{{ info.name }}
 				</div>
+
 				<div class="text-neutral-500 flex flex-col text-sm">
 					<span class="-mb-1">{{ humanReadableSize(info.size) }} | {{ info.width }}x{{ info.height }}</span>
 					<span>{{ new Date(info.dateAdded).toLocaleTimeString("en-US", {
