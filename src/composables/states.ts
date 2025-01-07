@@ -1,6 +1,8 @@
 import { openDB } from "idb";
 import { type Ref, ref } from "vue";
 
+import type { ResizablePanel } from "~/components/ui/resizable";
+
 import type { ImageItemForDisplay } from "./types";
 
 export const displayMode = ref("horizontal" as "horizontal" | "vertical");
@@ -31,3 +33,5 @@ export const imageCompareImages = ref({
 });
 
 export const imageCompareMode = ref("overlay" as "side-by-side" | "overlay");
+
+export const imageInputPanelRef = ref<InstanceType<typeof ResizablePanel>>();
