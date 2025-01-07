@@ -175,11 +175,9 @@ watch(imageCompareImages, () => {
 				class="p-2 shadow-lg bg-primary-foreground overflow-visible rounded-full" />
 		</div>
 
-		<!-- control buttons -->
-		<div class="absolute bottom-4 w-full px-5 justify-between flex z-10">
-
-			<!-- bottom left -->
-			<div class="flex backdrop-blur bg-black/60 rounded-md">
+		<!-- control buttons, bottom left -->
+		<div
+			class="flex absolute bottom-4 left-5 backdrop-blur bg-black/60 rounded-md">
 				<Button
 					size="lg"
 					variant="secondary"
@@ -191,8 +189,9 @@ watch(imageCompareImages, () => {
 				</Button>
 			</div>
 
-			<!-- bottom right -->
-			<div class="flex backdrop-blur bg-black/60 rounded-md gap-[1px]">
+		<!-- control buttons, bottom right -->
+		<div
+			class="flex absolute bottom-4 right-5 backdrop-blur bg-black/60 rounded-md gap-[1px]">
 				<Button
 					size="lg"
 					variant="secondary"
@@ -222,7 +221,6 @@ watch(imageCompareImages, () => {
 			<PanelTopOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
 			<PanelTopClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
 		</Button>
-		<!-- </div> -->
 	</div>
 
 	<div
