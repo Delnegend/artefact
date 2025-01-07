@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { clamp } from "@vueuse/core";
-import { ChevronsLeftRight, Columns2, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen, Search, SquareSplitHorizontal } from "lucide-vue-next";
+import { ChevronsLeftRight, ChevronUp, Columns2, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen, SquareSplitHorizontal } from "lucide-vue-next";
 import { ref, watch } from "vue";
 
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
 import { displayMode, imageCompareImages, imageCompareMode, imageInputPanelRef } from "~/composables/states";
 
 import Button from "./ui/button/Button.vue";
@@ -164,21 +165,38 @@ watch(imageCompareImages, () => {
 
 		<!-- control buttons, bottom left -->
 		<div
-			class="flex absolute bottom-4 left-5 backdrop-blur bg-black/60 rounded-md">
+			class="flex absolute bottom-4 left-5 backdrop-blur bg-secondary/60 rounded-md">
+			<DropdownMenu>
+				<DropdownMenuTrigger>
+					<div class="px-3">
+						<ChevronUp class="translate-x-[1px]" />
+					</div>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuItem
+						v-for="n in [20, 10, 5, 2, 1]"
+						:key="n"
+						class="h-12 font-mono flex justify-center"
+						@click="scale = n">
+						x{{ n }}
+						<DropdownMenuSeparator />
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+
 			<Button
 				size="lg"
 				variant="secondary"
-				class="p-4 shadow-sm hover:shadow-md transition-all"
+				class="aspect-square px-4 shadow-sm hover:shadow-md transition-all font-mono"
 				:disabled="scale === 1 && position.x === 0 && position.y === 0"
 				@click="{ scale = 1; position = { x: 0, y: 0 }; }">
-				<Search />
-				<span class="w-7">x{{ Math.round(scale * 10) / 10 }}</span>
+				x{{ Math.round(scale * 10) / 10 }}
 			</Button>
 		</div>
 
 		<!-- control buttons, bottom right -->
 		<div
-			class="flex absolute bottom-4 right-5 backdrop-blur bg-black/60 rounded-md gap-[1px] z-10">
+			class="flex absolute bottom-4 right-5 backdrop-blur bg-primary-foreground/60 rounded-md gap-[1px] z-10">
 			<Button
 				size="lg"
 				variant="secondary"
@@ -199,7 +217,7 @@ watch(imageCompareImages, () => {
 
 		<!-- collapse image input btn -->
 		<Button
-			class="absolute top-4 left-5 aspect-square p-0"
+			class="absolute top-4 left-5 aspect-square p-0 backdrop-blur"
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')">
