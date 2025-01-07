@@ -103,6 +103,6 @@ fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
 			{{ nothingOver ? "Drag JPEG files here or click to select" : "Drop here" }}
 		</label>
 
-		<div class="w-full h-28 m-4" />
+		<div class="h-28 m-4" />
 	</div>
 </template>
