@@ -90,8 +90,8 @@ function handleDisplayModeChange(): void {
 
 		<div class="select-none relative">
 			<div class="font-black text-4xl italic drop-shadow-xl">artefact</div>
-			<div class="-bottom-6 z-10 whitespace-nowrap left-1/2 -translate-x-1/2 absolute bg-red-600 px-2 py-1 rounded-full text-white text-xs">
-				work-in-progress
+			<div class="-bottom-6 z-10 whitespace-nowrap -right-6 absolute px-2 py-1 italic font-black rounded-full text-red-500 drop-shadow-md bg-primary text-sm">
+				beta
 			</div>
 		</div>
 
