@@ -4,7 +4,7 @@
 
 - <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code.
 - <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser.
-- ⚡  ***FASTER***, ***SAFER*** implementation of the original [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
+- ⚡  ***FASTER***, ***SAFER*** than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
 ## Tests
 
@@ -86,7 +86,7 @@ Options:
 ### Directories
 - [`artefact-lib`](./artefact-lib/) - the implementation and pipeline
 - [`artefact-cli`](./artefact-cli/) - command-line interface wrapper
-- [`artefact-wasm`](./artefact-wasm/) - the [`wasm-pack`](https://github.com/rustwasm/wasm-pack) wrapper designed to build WebAssembly (WASM) modules compatible with modern browsers (work in progress)
+- [`artefact-wasm`](./artefact-wasm/) - the [`wasm-pack`](https://github.com/rustwasm/wasm-pack) wrapper designed to build WebAssembly (WASM) modules compatible with modern browsers
 - [`zune-jpeg`](./zune-jpeg/) - a minimized fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables.
 
 The binary will be located at `./target/release/artefact-cli`
