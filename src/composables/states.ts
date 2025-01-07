@@ -12,7 +12,7 @@ export const db = await openDB("artefact", 20250105, {
 	upgrade(db, oldVersion, newVersion) {
 		const alreadyExists = db.objectStoreNames.contains("files");
 
-		if (newVersion && alreadyExists && oldVersion !== newVersion) {
+		if (newVersion !== null && alreadyExists && oldVersion !== newVersion) {
 			db.deleteObjectStore("files");
 		}
 
