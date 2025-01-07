@@ -8,21 +8,6 @@ import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
 import { displayMode, imageInputPanelRef } from "./composables/states";
 
-const lefPaneWidth = ((): number => {
-	const storedWidth = Number(localStorage.getItem("image-input-panel-size"));
-	if (!Number.isNaN(storedWidth)) {
-		return storedWidth;
-	}
-	return 20;
-})();
-
-function handlePanelResize(): void {
-	const flexVal = document.querySelector(".image-input-panel")?.computedStyleMap()
-		.get("flex")
-		?.toString();
-	localStorage.setItem("image-input-panel-size", flexVal ?? lefPaneWidth.toString());
-}
-
 function toggleImageInputPanel(): void {
 	if (!imageInputPanelRef.value) { return; }
 	const imageInputPanel = document.querySelector<HTMLDivElement>(".image-input-panel");
@@ -53,7 +38,8 @@ onMounted(() => {
 
 		<ResizablePanelGroup
 			:direction="displayMode"
-			class="h-full max-h-[calc(100vh-4rem)]">
+			class="h-full max-h-[calc(100vh-4rem)]"
+			auto-save-id="app-layout">
 
 			<ResizablePanel
 				ref="imageInputPanelRef"
@@ -73,9 +59,7 @@ onMounted(() => {
 				</div>
 			</ResizablePanel>
 
-			<ResizableHandle
-				with-handle
-				@dragging="handlePanelResize" />
+			<ResizableHandle with-handle />
 
 			<ResizablePanel>
 				<div
