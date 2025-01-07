@@ -210,7 +210,19 @@ watch(imageCompareImages, () => {
 					<SquareSplitHorizontal />
 				</Button>
 			</div>
-		</div>
+
+		<!-- collapse image input btn -->
+		<Button
+			class="absolute top-4 left-5 aspect-square p-0"
+			variant="secondary"
+			size="lg"
+			@click="$emit('toggle-image-input-panel')">
+			<PanelLeftOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelLeftClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelTopOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+			<PanelTopClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+		</Button>
+		<!-- </div> -->
 	</div>
 
 	<div
