@@ -110,23 +110,14 @@ watch(imageCompareImages, () => {
 	<div
 		v-if="imageCompareImages.jpegBlobUrl && imageCompareImages.pngBlobUrl"
 		ref="containerRef"
-		class="grid size-full relative"
-		:style="{
-			display: imageCompareMode === 'side-by-side' ? 'grid' : undefined,
-			gridTemplateColumns: imageCompareMode === 'side-by-side' ? 'repeat(2, minmax(0, 1fr))' : undefined,
-		}"
+		class="size-full relative"
+		:class="{ 'grid grid-cols-2 gap-[2px]': imageCompareMode === 'side-by-side' }"
 		@wheel.prevent="handleWheel">
 
 		<!-- second/png image -->
 		<div
-			class="flex justify-center items-center overflow-hidden cursor-grab active:cursor-grabbing order-1"
-			:class="{
-				'size-full': imageCompareMode === 'side-by-side',
-				'size-full absolute top-0 left-0': imageCompareMode === 'overlay',
-			}"
-			:style="{
-				position: imageCompareMode === 'side-by-side' ? 'relative' : 'absolute',
-			}"
+			class="flex size-full justify-center items-center overflow-hidden cursor-grab active:cursor-grabbing order-1"
+			:class="{ 'absolute top-0 left-0': imageCompareMode === 'overlay' }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
@@ -142,14 +133,9 @@ watch(imageCompareImages, () => {
 
 		<!-- first/jpeg image -->
 		<div
-			class="cursor-grab overflow-hidden flex items-center active:cursor-grabbing -order-1"
-			:class="{
-				'justify-center size-full': imageCompareMode === 'side-by-side',
-				'justify-center h-full w-full absolute top-0 left-0': imageCompareMode === 'overlay',
-			}"
-			:style="{
-				clipPath: imageCompareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined,
-			}"
+			class="justify-center size-full cursor-grab overflow-hidden flex items-center active:cursor-grabbing -order-1"
+			:class="{ 'absolute top-0 left-0': imageCompareMode === 'overlay' }"
+			:style="{ clipPath: imageCompareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
@@ -160,8 +146,7 @@ watch(imageCompareImages, () => {
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
 					transition: isDragging ? 'none' : 'transform 0.1s ease-out',
 					imageRendering: 'pixelated',
-				}"
-				@wheel.prevent="handleWheel">
+				}">
 		</div>
 
 		<!-- compare sliding handle -->
@@ -193,7 +178,7 @@ watch(imageCompareImages, () => {
 
 		<!-- control buttons, bottom right -->
 		<div
-			class="flex absolute bottom-4 right-5 backdrop-blur bg-black/60 rounded-md gap-[1px]">
+			class="flex absolute bottom-4 right-5 backdrop-blur bg-black/60 rounded-md gap-[1px] z-10">
 			<Button
 				size="lg"
 				variant="secondary"
