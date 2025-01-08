@@ -53,13 +53,11 @@ pub fn compute_step(
     // with a specified step size. The gradient is normalized before applying the step.
     for aux in auxs.iter_mut() {
         // Calculate Euclidean norm of the objective gradient
-        let norm = {
-            let mut norm = 0.0;
-            for i in 0..max_rounded_px_count {
-                norm += aux.obj_gradient[i].powi(2);
-            }
-            norm.sqrt()
-        };
+        let norm = aux
+            .obj_gradient
+            .iter()
+            .fold(0.0, |acc, &x| acc + x.powi(2))
+            .sqrt();
 
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
