@@ -30,6 +30,8 @@ Pre-requisites: [Rust toolchain](https://www.rust-lang.org/learn/get-started)
 cargo build --release --package artefact-cli
 ```
 
+The binary will be located at `./target/release/artefact-cli`
+
 ### Usage
 ```
 Usage: artefact-cli [OPTIONS] <INPUT>
