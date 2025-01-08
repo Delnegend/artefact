@@ -2,7 +2,6 @@ use wide::f32x8;
 
 use crate::compute::aux::Aux;
 
-#[allow(unused)]
 pub fn compute_step_tv2_simd(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
