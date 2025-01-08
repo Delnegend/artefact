@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use artefact_lib::{pipeline, Config, JpegSource};
+use artefact_lib::{Artefact, JpegSource, Param};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -52,42 +52,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let weight: Option<[f32; 3]> = args.weight.map(|w| {
-        w.split(",")
-            .map(|s| {
-                s.parse()
-                    .unwrap_or_else(|_| panic!("Invalid weight value: {}", s))
-            })
-            .take(3)
-            .collect::<Vec<f32>>()
-            .try_into()
-            .expect("Invalid number of weight values")
-    });
-
-    let pweight: Option<[f32; 3]> = args.pweight.map(|w| {
-        w.split(",")
-            .map(|s| {
-                s.parse()
-                    .unwrap_or_else(|_| panic!("Invalid pweight value: {}", s))
-            })
-            .take(3)
-            .collect::<Vec<f32>>()
-            .try_into()
-            .expect("Invalid number of pweight values")
-    });
-
-    let iterations: Option<[u32; 3]> = args.iterations.map(|w| {
-        w.split(",")
-            .map(|s| {
-                s.parse()
-                    .unwrap_or_else(|_| panic!("Invalid iterations value: {}", s))
-            })
-            .take(3)
-            .collect::<Vec<u32>>()
-            .try_into()
-            .expect("Invalid number of iterations values")
-    });
-
     let output = args.output.map(PathBuf::from).unwrap_or_else(|| {
         let input_path = PathBuf::from(&args.input);
         input_path.with_extension("png")
@@ -97,21 +61,52 @@ fn main() {
         return;
     }
 
-    let mut config = Config::default();
-    if let Some(weight) = weight {
-        config.weight = weight;
-    }
-    if let Some(pweight) = pweight {
-        config.pweight = pweight;
-    }
-    if let Some(iterations) = iterations {
-        config.iterations = iterations;
-    }
-    if let Some(spearate_components) = args.spearate_components {
-        config.separate_components = spearate_components;
-    }
-
-    match pipeline(Some(Config::default()), JpegSource::File(args.input)) {
+    match Artefact::default()
+        .source(JpegSource::File(args.input))
+        .weight(args.weight.map(|arg| {
+            let vals = arg
+                .split(",")
+                .map(|s| {
+                    s.parse()
+                        .unwrap_or_else(|_| panic!("Invalid weight value: {}", s))
+                })
+                .collect::<Vec<f32>>();
+            match vals.len() {
+                1 => Param::ForAll(vals[0]),
+                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                _ => panic!("Invalid number of weight values"),
+            }
+        }))
+        .pweight(args.pweight.map(|arg| {
+            let vals = arg
+                .split(",")
+                .map(|s| {
+                    s.parse()
+                        .unwrap_or_else(|_| panic!("Invalid pweight value: {}", s))
+                })
+                .collect::<Vec<f32>>();
+            match vals.len() {
+                1 => Param::ForAll(vals[0]),
+                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                _ => panic!("Invalid number of pweight values"),
+            }
+        }))
+        .iterations(args.iterations.map(|arg| {
+            let vals = arg
+                .split(",")
+                .map(|s| {
+                    s.parse()
+                        .unwrap_or_else(|_| panic!("Invalid iterations value: {}", s))
+                })
+                .collect::<Vec<u32>>();
+            match vals.len() {
+                1 => Param::ForAll(vals[0]),
+                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                _ => panic!("Invalid number of iterations values"),
+            }
+        }))
+        .process()
+    {
         Ok(img) => img.save(output).expect("Cannot save output image"),
         Err(e) => eprintln!("Error: {e:?}"),
     }
