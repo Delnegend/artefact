@@ -63,8 +63,13 @@ pub fn compute_step(
 
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
-            for i in 0..max_rounded_px_count {
-                aux.fdata[i] -= step_size * (aux.obj_gradient[i] / norm);
+            for i in (0..max_rounded_px_count).step_by(8) {
+                let original = &mut aux.fdata[i..i + 8];
+
+                let update = f32x8::from(&original[..])
+                    - step_size * (f32x8::from(&aux.obj_gradient[i..i + 8]) / norm);
+
+                original.copy_from_slice(update.as_array_ref());
             }
         }
     }
