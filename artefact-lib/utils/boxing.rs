@@ -9,19 +9,19 @@ pub fn unboxing(
     block_w: u32,
     block_h: u32,
 ) {
-    assert_eq!(rounded_px_w % 8, 0);
-    assert_eq!(rounded_px_h % 8, 0);
-    assert_eq!(input.len(), output.len());
+    debug_assert_eq!(rounded_px_w % 8, 0);
+    debug_assert_eq!(rounded_px_h % 8, 0);
+    debug_assert_eq!(input.len(), output.len());
 
     let mut index = 0;
 
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                let result = f32x8::from(&input[index..index + 8]).to_array();
+                let result = f32x8::from(&input[index..index + 8]);
 
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-                output[row_start..row_start + 8].copy_from_slice(&result);
+                output[row_start..row_start + 8].copy_from_slice(result.as_array_ref());
                 index += 8;
             }
         }
@@ -37,9 +37,9 @@ pub fn boxing(
     block_w: u32,
     block_h: u32,
 ) {
-    assert_eq!(rounded_px_w % 8, 0);
-    assert_eq!(rounded_px_h % 8, 0);
-    assert_eq!(input.len(), output.len());
+    debug_assert_eq!(rounded_px_w % 8, 0);
+    debug_assert_eq!(rounded_px_h % 8, 0);
+    debug_assert_eq!(input.len(), output.len());
 
     let mut index = 0;
 
@@ -47,8 +47,9 @@ pub fn boxing(
         for block_x in 0..block_w {
             for in_y in 0..8 {
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-                let result = f32x8::from(&input[row_start..row_start + 8]).to_array();
-                output[index..index + 8].copy_from_slice(&result);
+                let result = f32x8::from(&input[row_start..row_start + 8]);
+
+                output[index..index + 8].copy_from_slice(result.as_array_ref());
                 index += 8;
             }
         }
