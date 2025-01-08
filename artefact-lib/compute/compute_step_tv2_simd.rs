@@ -10,6 +10,8 @@ pub fn compute_step_tv2_simd(
     auxs: &mut [Aux],
     alpha: f32,
 ) {
+    let alpha = alpha / (nchannel as f32).sqrt();
+
     for curr_row in 0..max_rounded_px_h {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
             compute_step_tv2_inner(
@@ -130,9 +132,6 @@ fn compute_step_tv2_inner(
         g_xy_syms[c] = (g_xy + g_yx) / 2.0;
     }
 
-    let alpha = (alpha) * 1.0 / (nchannel as f32).sqrt();
-    let alpha_f32 = f32x8::splat(alpha);
-
     // norm
     let g2_norm = {
         let mut g2_norm = f32x8::splat(0.0);
@@ -168,7 +167,7 @@ fn compute_step_tv2_inner(
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm,
+                    _ => alpha * dividend / g2_norm,
                 }
             };
 
@@ -191,7 +190,7 @@ fn compute_step_tv2_inner(
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm,
+                    _ => alpha * dividend / g2_norm,
                 }
             };
 
@@ -233,7 +232,7 @@ fn compute_step_tv2_inner(
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm,
+                    _ => alpha * dividend / g2_norm,
                 }
             };
 
@@ -281,7 +280,7 @@ fn compute_step_tv2_inner(
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm,
+                    _ => alpha * dividend / g2_norm,
                 }
             };
 
@@ -308,7 +307,7 @@ fn compute_step_tv2_inner(
                             .collect::<Vec<f32>>()
                             .as_slice(),
                     ),
-                    _ => alpha_f32 * dividend / g2_norm,
+                    _ => alpha * dividend / g2_norm,
                 }
             };
 
@@ -333,7 +332,7 @@ fn compute_step_tv2_inner(
                         .collect::<Vec<f32>>()
                         .as_slice(),
                 ),
-                _ => alpha_f32 * -g_xy_sym / g2_norm,
+                _ => alpha * -g_xy_sym / g2_norm,
             };
 
             // ignore the last pixel in the group because it's out of bounds
@@ -378,7 +377,7 @@ fn compute_step_tv2_inner(
                         .collect::<Vec<f32>>()
                         .as_slice(),
                 ),
-                _ => alpha_f32 * -g_xy_sym / g2_norm,
+                _ => alpha * -g_xy_sym / g2_norm,
             };
 
             // ignore the first pixel in the group because it's out of bounds
