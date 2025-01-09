@@ -18,7 +18,10 @@ try {
 			dateAdded: file.dateAdded,
 			size: file.jpegFileSize,
 			jpegBlobUrl: URL.createObjectURL(new Blob([file.jpegArrayBuffer], { type: "image/jpeg" })),
-			pngBlobUrl: file.pngArrayBuffer ? URL.createObjectURL(new Blob([file.pngArrayBuffer], { type: "image/png" })) : undefined,
+			outputImgBlobUrl: file.outputImgArrayBuffer
+				? URL.createObjectURL(new Blob([file.outputImgArrayBuffer], { type: `image/${file.outputImgFormat}` }))
+				: undefined,
+			outputImgFormat: file.outputImgFormat,
 			width: file.width,
 			height: file.height,
 		});
