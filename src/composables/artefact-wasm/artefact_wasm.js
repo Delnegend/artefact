@@ -106,16 +106,17 @@ function getArrayU8FromWasm0(ptr, len) {
 }
 /**
  * @param {Uint8Array} buffer
+ * @param {OutputFormat | undefined} [output_format]
  * @param {number | undefined} [weight]
  * @param {number | undefined} [pweight]
  * @param {number | undefined} [iterations]
  * @param {boolean | undefined} [separate_components]
  * @returns {Uint8Array}
  */
-export function compute(buffer, weight, pweight, iterations, separate_components) {
+export function compute(buffer, output_format, weight, pweight, iterations, separate_components) {
     const ptr0 = passArray8ToWasm0(buffer, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.compute(ptr0, len0, isLikeNone(weight) ? 0x100000001 : Math.fround(weight), isLikeNone(pweight) ? 0x100000001 : Math.fround(pweight), isLikeNone(iterations) ? 0x100000001 : (iterations) >>> 0, isLikeNone(separate_components) ? 0xFFFFFF : separate_components ? 1 : 0);
+    const ret = wasm.compute(ptr0, len0, isLikeNone(output_format) ? 4 : output_format, isLikeNone(weight) ? 0x100000001 : Math.fround(weight), isLikeNone(pweight) ? 0x100000001 : Math.fround(pweight), isLikeNone(iterations) ? 0x100000001 : (iterations) >>> 0, isLikeNone(separate_components) ? 0xFFFFFF : separate_components ? 1 : 0);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
@@ -123,6 +124,16 @@ export function compute(buffer, weight, pweight, iterations, separate_components
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v2;
 }
+
+/**
+ * @enum {0 | 1 | 2 | 3}
+ */
+export const OutputFormat = Object.freeze({
+    Png: 0, "0": "Png",
+    Webp: 1, "1": "Webp",
+    Tiff: 2, "2": "Tiff",
+    Bmp: 3, "3": "Bmp",
+});
 
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -193,6 +204,9 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_string_new = function(arg0, arg1) {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
+    };
+    imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
     };
 
     return imports;
