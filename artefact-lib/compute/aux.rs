@@ -56,6 +56,7 @@ impl Aux {
         }
 
         Self {
+            #[cfg(not(feature = "simd"))]
             cos: {
                 let mut cos = Vec::with_capacity((coef.rounded_px_count) as usize);
 
@@ -65,6 +66,17 @@ impl Aux {
                     }
                 }
 
+                cos
+            },
+            #[cfg(feature = "simd")]
+            cos: {
+                let mut cos = vec![0.0; (coef.rounded_px_count) as usize];
+                for i in 0..coef.block_count as usize {
+                    for j in 0..8 {
+                        let res = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
+                        cos[i * 8 + j..(i + 1) * 8 + j].copy_from_slice(res.as_array_ref());
+                    }
+                }
                 cos
             },
 
