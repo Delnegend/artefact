@@ -5,7 +5,7 @@ import { ref, watch } from "vue";
 
 import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
-import { displayMode, useImageCompareStore } from "~/composables/states";
+import { displayMode, imageInputPanelRef, useImageCompareStore } from "~/composables/states";
 
 const imageCompareStore = useImageCompareStore();
 
@@ -222,10 +222,10 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')">
-			<PanelLeftOpen v-if="imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
-			<PanelLeftClose v-if="!imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
-			<PanelTopOpen v-if="imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
-			<PanelTopClose v-if="!imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+			<PanelLeftOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelLeftClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelTopOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+			<PanelTopClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
 		</Button>
 	</div>
 

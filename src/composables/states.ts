@@ -32,16 +32,16 @@ export const colorScheme = ref<"light" | "dark">("light");
 export const useImageCompareStore = defineStore("image-compare", () => {
 	const jpegBlobUrl = ref<string | undefined>(undefined);
 	const outputImgBlobUrl = ref<string | undefined>(undefined);
-	const imageInputPanelRef = ref<InstanceType<typeof ResizablePanel>>();
 	const compareMode = ref<"side-by-side" | "overlay">("overlay");
 
 	return {
 		jpegBlobUrl,
 		outputImgBlobUrl,
-		imageInputPanelRef,
 		compareMode,
 	};
 });
+
+export const imageInputPanelRef = ref<InstanceType<typeof ResizablePanel>>();
 
 export const useProcessingConfig = defineStore("processing-config", () => {
 	const __DEFAULT_OUTPUT_FORMAT = OutputImgFormat.PNG;

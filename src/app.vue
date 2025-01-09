@@ -6,20 +6,18 @@ import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
-import { displayMode, useImageCompareStore } from "./composables/states";
-
-const imageCompareStore = useImageCompareStore();
+import { displayMode, imageInputPanelRef } from "./composables/states";
 
 function toggleImageInputPanel(): void {
-	if (!imageCompareStore.imageInputPanelRef) { return; }
+	if (!imageInputPanelRef.value) { return; }
 	const imageInputPanel = document.querySelector<HTMLDivElement>(".image-input-panel");
 	if (!imageInputPanel) { return; }
 
 	imageInputPanel.style.transition = "flex 150ms cubic-bezier(0.4, 0, 0.2, 1)";
-	if (imageCompareStore.imageInputPanelRef.isCollapsed) {
-		imageCompareStore.imageInputPanelRef.expand();
+	if (imageInputPanelRef.value.isCollapsed) {
+		imageInputPanelRef.value.expand();
 	} else {
-		imageCompareStore.imageInputPanelRef.collapse();
+		imageInputPanelRef.value.collapse();
 	}
 	setTimeout(() => {
 		imageInputPanel.style.transition = "";
@@ -32,9 +30,9 @@ onMounted(() => {
 	}
 
 	setTimeout(() => {
-		if (!imageCompareStore.imageInputPanelRef) { return; }
-		if (imageCompareStore.imageInputPanelRef.isCollapsed) {
-			imageCompareStore.imageInputPanelRef.expand();
+		if (!imageInputPanelRef.value) { return; }
+		if (imageInputPanelRef.value.isCollapsed) {
+			imageInputPanelRef.value.expand();
 		}
 	}, 0);
 });
