@@ -15,7 +15,8 @@ export interface ImageItemForDB {
 	dateAdded: Date;
 	jpegFileSize: number;
 	jpegArrayBuffer: ArrayBuffer;
-	pngArrayBuffer?: ArrayBuffer;
+	outputImgArrayBuffer?: ArrayBuffer;
+	outputImgFormat?: OutputImgFormat;
 	width: number;
 	height: number;
 }
@@ -25,7 +26,8 @@ export interface ImageItemForDisplay {
 	dateAdded: Date;
 	size: number;
 	jpegBlobUrl: string;
-	pngBlobUrl?: string;
+	outputImgBlobUrl?: string;
+	outputImgFormat?: OutputImgFormat;
 	width: number;
 	height: number;
 }
