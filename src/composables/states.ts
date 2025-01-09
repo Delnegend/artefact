@@ -116,6 +116,9 @@ export const useProcessingConfig = defineStore("processing-config", () => {
 		separateComponents,
 		isDefault,
 		resetDefaultAll,
+		handleOutputFormatChange: (format: OutputImgFormat): void => {
+			outputFormat.value = format;
+		},
 		ensureInterationsValid: (): void => {
 			if (iterations.value < 1) {
 				iterations.value = 1;
