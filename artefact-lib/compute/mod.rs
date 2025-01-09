@@ -134,6 +134,6 @@ pub fn compute(
     for c in 0..nchannel {
         coefs[c].rounded_px_w = max_rounded_px_w;
         coefs[c].rounded_px_h = max_rounded_px_h;
-        coefs[c].image_data = auxs[c].fdata.clone(); // TODO: might need a Rc/Arc
+        coefs[c].image_data = std::mem::take(&mut auxs[c].fdata);
     }
 }
