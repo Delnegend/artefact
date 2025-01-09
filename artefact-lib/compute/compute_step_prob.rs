@@ -46,8 +46,8 @@ pub fn compute_step_prob(
                             let x = cx * coef.horizontal_samp_factor.u32() + sx;
 
                             // Bounds checking
-                            assert!(y < max_rounded_px_h);
-                            assert!(x < max_rounded_px_w);
+                            debug_assert!(y < max_rounded_px_h);
+                            debug_assert!(x < max_rounded_px_w);
 
                             // Update gradient with scaled cosine value
                             obj_gradient[(y * max_rounded_px_w + x) as usize] += alpha * cosbs[j];
