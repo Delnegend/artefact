@@ -6,13 +6,6 @@
 //! You may use, copy, modify and distribute this code for any purpose
 //! (include commercial use) and without fee. Please refer to this package
 //! when you modify this code.
-//!
-//! Modifications:
-//! double -> float
-//! double indirection removed
-//! added named functions instead of sign
-//! added ASSUME_ALIGNED
-//! rewrite in Rust
 
 #![allow(clippy::identity_op)]
 #![allow(clippy::erasing_op)]
