@@ -1,10 +1,20 @@
-use crate::{
-    compute::{
-        aux::Aux, compute_step_prob::compute_step_prob,
-        compute_step_tv2_simd::compute_step_tv2_simd, compute_step_tv_simd::compute_step_tv_simd,
-    },
-    jpeg::Coefficient,
+#[cfg(feature = "simd")]
+use wide::f32x8;
+
+#[cfg(feature = "simd")]
+use crate::compute::{
+    compute_step_prob_simd::compute_step_prob_simd as compute_step_prob,
+    compute_step_tv2_simd::compute_step_tv2_simd as compute_step_tv2,
+    compute_step_tv_simd::compute_step_tv_simd as compute_step_tv, f32x8,
 };
+
+#[cfg(not(feature = "simd"))]
+use crate::compute::{
+    compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
+    compute_step_tv2::compute_step_tv2,
+};
+
+use crate::{compute::aux::Aux, jpeg::Coefficient};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute_step(
@@ -38,10 +48,10 @@ pub fn compute_step(
     }
 
     // TV computation
-    compute_step_tv_simd(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
+    compute_step_tv(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
 
     // TGV second order
-    compute_step_tv2_simd(
+    compute_step_tv2(
         max_rounded_px_w,
         max_rounded_px_h,
         nchannel,
@@ -61,13 +71,19 @@ pub fn compute_step(
 
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
+            #[cfg(feature = "simd")]
             for i in (0..max_rounded_px_count).step_by(8) {
                 let original = &mut aux.fdata[i..i + 8];
 
-                let update = f32x8::from(&original[..])
-                    - step_size * (f32x8::from(&aux.obj_gradient[i..i + 8]) / norm);
+                let update = f32x8!(&original[..])
+                    - step_size * (f32x8!(&aux.obj_gradient[i..i + 8]) / norm);
 
                 original.copy_from_slice(update.as_array_ref());
+            }
+
+            #[cfg(not(feature = "simd"))]
+            for i in 0..max_rounded_px_count {
+                aux.fdata[i] -= step_size * (aux.obj_gradient[i] / norm);
             }
         }
     }
