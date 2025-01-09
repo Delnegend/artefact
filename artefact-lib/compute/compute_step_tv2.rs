@@ -1,7 +1,6 @@
 use crate::compute::aux::Aux;
 
 /// Computes the Total Generalized Variation (TGV) regularization term and its gradient
-#[allow(unused)]
 pub fn compute_step_tv2(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
