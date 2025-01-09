@@ -31,3 +31,23 @@ export interface ImageItemForDisplay {
 	width: number;
 	height: number;
 }
+
+export interface WorkerInput {
+	jpegFileHash: string;
+	config: ProcessingConfig;
+}
+
+export interface WorkerOutput {
+	blobUrl?: string;
+	error?: string;
+	timeTakenInMs?: number;
+	outputFormat?: OutputImgFormat;
+}
+
+export interface ProcessingConfig {
+	outputFormat: OutputImgFormat;
+	iterations: number;
+	weight: number;
+	pWeight: number;
+	separateComponents: boolean;
+}
