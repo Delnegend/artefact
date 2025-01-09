@@ -9,25 +9,25 @@ use crate::{compute::compute, jpeg::Jpeg};
 pub use crate::jpeg::JpegSource;
 
 #[derive(Debug)]
-pub enum Param<T> {
+pub enum ValueCollection<T> {
     ForAll(T),
     ForEach([T; 3]),
 }
 
-impl<T: Copy> Param<T> {
+impl<T: Copy> ValueCollection<T> {
     fn to_slice(&self) -> [T; 3] {
         match self {
-            Param::ForAll(v) => [*v, *v, *v],
-            Param::ForEach(v) => *v,
+            ValueCollection::ForAll(v) => [*v, *v, *v],
+            ValueCollection::ForEach(v) => *v,
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Artefact {
-    weight: Param<f32>,
-    pweight: Param<f32>,
-    iterations: Param<u32>,
+    weight: ValueCollection<f32>,
+    pweight: ValueCollection<f32>,
+    iterations: ValueCollection<u32>,
     separate_components: bool,
 
     source: Option<JpegSource>,
@@ -36,9 +36,9 @@ pub struct Artefact {
 impl Default for Artefact {
     fn default() -> Self {
         Self {
-            weight: Param::ForAll(0.3),
-            pweight: Param::ForAll(0.001),
-            iterations: Param::ForAll(50),
+            weight: ValueCollection::ForAll(0.3),
+            pweight: ValueCollection::ForAll(0.001),
+            iterations: ValueCollection::ForAll(50),
             separate_components: false,
             source: None,
         }
@@ -51,21 +51,21 @@ impl Artefact {
         self
     }
 
-    pub fn weight(mut self, weight: Option<Param<f32>>) -> Self {
+    pub fn weight(mut self, weight: Option<ValueCollection<f32>>) -> Self {
         if let Some(weight) = weight {
             self.weight = weight;
         };
         self
     }
 
-    pub fn pweight(mut self, pweight: Option<Param<f32>>) -> Self {
+    pub fn pweight(mut self, pweight: Option<ValueCollection<f32>>) -> Self {
         if let Some(pweight) = pweight {
             self.pweight = pweight;
         };
         self
     }
 
-    pub fn iterations(mut self, iterations: Option<Param<u32>>) -> Self {
+    pub fn iterations(mut self, iterations: Option<ValueCollection<u32>>) -> Self {
         if let Some(iterations) = iterations {
             self.iterations = iterations;
         };

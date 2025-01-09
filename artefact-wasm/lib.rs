@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use artefact_lib::{Artefact, JpegSource, Param};
+use artefact_lib::{Artefact, JpegSource, ValueCollection};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,9 +17,9 @@ pub fn compute(
 
     Artefact::default()
         .source(JpegSource::Buffer(buffer))
-        .weight(weight.map(Param::ForAll))
-        .pweight(pweight.map(Param::ForAll))
-        .iterations(iterations.map(Param::ForAll))
+        .weight(weight.map(ValueCollection::ForAll))
+        .pweight(pweight.map(ValueCollection::ForAll))
+        .iterations(iterations.map(ValueCollection::ForAll))
         .separate_components(separate_components)
         .process()?
         .write_to(&mut cursor, artefact_lib::image::ImageFormat::Png)

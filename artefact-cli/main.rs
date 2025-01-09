@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use artefact_lib::{Artefact, JpegSource, Param};
+use artefact_lib::{Artefact, JpegSource, ValueCollection};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -72,8 +72,8 @@ fn main() {
                 })
                 .collect::<Vec<f32>>();
             match vals.len() {
-                1 => Param::ForAll(vals[0]),
-                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                1 => ValueCollection::ForAll(vals[0]),
+                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
                 _ => panic!("Invalid number of weight values"),
             }
         }))
@@ -86,8 +86,8 @@ fn main() {
                 })
                 .collect::<Vec<f32>>();
             match vals.len() {
-                1 => Param::ForAll(vals[0]),
-                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                1 => ValueCollection::ForAll(vals[0]),
+                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
                 _ => panic!("Invalid number of pweight values"),
             }
         }))
@@ -100,8 +100,8 @@ fn main() {
                 })
                 .collect::<Vec<u32>>();
             match vals.len() {
-                1 => Param::ForAll(vals[0]),
-                3 => Param::ForEach([vals[0], vals[1], vals[2]]),
+                1 => ValueCollection::ForAll(vals[0]),
+                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
                 _ => panic!("Invalid number of iterations values"),
             }
         }))
