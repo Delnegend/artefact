@@ -4,9 +4,9 @@ mod utils;
 
 pub use image;
 
-use crate::{compute::compute, jpeg::Jpeg};
-
-pub use crate::jpeg::JpegSource;
+use compute::compute;
+use jpeg::Jpeg;
+pub use jpeg::JpegSource;
 
 #[derive(Debug)]
 pub enum ValueCollection<T> {
