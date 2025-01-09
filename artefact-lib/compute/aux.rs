@@ -61,7 +61,7 @@ impl Aux {
 
                 for i in 0..coef.block_count as usize {
                     for j in 0..64 {
-                        cos.push(coef.dct_coefs[i * 64 + j] as f32 * coef.quant_table[j] as f32);
+                        cos.push(coef.dct_coefs[i * 64 + j] * coef.quant_table[j]);
                     }
                 }
 

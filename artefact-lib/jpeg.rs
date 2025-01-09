@@ -19,9 +19,9 @@ pub struct Coefficient {
     pub horizontal_samp_factor: SampleFactor,
     pub vertical_samp_factor: SampleFactor,
 
-    pub dct_coefs: Vec<i16>,
+    pub dct_coefs: Vec<f32>, // originally i16, but for convenience we use f32
     pub image_data: Vec<f32>,
-    pub quant_table: [u16; 64],
+    pub quant_table: [f32; 64], // i32, same as above
 }
 
 #[derive(Debug)]
@@ -73,15 +73,15 @@ impl Jpeg {
                         block_count,
                         horizontal_samp_factor: comp.horizontal_samp_factor,
                         vertical_samp_factor: comp.vertical_samp_factor,
-                        dct_coefs: comp.dct_coefs,
+                        dct_coefs: comp.dct_coefs.iter().map(|&x| x as f32).collect(),
                         image_data: vec![0.0; comp.rounded_px_count],
                         quant_table: comp
                             .quant_table
                             .iter()
-                            .map(|&x| x as u16)
-                            .collect::<Vec<u16>>()
+                            .map(|&x| x as f32)
+                            .collect::<Vec<_>>()
                             .try_into()
-                            .map_err(|_| "Failed to convert quantization table".to_string())?,
+                            .map_err(|_| "Quantization table length is not 64")?,
                     };
 
                     // DCT coefs + quantization table -> image data

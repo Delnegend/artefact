@@ -72,8 +72,8 @@ pub fn compute_projection(
     // Clamp DCT coefficients
     for i in 0..coef.block_count as usize {
         for j in 0..64 {
-            let min = (coef.dct_coefs[i * 64 + j] as f32 - 0.5) * coef.quant_table[j] as f32;
-            let max = (coef.dct_coefs[i * 64 + j] as f32 + 0.5) * coef.quant_table[j] as f32;
+            let min = (coef.dct_coefs[i * 64 + j] - 0.5) * coef.quant_table[j];
+            let max = (coef.dct_coefs[i * 64 + j] + 0.5) * coef.quant_table[j];
             aux.pixel_diff.x[i * 64 + j] = aux.pixel_diff.x[i * 64 + j].clamp(min, max)
         }
     }

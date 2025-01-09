@@ -23,10 +23,10 @@ pub fn compute_step_prob(
             // Process each coefficient in current block
             for (j, cosb) in cosbs.iter_mut().enumerate() {
                 // Calculate difference from original DCT coefficients
-                *cosb -= coef.dct_coefs[i * 64 + j] as f32 * coef.quant_table[j] as f32;
+                *cosb -= coef.dct_coefs[i * 64 + j] * coef.quant_table[j];
 
                 // Calculate derivative for gradient
-                *cosb /= (coef.quant_table[j] as f32).powi(2);
+                *cosb /= (coef.quant_table[j]).powi(2);
             }
 
             // Apply inverse DCT to get spatial domain gradient
