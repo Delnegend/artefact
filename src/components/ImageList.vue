@@ -31,11 +31,33 @@ try {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4 overflow-y-auto">
+	<TransitionGroup name="list" tag="div" class="relative">
+		<div ref="dummyElementRef" key="dummy" class="w-full" />
 		<ImageItem
 			v-for="[jpegFileHash, info] in imageDisplayList"
 			:key="jpegFileHash"
 			:jpeg-file-hash="jpegFileHash"
-			:info="info" />
-	</div>
+			:info="info"
+			class="mb-4" />
+	</TransitionGroup>
 </template>
+
+<style scoped>
+.list-move,
+.list-enter-active,
+.list-leave-active {
+	transition: all 0.5s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+	opacity: 0;
+	transform: translateX(30px);
+}
+
+.list-leave-active {
+	position: absolute;
+	overflow: hidden;
+	width: 100%;
+}
+</style>
