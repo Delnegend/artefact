@@ -16,6 +16,13 @@ struct Args {
     #[arg(short, long)]
     output: Option<String>,
 
+    /// Output format
+    ///
+    /// Default: png
+    /// Possible values: png, webp, tiff, bmp, gif
+    #[arg(short, long, default_value = "png")]
+    format: Option<String>,
+
     /// Overwrite existing output file
     #[arg(short = 'y', long, default_value = "false")]
     overwrite: bool,
@@ -52,9 +59,15 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    let output_format = args.format.unwrap_or_else(|| "png".to_string());
+    if !["png", "webp", "tiff", "bmp", "gif"].contains(&output_format.as_str()) {
+        eprintln!("Invalid output format. Possible values: png, webp, tiff, bmp, gif");
+        return;
+    }
+
     let output = args.output.map(PathBuf::from).unwrap_or_else(|| {
         let input_path = PathBuf::from(&args.input);
-        input_path.with_extension("png")
+        input_path.with_extension(output_format)
     });
     if output.exists() && !args.overwrite {
         eprintln!("Output file already exists, use -y to overwrite");
