@@ -25,13 +25,13 @@ pub fn compute_projection(
                     for sx in 0..coef.horizontal_samp_factor.u32() {
                         let y = cy * coef.vertical_samp_factor.u32() + sy;
                         let x = cx * coef.horizontal_samp_factor.u32() + sx;
-                        assert!(y < max_rounded_px_h && x < max_rounded_px_w);
+                        debug_assert!(y < max_rounded_px_h && x < max_rounded_px_w);
                         mean += aux.fdata[(y * max_rounded_px_w + x) as usize];
                     }
                 }
                 mean /= (coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8()) as f32;
 
-                assert!(cx < coef.rounded_px_w && cy < coef.rounded_px_h);
+                debug_assert!(cx < coef.rounded_px_w && cy < coef.rounded_px_h);
                 aux.pixel_diff.y[(cy * coef.rounded_px_w + cx) as usize] = mean;
 
                 for sy in 0..coef.vertical_samp_factor.u32() {
@@ -39,7 +39,7 @@ pub fn compute_projection(
                         let y = cy * coef.vertical_samp_factor.u32() + sy;
                         let x = cx * coef.horizontal_samp_factor.u32() + sx;
 
-                        assert!(y < max_rounded_px_h && x < max_rounded_px_w);
+                        debug_assert!(y < max_rounded_px_h && x < max_rounded_px_w);
                         aux.fdata[(y * max_rounded_px_w + x) as usize] -= mean;
                     }
                 }
