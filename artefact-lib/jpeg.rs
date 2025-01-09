@@ -1,5 +1,8 @@
 use zune_jpeg::{sample_factor::SampleFactor, zune_core::bytestream::ZCursor, JpegDecoder};
 
+#[cfg(feature = "simd")]
+use wide::f32x8;
+
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
 
 #[derive(Debug, Clone)]
@@ -19,9 +22,17 @@ pub struct Coefficient {
     pub horizontal_samp_factor: SampleFactor,
     pub vertical_samp_factor: SampleFactor,
 
+    #[cfg(not(feature = "simd"))]
     pub dct_coefs: Vec<f32>, // originally i16, but for convenience we use f32
-    pub image_data: Vec<f32>,
+    #[cfg(not(feature = "simd"))]
     pub quant_table: [f32; 64], // i32, same as above
+
+    #[cfg(feature = "simd")]
+    pub dct_coefs: Vec<f32x8>,
+    #[cfg(feature = "simd")]
+    pub quant_table: [f32x8; 8],
+
+    pub image_data: Vec<f32>,
 }
 
 #[derive(Debug)]
@@ -29,6 +40,7 @@ pub struct Jpeg {
     pub chan_count: u32,
     pub real_px_w: u32,
     pub real_px_h: u32,
+
     pub coefs: Vec<Coefficient>,
 }
 
@@ -59,6 +71,7 @@ impl Jpeg {
             real_px_h,
             coefs: {
                 let mut coefs = Vec::with_capacity(img.components.len());
+
                 for comp in img.components {
                     let block_w = comp.rounded_px_w as u32 / 8;
                     let block_h = comp.rounded_px_h as u32 / 8;
@@ -73,22 +86,69 @@ impl Jpeg {
                         block_count,
                         horizontal_samp_factor: comp.horizontal_samp_factor,
                         vertical_samp_factor: comp.vertical_samp_factor,
-                        dct_coefs: comp.dct_coefs.iter().map(|&x| x as f32).collect(),
-                        image_data: vec![0.0; comp.rounded_px_count],
+
+                        #[cfg(not(feature = "simd"))]
+                        dct_coefs: comp.dct_coefs.iter().map(|&x| x as f32).collect::<Vec<_>>(),
+
+                        #[cfg(feature = "simd")]
+                        dct_coefs: comp
+                            .dct_coefs
+                            .iter()
+                            .map(|&x| x as f32)
+                            .collect::<Vec<_>>()
+                            .chunks_exact(8)
+                            .map(f32x8::from)
+                            .collect(),
+
+                        #[cfg(not(feature = "simd"))]
                         quant_table: comp
                             .quant_table
                             .iter()
                             .map(|&x| x as f32)
                             .collect::<Vec<_>>()
                             .try_into()
-                            .map_err(|_| "Quantization table length is not 64")?,
+                            .map_err(|_| "Invalid quant_table_aligned length".to_string())?,
+
+                        #[cfg(feature = "simd")]
+                        quant_table: comp
+                            .quant_table
+                            .iter()
+                            .map(|&x| x as f32)
+                            .collect::<Vec<_>>()
+                            .chunks_exact(8)
+                            .map(f32x8::from)
+                            .collect::<Vec<f32x8>>()
+                            .try_into()
+                            .map_err(|_| "Invalid quant_table length".to_string())?,
+
+                        image_data: vec![0.0; comp.rounded_px_count],
                     };
 
                     // DCT coefs + quantization table -> image data
+                    #[cfg(not(feature = "simd"))]
                     for i in 0..(block_count as usize) {
                         for j in 0..64 {
                             coef.image_data[i * 64 + j] =
                                 coef.dct_coefs[i * 64 + j] as f32 * coef.quant_table[j] as f32;
+                        }
+
+                        idct8x8s(
+                            coef.image_data[i * 64..(i + 1) * 64]
+                                .as_mut()
+                                .try_into()
+                                .expect("Invalid coef's image data length"),
+                        );
+                    }
+
+                    #[cfg(feature = "simd")]
+                    for i in 0..(block_count as usize) {
+                        for j in 0..8 {
+                            let dct_coefs = coef.dct_coefs[i * 8 + j];
+                            let quant_table = coef.quant_table[j];
+
+                            let idx = i * 64 + j * 8;
+                            coef.image_data[idx..idx + 8]
+                                .copy_from_slice((dct_coefs * quant_table).as_array_ref());
                         }
 
                         idct8x8s(
