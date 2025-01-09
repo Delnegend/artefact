@@ -14,6 +14,37 @@ use crate::{
     jpeg::Coefficient,
 };
 
+trait Extract {
+    fn get(&self, i: usize) -> f32;
+}
+
+impl Extract for wide::f32x8 {
+    fn get(&self, i: usize) -> f32 {
+        self.as_array_ref()[i]
+    }
+}
+
+macro_rules! f32x8 {
+    // Create a f32x8 from a slice with less than 8 elements
+    ($fill_range:expr, $slice:expr) => {
+        f32x8::from({
+            let mut tmp = [0.0; 8];
+            tmp[$fill_range].copy_from_slice(&$slice);
+            tmp
+        })
+    };
+    // Syntax sugar
+    ($slice:expr) => {
+        f32x8::from($slice)
+    };
+    // Syntax sugar
+    () => {
+        f32x8::splat(0.0)
+    };
+}
+
+use f32x8;
+
 pub fn compute(
     nchannel: usize,
     coefs: &mut [Coefficient],
