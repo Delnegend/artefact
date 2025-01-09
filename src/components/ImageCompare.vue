@@ -3,10 +3,11 @@ import { clamp } from "@vueuse/core";
 import { ChevronsLeftRight, ChevronUp, Columns2, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen, SquareSplitHorizontal } from "lucide-vue-next";
 import { ref, watch } from "vue";
 
+import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
-import { displayMode, imageCompareImages, imageCompareMode, imageInputPanelRef } from "~/composables/states";
+import { displayMode, useImageCompareStore } from "~/composables/states";
 
-import Button from "./ui/button/Button.vue";
+const imageCompareStore = useImageCompareStore();
 
 defineEmits(["toggle-image-input-panel"]);
 
@@ -101,7 +102,7 @@ function startDragSlidingHandle(): void {
 }
 
 // reset scale and position when image changes
-watch(imageCompareImages, () => {
+watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl], () => {
 	scale.value = 1;
 	position.value = { x: 0, y: 0 };
 });
@@ -109,21 +110,21 @@ watch(imageCompareImages, () => {
 
 <template>
 	<div
-		v-if="imageCompareImages.jpegBlobUrl && imageCompareImages.pngBlobUrl"
+		v-if="imageCompareStore.jpegBlobUrl && imageCompareStore.outputImgBlobUrl"
 		ref="containerRef"
 		class="size-full relative"
-		:class="{ 'grid grid-cols-2 gap-[2px]': imageCompareMode === 'side-by-side' }"
+		:class="{ 'grid grid-cols-2 gap-[2px]': imageCompareStore.compareMode === 'side-by-side' }"
 		@wheel.prevent="handleWheel">
 
-		<!-- second/png image -->
+		<!-- second/processed image -->
 		<div
 			class="flex size-full justify-center items-center overflow-hidden cursor-grab active:cursor-grabbing order-1"
-			:class="{ 'absolute top-0 left-0': imageCompareMode === 'overlay' }"
+			:class="{ 'absolute top-0 left-0': imageCompareStore.compareMode === 'overlay' }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
-				:src="imageCompareImages.pngBlobUrl"
+				:src="imageCompareStore.outputImgBlobUrl"
 				class="size-auto max-w-none select-none origin-center"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
@@ -135,13 +136,13 @@ watch(imageCompareImages, () => {
 		<!-- first/jpeg image -->
 		<div
 			class="justify-center size-full cursor-grab overflow-hidden flex items-center active:cursor-grabbing -order-1"
-			:class="{ 'absolute top-0 left-0': imageCompareMode === 'overlay' }"
-			:style="{ clipPath: imageCompareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined }"
+			:class="{ 'absolute top-0 left-0': imageCompareStore.compareMode === 'overlay' }"
+			:style="{ clipPath: imageCompareStore.compareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
-				:src="imageCompareImages.jpegBlobUrl"
+				:src="imageCompareStore.jpegBlobUrl"
 				class="size-auto max-w-none select-none origin-center"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
@@ -152,7 +153,7 @@ watch(imageCompareImages, () => {
 
 		<!-- compare sliding handle -->
 		<div
-			v-if="imageCompareMode === 'overlay'"
+			v-if="imageCompareStore.compareMode === 'overlay'"
 			class="absolute top-0 -translate-x-1/2 w-[2px] bg-secondary h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
 			:style="{ left: `${slidingHandlePositionPercent}%` }"
 			@mousedown.prevent="startDragSlidingHandle"
@@ -201,16 +202,16 @@ watch(imageCompareImages, () => {
 				size="lg"
 				variant="secondary"
 				class="shadow-sm hover:shadow-md rounded-r-none p-4"
-				:disabled="imageCompareMode === 'side-by-side'"
-				@click="imageCompareMode = 'side-by-side'">
+				:disabled="imageCompareStore.compareMode === 'side-by-side'"
+				@click="imageCompareStore.compareMode = 'side-by-side'">
 				<Columns2 />
 			</Button>
 			<Button
 				size="lg"
 				variant="secondary"
 				class="shadow-sm hover:shadow-md rounded-l-none p-4"
-				:disabled="imageCompareMode === 'overlay'"
-				@click="imageCompareMode = 'overlay'">
+				:disabled="imageCompareStore.compareMode === 'overlay'"
+				@click="imageCompareStore.compareMode = 'overlay'">
 				<SquareSplitHorizontal />
 			</Button>
 		</div>
@@ -221,10 +222,10 @@ watch(imageCompareImages, () => {
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')">
-			<PanelLeftOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
-			<PanelLeftClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
-			<PanelTopOpen v-if="imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
-			<PanelTopClose v-if="!imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+			<PanelLeftOpen v-if="imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelLeftClose v-if="!imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'horizontal'" />
+			<PanelTopOpen v-if="imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
+			<PanelTopClose v-if="!imageCompareStore.imageInputPanelRef?.isCollapsed && displayMode === 'vertical'" />
 		</Button>
 	</div>
 
