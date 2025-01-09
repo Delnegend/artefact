@@ -98,21 +98,18 @@ fn compute_step_tv_inner(
 
     // compute derivatives
     for c in 0..nchannel {
-        let g_x = g_xs[c];
-        let g_y = g_ys[c];
-
         let aux = &mut auxs[c];
 
         '_for_current_group: {
             let target = &mut aux.obj_gradient[curr_group_idx..=curr_group_idx + 7];
             let original = f32x8!(&target[..]);
-            let update = f32x8!(div: alpha * -(g_x + g_y), g_norm);
+            let update = f32x8!(div: alpha * -(g_xs[c] + g_ys[c]), g_norm);
 
             target.copy_from_slice((original + update).as_array_ref());
         }
 
         '_for_shifted_right_1px_group: {
-            let update = f32x8!(div: alpha * g_x, g_norm);
+            let update = f32x8!(div: alpha * g_xs[c], g_norm);
 
             if group_at_right_edge {
                 // ignore the last pixel in the group because it's out of bounds
@@ -136,7 +133,7 @@ fn compute_step_tv_inner(
 
             let target = aux.obj_gradient[start..=start + 7].as_mut();
             let original = f32x8!(&target[..]);
-            let update = f32x8!(div: alpha * g_y, g_norm);
+            let update = f32x8!(div: alpha * g_ys[c], g_norm);
 
             target.copy_from_slice((original + update).as_array_ref());
         }
