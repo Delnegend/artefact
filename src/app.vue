@@ -6,18 +6,20 @@ import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
-import { displayMode, imageInputPanelRef } from "./composables/states";
+import { displayMode, useImageCompareStore } from "./composables/states";
+
+const imageCompareStore = useImageCompareStore();
 
 function toggleImageInputPanel(): void {
-	if (!imageInputPanelRef.value) { return; }
+	if (!imageCompareStore.imageInputPanelRef) { return; }
 	const imageInputPanel = document.querySelector<HTMLDivElement>(".image-input-panel");
 	if (!imageInputPanel) { return; }
 
 	imageInputPanel.style.transition = "flex 150ms cubic-bezier(0.4, 0, 0.2, 1)";
-	if (imageInputPanelRef.value.isCollapsed) {
-		imageInputPanelRef.value.expand();
+	if (imageCompareStore.imageInputPanelRef.isCollapsed) {
+		imageCompareStore.imageInputPanelRef.expand();
 	} else {
-		imageInputPanelRef.value.collapse();
+		imageCompareStore.imageInputPanelRef.collapse();
 	}
 	setTimeout(() => {
 		imageInputPanel.style.transition = "";
@@ -25,10 +27,18 @@ function toggleImageInputPanel(): void {
 }
 
 onMounted(() => {
-	if ((/Mobi/iu).test(window.navigator.userAgent)) {
+	if (window.innerWidth < window.innerHeight) {
 		displayMode.value = "vertical";
 	}
+
+	setTimeout(() => {
+		if (!imageCompareStore.imageInputPanelRef) { return; }
+		if (imageCompareStore.imageInputPanelRef.isCollapsed) {
+			imageCompareStore.imageInputPanelRef.expand();
+		}
+	}, 0);
 });
+
 </script>
 
 <template>
@@ -45,7 +55,7 @@ onMounted(() => {
 				ref="imageInputPanelRef"
 				collapsible
 				:collapsed-size="0"
-				:default-size="lefPaneWidth"
+				:default-size="20"
 				class="image-input-panel">
 				<div
 					class="grid grid-rows-[auto,1fr,auto] h-full"
