@@ -1,19 +1,33 @@
 mod aux;
-mod compute_projection;
 mod compute_step;
+
+#[cfg(not(feature = "simd"))]
+mod compute_projection;
+#[cfg(not(feature = "simd"))]
 mod compute_step_prob;
+#[cfg(not(feature = "simd"))]
 mod compute_step_tv;
+#[cfg(not(feature = "simd"))]
 mod compute_step_tv2;
+#[cfg(not(feature = "simd"))]
+use crate::compute::compute_projection::compute_projection;
+
+#[cfg(feature = "simd")]
+mod compute_projection_simd;
+#[cfg(feature = "simd")]
+mod compute_step_prob_simd;
+#[cfg(feature = "simd")]
 mod compute_step_tv2_simd;
+#[cfg(feature = "simd")]
 mod compute_step_tv_simd;
+#[cfg(feature = "simd")]
+use crate::compute::compute_projection_simd::compute_projection_simd as compute_projection;
 
 use rayon::prelude::*;
 
-use crate::{
-    compute::{aux::Aux, compute_projection::compute_projection, compute_step::compute_step},
-    jpeg::Coefficient,
-};
+use crate::{compute::aux::Aux, compute::compute_step::compute_step, jpeg::Coefficient};
 
+#[cfg(feature = "simd")]
 macro_rules! f32x8 {
     // Create a f32x8 from a slice with less than 8 elements
     ($fill_range:expr, $slice:expr) => {
@@ -51,7 +65,8 @@ macro_rules! f32x8 {
     }};
 }
 
-use f32x8;
+#[cfg(feature = "simd")]
+pub(crate) use f32x8;
 
 pub fn compute(
     nchannel: usize,
