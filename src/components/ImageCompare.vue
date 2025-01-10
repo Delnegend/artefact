@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { clamp } from "@vueuse/core";
 import { ChevronsLeftRight, ChevronUp, Columns2, PanelLeftClose, PanelLeftOpen, PanelTopClose, PanelTopOpen, SquareSplitHorizontal } from "lucide-vue-next";
-import { ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
@@ -22,6 +22,61 @@ function handleWheel(e: WheelEvent): void {
 	const delta = e.deltaY > 0 ? 0.9 : 1.1;
 	scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale.value * delta));
 }
+
+// ===== for scaling the image but on mobile =====
+let initialDistance = 0;
+let rafId: number | null = null;
+let initialScale = 1;
+// eslint-disable-next-line no-unused-vars
+let touchMoveHandler: ((e: TouchEvent)=> void) | null = null;
+
+function updateScaleMobile(newDistance: number): void {
+	if (rafId !== null) { cancelAnimationFrame(rafId); }
+	rafId = requestAnimationFrame((): void => {
+		scale.value = clamp(initialScale * (newDistance / initialDistance), MIN_SCALE, MAX_SCALE);
+	});
+}
+
+function cleanup(): void {
+	if (touchMoveHandler) {
+		document.removeEventListener("touchmove", touchMoveHandler);
+		touchMoveHandler = null;
+	}
+	if (rafId !== null) {
+		cancelAnimationFrame(rafId);
+		rafId = null;
+	}
+}
+
+function handleTouchStart(e: TouchEvent): void {
+	if (e.touches.length !== 2) { return; }
+
+	const touch1 = e.touches[0];
+	const touch2 = e.touches[1];
+	initialDistance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+	initialScale = scale.value;
+
+	function touchMoveHandler(e: TouchEvent): void {
+		if (e.touches.length !== 2) { return; }
+
+		const touch1 = e.touches[0];
+		const touch2 = e.touches[1];
+		const newDistance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+		updateScaleMobile(newDistance);
+	}
+
+	document.addEventListener("touchmove", touchMoveHandler, { passive: true });
+	document.addEventListener("touchend", cleanup, { once: true });
+}
+
+onMounted(() => {
+	document.addEventListener("touchstart", handleTouchStart, { passive: false });
+});
+
+onUnmounted(() => {
+	document.removeEventListener("touchstart", handleTouchStart);
+	cleanup();
+});
 
 // ===== for moving the image =====
 
