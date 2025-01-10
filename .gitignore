@@ -7,6 +7,7 @@ ooura/
 node_modules/
 .pnpm-store/
 .output/
+src/dev-dist
 
 dist
 *.c
@@ -16,6 +17,7 @@ dist
 *.jpg
 *.png
 !assets/*.png
+!src/public/*.png
 perf.*
 *.svg
 .eslintcache
