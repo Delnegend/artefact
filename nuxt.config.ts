@@ -19,7 +19,7 @@ export default defineNuxtConfig({
 			title: "Artefact",
 			meta: [
 				{ charset: "utf-8" },
-				{ name: "viewport", content: "width=device-width, initial-scale=1" },
+				{ name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" },
 			],
 		},
 	},
@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 				manifest: {
 					name: "Artefact",
 					short_name: "Artefact",
-					theme_color: "#f8fafc",
+					theme_color: "#020817",
 					background_color: "#020817",
 					icons: [
 						{
