@@ -14,6 +14,9 @@ importers:
       '@pinia/nuxt':
         specifier: 0.9.0
         version: 0.9.0(magicast@0.3.5)(pinia@2.3.0(typescript@5.7.2)(vue@3.5.13(typescript@5.7.2)))(rollup@4.30.1)
+      '@vite-pwa/nuxt':
+        specifier: 0.10.6
+        version: 0.10.6(magicast@0.3.5)(rollup@4.30.1)(vite@6.0.7(@types/node@22.10.5)(jiti@2.4.2)(sass@1.83.0)(terser@5.37.0)(yaml@2.7.0))(workbox-build@7.3.0)(workbox-window@7.3.0)
       '@vueuse/core':
         specifier: ^12.3.0
         version: 12.3.0(typescript@5.7.2)
@@ -1638,6 +1641,14 @@ packages:
     resolution: {integrity: sha512-zbaF9Wp/NsZtKLE4uVmL3FyfFwlpDyuymQM1kPbeT0mVOHKDQQNjnnfslB3REg3oZprmNFJuh3pkHBk2qAaizg==}
     engines: {node: '>=16'}
     hasBin: true
+
+  '@vite-pwa/nuxt@0.10.6':
+    resolution: {integrity: sha512-yQTrMNLz2KuroEaqstHYvylT258BgYryON1tC2MQGCG8VVyWXfmYZPeffid/zCE8pkKMQpp6e9owKUyVLgT5xg==}
+    peerDependencies:
+      '@vite-pwa/assets-generator': ^0.2.6
+    peerDependenciesMeta:
+      '@vite-pwa/assets-generator':
+        optional: true
 
   '@vitejs/plugin-vue-jsx@4.1.1':
     resolution: {integrity: sha512-uMJqv/7u1zz/9NbWAD3XdjaY20tKTf17XVfQ9zq4wY1BjsB/PjpJPMe2xiG39QpP4ZdhYNhm4Hvo66uJrykNLA==}
@@ -7202,6 +7213,20 @@ snapshots:
       - encoding
       - rollup
       - supports-color
+
+  '@vite-pwa/nuxt@0.10.6(magicast@0.3.5)(rollup@4.30.1)(vite@6.0.7(@types/node@22.10.5)(jiti@2.4.2)(sass@1.83.0)(terser@5.37.0)(yaml@2.7.0))(workbox-build@7.3.0)(workbox-window@7.3.0)':
+    dependencies:
+      '@nuxt/kit': 3.15.1(magicast@0.3.5)(rollup@4.30.1)
+      pathe: 1.1.2
+      ufo: 1.5.4
+      vite-plugin-pwa: 0.21.1(vite@6.0.7(@types/node@22.10.5)(jiti@2.4.2)(sass@1.83.0)(terser@5.37.0)(yaml@2.7.0))(workbox-build@7.3.0)(workbox-window@7.3.0)
+    transitivePeerDependencies:
+      - magicast
+      - rollup
+      - supports-color
+      - vite
+      - workbox-build
+      - workbox-window
 
   '@vitejs/plugin-vue-jsx@4.1.1(vite@6.0.7(@types/node@22.10.5)(jiti@2.4.2)(sass@1.83.0)(terser@5.37.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.7.2))':
     dependencies:

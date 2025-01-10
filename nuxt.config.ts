@@ -4,7 +4,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import wasm from "vite-plugin-wasm";
 
 export default defineNuxtConfig({
-	modules: ["@nuxt/eslint", "@vueuse/nuxt", "@nuxtjs/tailwindcss", "@nuxtjs/color-mode", "shadcn-nuxt", "@pinia/nuxt"],
+	modules: ["@nuxt/eslint", "@vueuse/nuxt", "@nuxtjs/tailwindcss", "@nuxtjs/color-mode", "shadcn-nuxt", "@pinia/nuxt", "@vite-pwa/nuxt"],
 	ssr: false,
 	components: {
 		dirs: [],
@@ -39,8 +39,32 @@ export default defineNuxtConfig({
 				manifest: {
 					name: "Artefact",
 					short_name: "Artefact",
-					theme_color: "#000000",
-					background_color: "#000000",
+					theme_color: "#f8fafc",
+					background_color: "#020817",
+					icons: [
+						{
+							src: "/pwa-64.png",
+							sizes: "64x64",
+							type: "image/png",
+						},
+						{
+							src: "/pwa-192.png",
+							sizes: "192x192",
+							type: "image/png",
+						},
+						{
+							src: "/pwa-512.png",
+							sizes: "512x512",
+							type: "image/png",
+						},
+						{
+							src: "/maskable-512.png",
+							sizes: "512x512",
+							type: "image/png",
+							purpose: "maskable",
+						},
+					],
+					display: "standalone",
 				},
 				devOptions: {
 					enabled: true,
@@ -56,5 +80,10 @@ export default defineNuxtConfig({
 	},
 	shadcn: {
 		componentDir: "./src/components/ui",
+	},
+	pwa: {
+		client: {
+			installPrompt: true,
+		},
 	},
 });
