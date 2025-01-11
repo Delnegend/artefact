@@ -1,6 +1,8 @@
 use zune_jpeg::{sample_factor::SampleFactor, zune_core::bytestream::ZCursor, JpegDecoder};
 
 #[cfg(feature = "simd")]
+use crate::compute::f32x8;
+#[cfg(feature = "simd")]
 use wide::f32x8;
 
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
@@ -31,6 +33,11 @@ pub struct Coefficient {
     pub dct_coefs: Vec<f32x8>,
     #[cfg(feature = "simd")]
     pub quant_table: [f32x8; 8],
+
+    #[cfg(feature = "simd")]
+    pub dequant_dct_coefs_min: Vec<f32x8>,
+    #[cfg(feature = "simd")]
+    pub dequant_dct_coefs_max: Vec<f32x8>,
 
     pub image_data: Vec<f32>,
 }
@@ -121,6 +128,11 @@ impl Jpeg {
                             .try_into()
                             .map_err(|_| "Invalid quant_table length".to_string())?,
 
+                        #[cfg(feature = "simd")]
+                        dequant_dct_coefs_min: vec![f32x8!(); comp.rounded_px_count as usize / 8],
+                        #[cfg(feature = "simd")]
+                        dequant_dct_coefs_max: vec![f32x8!(); comp.rounded_px_count as usize / 8],
+
                         image_data: vec![0.0; comp.rounded_px_count],
                     };
 
@@ -157,6 +169,23 @@ impl Jpeg {
                                 .try_into()
                                 .expect("Invalid coef's image data length"),
                         );
+                    }
+
+                    #[cfg(feature = "simd")]
+                    {
+                        coef.dequant_dct_coefs_min = coef
+                            .dct_coefs
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, dct_coefs)| (*dct_coefs - 0.5) * coef.quant_table[idx % 8])
+                            .collect();
+
+                        coef.dequant_dct_coefs_max = coef
+                            .dct_coefs
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, dct_coefs)| (*dct_coefs + 0.5) * coef.quant_table[idx % 8])
+                            .collect();
                     }
 
                     // 8x8 -> 64x1

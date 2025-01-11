@@ -96,13 +96,17 @@ pub fn compute_projection_simd(
     // Clamp DCT coefficients
     for i in 0..coef.block_count as usize {
         for j in 0..8 {
-            let min = (coef.dct_coefs[i * 8 + j] - 0.5) * coef.quant_table[j];
-            let max = (coef.dct_coefs[i * 8 + j] + 0.5) * coef.quant_table[j];
-
-            let target = &mut aux.pixel_diff.x[(i * 64 + j * 8)..(i * 64 + j * 8) + 8];
-            target.copy_from_slice(f32x8!(&target[..]).min(max).max(min).as_array_ref());
+            let idx = i * 64 + j * 8;
+            let target = &mut aux.pixel_diff.x[idx..idx + 8];
+            target.copy_from_slice(
+                f32x8!(&target[..])
+                    .min(coef.dequant_dct_coefs_max[i * 8 + j])
+                    .max(coef.dequant_dct_coefs_min[i * 8 + j])
+                    .as_array_ref(),
+            );
         }
     }
+
     // Save a copy of the DCT values for step_prob
     aux.cos = aux.pixel_diff.x.clone();
 
