@@ -11,7 +11,7 @@ export default withNuxt(
 	},
 ).prepend(
 	{ files: ["**/*.{ts,vue}"] },
-	{ ignores: ["artefact-wasm/**/*", "src/composables/artefact-wasm/**/*"] },
+	{ ignores: ["artefact-wasm/**/*", "src/utils/artefact-wasm/**/*"] },
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
 	...hagemanto({
 		enableJsx: false,
