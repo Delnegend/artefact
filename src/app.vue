@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
-import ActionButtons from "./components/ActionButtons.vue";
 import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
 import { displayMode, imageInputPanelRef } from "./composables";
+// import ActionButtons from "./components/ActionButtons.vue";
 
 function toggleImageInputPanel(): void {
 	if (!imageInputPanelRef.value) { return; }
@@ -64,7 +64,7 @@ onMounted(() => {
 					}">
 					<ImageInput />
 					<ImageList />
-					<ActionButtons />
+					<!-- <ActionButtons /> -->
 				</div>
 			</ResizablePanel>
 
