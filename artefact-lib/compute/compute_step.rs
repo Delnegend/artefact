@@ -1,5 +1,3 @@
-use rayon::prelude::*;
-
 use crate::compute::{
     compute_projection::compute_projection, compute_step_prob::compute_step_prob,
     compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
@@ -69,7 +67,7 @@ pub fn compute_step(
     }
 
     // Project onto DCT basis
-    auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
+    auxs.iter_mut().enumerate().for_each(|(c, aux)| {
         #[cfg(not(feature = "simd"))]
         compute_projection(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
     });

@@ -1,6 +1,4 @@
 use std::time::Duration;
-
-use rayon::prelude::*;
 use wide::f32x8;
 
 use crate::{
@@ -81,7 +79,7 @@ pub fn compute_step_simd(
     }
 
     // Project onto DCT basis
-    auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
+    auxs.iter_mut().enumerate().for_each(|(c, aux)| {
         compute_projection_simd(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
     });
 }
