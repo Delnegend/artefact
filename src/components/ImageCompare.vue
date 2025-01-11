@@ -5,7 +5,7 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
-import { displayMode, imageInputPanelRef, useImageCompareStore } from "~/composables/states";
+import { displayMode, imageInputPanelRef, useImageCompareStore } from "~/composables";
 
 const imageCompareStore = useImageCompareStore();
 

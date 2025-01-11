@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { toast } from "vue-sonner";
 
-import { db, imageDisplayList } from "~/composables/states";
-import type { ImageItemForDB } from "~/composables/types";
+import { imageDisplayList } from "~/composables";
+import { db, type ImageItemForDB } from "~/utils";
 
 import ImageItem from "./ImageItem.vue";
 

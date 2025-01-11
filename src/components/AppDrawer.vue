@@ -4,10 +4,10 @@ import { Info } from "lucide-vue-next";
 import Button from "~/components/ui/button/Button.vue";
 import Input from "~/components/ui/input/Input.vue";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { useProcessingConfig } from "~/composables/states";
-import { OutputImgFormat } from "~/composables/types";
+import { useProcessConfigStore } from "~/composables";
+import { OutputImgFormat } from "~/utils";
 
-const processingConfig = useProcessingConfig();
+const processingConfig = useProcessConfigStore();
 </script>
 
 <template>

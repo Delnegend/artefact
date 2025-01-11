@@ -5,7 +5,7 @@ import { onBeforeMount, watch } from "vue";
 import AppDrawer from "~/components/AppDrawer.vue";
 import Button from "~/components/ui/button/Button.vue";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
-import { colorScheme, displayMode } from "~/composables/states";
+import { colorScheme, displayMode } from "~/composables";
 
 onBeforeMount(() => {
 	const osColorScheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
