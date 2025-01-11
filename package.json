@@ -18,7 +18,7 @@
 		"build-linux-32": "cargo build --bin artefact-cli --release --target i686-unknown-linux-gnu",
 		"build-linux-64": "cargo build --bin artefact-cli --release --target x86_64-unknown-linux-gnu",
 		"build": "nuxt build",
-		"build-wasm": "rm -rf src/composables/artefact-wasm && cd artefact-wasm && wasm-pack build --target web --out-dir ../src/composables/artefact-wasm && cd ..",
+		"build-wasm": "rm -rf src/utils/artefact-wasm && cd artefact-wasm && wasm-pack build --target web --out-dir ../src/utils/artefact-wasm && cd .. && rm -f src/utils/artefact-wasm/.gitignore",
 		"dev": "nuxt dev",
 		"generate": "nuxt generate",
 		"preview": "nuxt preview",
