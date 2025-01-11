@@ -1,3 +1,4 @@
+import { clamp } from "@vueuse/core";
 import { defineStore } from "pinia";
 import { computed, ref, watchEffect } from "vue";
 
@@ -80,28 +81,13 @@ export const useProcessConfigStore = defineStore("processing-config", () => {
 			outputFormat.value = format;
 		},
 		ensureInterationsValid: (): void => {
-			if (iterations.value < 1) {
-				iterations.value = 1;
-			}
-			if (iterations.value > 1000) {
-				iterations.value = 1000;
-			}
+			iterations.value = clamp(iterations.value, 1, 1000);
 		},
 		ensureWeightValid: (): void => {
-			if (weight.value < 0) {
-				weight.value = 0;
-			}
-			if (weight.value > 1) {
-				weight.value = 1;
-			}
+			weight.value = clamp(weight.value, 0, 1);
 		},
 		ensurePWeightValid: (): void => {
-			if (pWeight.value < 0) {
-				pWeight.value = 0;
-			}
-			if (pWeight.value > 1) {
-				pWeight.value = 1;
-			}
+			pWeight.value = clamp(pWeight.value, 0, 1);
 		},
 		allConfig: computed((): ProcessingConfig => ({
 			outputFormat: outputFormat.value,
