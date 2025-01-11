@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
+import { default as VitePwaManifest } from "@vite-pwa/nuxt/dist/runtime/components/VitePwaManifest.js";
 import ActionButtons from "./components/ActionButtons.vue";
 import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
@@ -43,7 +44,7 @@ onMounted(() => {
 	<div class="max-h-dvh h-dvh w-full">
 		<AppHeader />
 		<Toaster />
-		<NuxtPwaManifest />
+		<VitePwaManifest />
 
 		<ResizablePanelGroup
 			:direction="displayMode"
