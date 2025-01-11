@@ -7,7 +7,7 @@ import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
-import { displayMode, imageInputPanelRef } from "./composables/states";
+import { displayMode, imageInputPanelRef } from "./composables";
 
 function toggleImageInputPanel(): void {
 	if (!imageInputPanelRef.value) { return; }
