@@ -1,14 +1,7 @@
-import {
-	db,
-	type ImageItemForDB,
-	type InputWrapperForWorker,
-	OutputImgFormat,
-	type OutputWrapperForWorker,
-	type WorkerInput,
-	WorkerMessageType,
-	type WorkerOutput,
-} from ".";
 import init, { compute, type OutputFormat } from "./artefact-wasm";
+import { db } from "./db";
+import { type ImageItemForDB, OutputImgFormat, type WorkerInput, type WorkerOutput } from "./types";
+import { type InputWrapperForWorker, type OutputWrapperForWorker, WorkerMessageType } from "./worker-pool";
 
 self.onerror = (event): boolean => {
 	console.error(event);

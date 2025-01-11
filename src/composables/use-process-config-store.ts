@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref, watchEffect } from "vue";
 
-import { OutputImgFormat, type ProcessingConfig } from "~/utils";
+import { OutputImgFormat, type ProcessingConfig } from "~/utils/types";
 
 export const useProcessConfigStore = defineStore("processing-config", () => {
 	const __DEFAULT_OUTPUT_FORMAT = OutputImgFormat.PNG;

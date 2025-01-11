@@ -1,6 +1,7 @@
 import { type Ref, ref } from "vue";
 
-import { type PoolTask, type WorkerInput, type WorkerOutput, WorkerPool } from "~/utils";
+import type { WorkerInput, WorkerOutput } from "~/utils/types";
+import { type PoolTask, WorkerPool } from "~/utils/worker-pool";
 
 export const workerPool = new WorkerPool<WorkerInput, WorkerOutput>({
 	workerCreator: (): Worker => new Worker(
