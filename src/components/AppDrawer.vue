@@ -5,7 +5,7 @@ import Button from "~/components/ui/button/Button.vue";
 import Input from "~/components/ui/input/Input.vue";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { useProcessConfigStore } from "~/composables";
-import { OutputImgFormat } from "~/utils";
+import { OutputImgFormat } from "~/utils/types";
 
 const processingConfig = useProcessConfigStore();
 </script>

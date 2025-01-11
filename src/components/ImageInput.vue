@@ -4,7 +4,10 @@ import { ref } from "vue";
 import { toast } from "vue-sonner";
 
 import { imageDisplayList } from "~/composables";
-import { cn, db, hashArrayBuffer, type ImageItemForDB } from "~/utils";
+import { cn } from "~/utils/cn";
+import { db } from "~/utils/db";
+import { hashArrayBuffer } from "~/utils/hash-array-buffer";
+import type { ImageItemForDB } from "~/utils/types";
 
 import { buttonBaseClassTw, buttonVariantsTw } from "./ui/button";
 

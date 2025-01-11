@@ -5,8 +5,10 @@ import { toast } from "vue-sonner";
 
 import Badge from "~/components/ui/badge/Badge.vue";
 import { imageDisplayList, useArtefactWorker, useImageCompareStore, useProcessConfigStore } from "~/composables";
-import { cn, db, type ImageItemForDisplay, type OutputImgFormat } from "~/utils";
+import { cn } from "~/utils/cn";
+import { db } from "~/utils/db";
 import { humanReadableSize } from "~/utils/human-readable-size";
+import type { ImageItemForDisplay, OutputImgFormat } from "~/utils/types";
 
 const props = defineProps<{
 	jpegFileHash: string;

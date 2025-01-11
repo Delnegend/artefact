@@ -2,7 +2,7 @@
 import { SplitterGroup, type SplitterGroupEmits, type SplitterGroupProps, useForwardPropsEmits } from "radix-vue";
 import { computed, type HTMLAttributes } from "vue";
 
-import { cn } from "~/utils";
+import { cn } from "~/utils/cn";
 
 const props = defineProps<SplitterGroupProps & { class?: HTMLAttributes["class"] }>();
 const emits = defineEmits<SplitterGroupEmits>();

@@ -2,7 +2,8 @@
 import { toast } from "vue-sonner";
 
 import { imageDisplayList } from "~/composables";
-import { db, type ImageItemForDB } from "~/utils";
+import { db } from "~/utils/db";
+import type { ImageItemForDB } from "~/utils/types";
 
 import ImageItem from "./ImageItem.vue";
 

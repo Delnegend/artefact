@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toast } from "vue-sonner";
 
-import { cn } from "~/utils";
+import { cn } from "~/utils/cn";
 
 const props = defineProps<{
 	class?: string;
