@@ -1,49 +1,9 @@
-import { openDB } from "idb";
 import { defineStore } from "pinia";
-import { type Ref, ref, watchEffect } from "vue";
+import { computed, ref, watchEffect } from "vue";
 
-import type { ResizablePanel } from "~/components/ui/resizable";
-import { type ImageItemForDisplay, OutputImgFormat, type ProcessingConfig } from "~/composables/types";
+import { OutputImgFormat, type ProcessingConfig } from "~/utils";
 
-export const displayMode = ref("horizontal" as "horizontal" | "vertical");
-
-export type JpegFileHash = string;
-export const imageDisplayList: Ref<Map<JpegFileHash, ImageItemForDisplay>> = ref(new Map());
-
-export const db = await openDB("artefact", 20250109, {
-	upgrade(db, oldVersion, newVersion) {
-		const alreadyExists = db.objectStoreNames.contains("files");
-
-		if (newVersion !== null && alreadyExists && oldVersion !== newVersion) {
-			db.deleteObjectStore("files");
-		}
-
-		if (!db.objectStoreNames.contains("files")) {
-			db.createObjectStore("files", {
-				keyPath: "jpegFileHash",
-				autoIncrement: false,
-			});
-		}
-	},
-});
-
-export const colorScheme = ref<"light" | "dark">("light");
-
-export const useImageCompareStore = defineStore("image-compare", () => {
-	const jpegBlobUrl = ref<string | undefined>(undefined);
-	const outputImgBlobUrl = ref<string | undefined>(undefined);
-	const compareMode = ref<"side-by-side" | "overlay">("overlay");
-
-	return {
-		jpegBlobUrl,
-		outputImgBlobUrl,
-		compareMode,
-	};
-});
-
-export const imageInputPanelRef = ref<InstanceType<typeof ResizablePanel>>();
-
-export const useProcessingConfig = defineStore("processing-config", () => {
+export const useProcessConfigStore = defineStore("processing-config", () => {
 	const __DEFAULT_OUTPUT_FORMAT = OutputImgFormat.PNG;
 	const __DEFAULT_ITERATIONS = 50;
 	const __DEFAULT_WEIGHT = 0.3;
@@ -143,5 +103,12 @@ export const useProcessingConfig = defineStore("processing-config", () => {
 				pWeight.value = 1;
 			}
 		},
+		allConfig: computed((): ProcessingConfig => ({
+			outputFormat: outputFormat.value,
+			iterations: iterations.value,
+			weight: weight.value,
+			pWeight: pWeight.value,
+			separateComponents: separateComponents.value,
+		})),
 	};
 });
