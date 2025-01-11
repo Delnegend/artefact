@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { LoaderCircle } from "lucide-vue-next";
-import { h, ref } from "vue";
+import { h, ref, watchEffect } from "vue";
 import { toast } from "vue-sonner";
 
 import Badge from "~/components/ui/badge/Badge.vue";
-import { humanReadableSize } from "~/composables/human-readable-size";
-import { db, imageDisplayList, useImageCompareStore, useProcessingConfig } from "~/composables/states";
-import type { ImageItemForDisplay, OutputImgFormat, WorkerInput, WorkerOutput } from "~/composables/types";
-import { cn } from "~/lib/utils";
+import { imageDisplayList, useArtefactWorker, useImageCompareStore, useProcessConfigStore } from "~/composables";
+import { cn, db, type ImageItemForDisplay, type OutputImgFormat } from "~/utils";
+import { humanReadableSize } from "~/utils/human-readable-size";
 
 const props = defineProps<{
 	jpegFileHash: string;
@@ -16,54 +15,34 @@ const props = defineProps<{
 }>();
 
 const imageCompareStore = useImageCompareStore();
-const processingConfig = useProcessingConfig();
+const processingConfig = useProcessConfigStore();
 
 const outputImgBlobUrl = ref<string | undefined>(props.info.outputImgBlobUrl);
 const outputImgFormat = ref<OutputImgFormat | undefined>(props.info.outputImgFormat);
 
-const isProcessing = ref(false);
+const {
+	error,
+	output,
+	processing,
+	process: startProcess,
+	terminate,
+} = useArtefactWorker({ config: processingConfig.allConfig, jpegFileHash: props.jpegFileHash });
 
-const worker = new Worker(
-	new URL("~/composables/artefact-worker.ts", import.meta.url),
-	{ type: "module", name: "artefact-worker" },
-);
+watchEffect(() => {
+	if (!error.value) { return; }
+	toast.error("Error", { description: error.value });
+});
 
-worker.onmessage = (e): void => {
-	const { blobUrl, error, timeTakenInMs, outputFormat } = e.data as WorkerOutput;
+watchEffect(() => {
+	if (!output.value) { return; }
 
-	if (error) {
-		toast.error("Error", {
-			description: error,
-		});
-		isProcessing.value = false;
-		return;
-	}
-
-	if (!blobUrl || timeTakenInMs === undefined) {
-		toast.error("Error", {
-			description: "The worker doesn't return the image nor any error.",
-		});
-		isProcessing.value = false;
-		return;
-	}
-
-	toast.info("Success", {
-		description: h("div", [
-			h("code", props.info.name),
-			" done in ",
-			h("code", `${(timeTakenInMs / 1000).toFixed(2)}s`),
-		]),
+	toast.success("Success", {
+		description: h("div", [h("code", props.info.name), " done in ", h("code", output.value.timeTaken)]),
 	});
-	outputImgBlobUrl.value = blobUrl;
-	outputImgFormat.value = outputFormat;
-};
 
-worker.onerror = (e): void => {
-	toast.error("Error", {
-		description: e.message,
-	});
-	isProcessing.value = false;
-};
+	outputImgBlobUrl.value = output.value.blobUrl;
+	outputImgFormat.value = output.value.outputFormat;
+});
 
 function process(): void {
 	if (outputImgBlobUrl.value) {
@@ -73,26 +52,14 @@ function process(): void {
 		return;
 	}
 
-	if (isProcessing.value) {
+	if (processing.value) {
 		toast.error("Error", {
 			description: "The image is already being processed.",
 		});
 		return;
 	}
 
-	isProcessing.value = true;
-
-	const req: WorkerInput = {
-		jpegFileHash: props.jpegFileHash,
-		config: {
-			outputFormat: processingConfig.outputFormat,
-			iterations: processingConfig.iterations,
-			weight: processingConfig.weight,
-			pWeight: processingConfig.pWeight,
-			separateComponents: processingConfig.separateComponents,
-		},
-	};
-	worker.postMessage(req);
+	startProcess();
 }
 
 function download(): void {
@@ -126,7 +93,8 @@ function compare(): void {
 }
 
 function remove(): void {
-	worker.terminate();
+	terminate();
+
 	void db.delete("files", props.jpegFileHash);
 	imageDisplayList.value.delete(props.jpegFileHash);
 	if (imageCompareStore.jpegBlobUrl === props.info.jpegBlobUrl) {
@@ -173,9 +141,9 @@ function reprocess(): void {
 			<div class="grid">
 				<Button
 					v-if="!outputImgBlobUrl"
-					:disabled="isProcessing"
+					:disabled="processing"
 					@click="process">
-					<span v-if="!isProcessing">Process</span>
+					<span v-if="!processing">Process</span>
 					<span v-else class="animate-spin">
 						<LoaderCircle />
 					</span>
