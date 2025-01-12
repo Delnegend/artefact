@@ -4,11 +4,11 @@ import { h, ref, watchEffect } from "vue";
 import { toast } from "vue-sonner";
 
 import Badge from "~/components/ui/badge/Badge.vue";
-import { imageDisplayList, useArtefactWorker, useImageCompareStore, useProcessConfigStore } from "~/composables";
+import { useArtefactWorker, useImageCompareStore, useProcessConfigStore } from "~/composables";
+import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
 import { cn } from "~/utils/cn";
-import { db } from "~/utils/db";
 import { humanReadableSize } from "~/utils/human-readable-size";
-import type { ImageItemForDisplay, OutputImgFormat } from "~/utils/types";
+import type { ImageItemForDisplay } from "~/utils/types";
 
 const props = defineProps<{
 	jpegFileHash: string;
@@ -16,11 +16,9 @@ const props = defineProps<{
 	class?: string;
 }>();
 
+const imageDisplayListStore = useImageDisplayListStore();
 const imageCompareStore = useImageCompareStore();
 const processingConfig = useProcessConfigStore();
-
-const outputImgBlobUrl = ref<string | undefined>(props.info.outputImgBlobUrl);
-const outputImgFormat = ref<OutputImgFormat | undefined>(props.info.outputImgFormat);
 
 const {
 	error,
@@ -29,25 +27,32 @@ const {
 	process: startProcess,
 	terminate,
 } = useArtefactWorker({ config: processingConfig.allConfig, jpegFileHash: props.jpegFileHash });
+const queued = ref(false);
 
 watchEffect(() => {
 	if (!error.value) { return; }
 	toast.error("Error", { description: error.value });
 });
 
-watchEffect(() => {
+watchEffect(async () => {
 	if (!output.value) { return; }
 
 	toast.success("Success", {
 		description: h("div", [h("code", props.info.name), " done in ", h("code", output.value.timeTaken)]),
 	});
 
-	outputImgBlobUrl.value = output.value.blobUrl;
-	outputImgFormat.value = output.value.outputFormat;
+	imageDisplayListStore.setOutputImgBlobUrl(
+		props.jpegFileHash,
+		await imageDisplayListStore.getOutputImgBlobUrl(props.jpegFileHash),
+	);
+	imageDisplayListStore.setOutputImgFormat(
+		props.jpegFileHash,
+		output.value.outputFormat,
+	);
 });
 
 function process(): void {
-	if (outputImgBlobUrl.value) {
+	if (props.info.outputImgBlobUrl) {
 		toast.error("Error", {
 			description: "The image is already processed.",
 		});
@@ -61,11 +66,12 @@ function process(): void {
 		return;
 	}
 
+	queued.value = true;
 	startProcess();
 }
 
 function download(): void {
-	if (!outputImgBlobUrl.value) {
+	if (!props.info.outputImgBlobUrl) {
 		toast.error("Error", {
 			description: "The image is not processed yet.",
 		});
@@ -75,15 +81,15 @@ function download(): void {
 	const a = document.createElement("a");
 	a.style.display = "none";
 	a.download = `${props.info.name.split(".").slice(0, -1)
-		.join(".")}.${outputImgFormat.value}`;
-	a.href = outputImgBlobUrl.value;
+		.join(".")}.${props.info.outputImgFormat}`;
+	a.href = props.info.outputImgBlobUrl;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
 }
 
 function compare(): void {
-	if (!outputImgBlobUrl.value) {
+	if (!props.info.outputImgBlobUrl) {
 		toast.error("Error", {
 			description: "The image is not processed yet.",
 		});
@@ -91,17 +97,17 @@ function compare(): void {
 	}
 
 	imageCompareStore.jpegBlobUrl = props.info.jpegBlobUrl;
-	imageCompareStore.outputImgBlobUrl = outputImgBlobUrl.value;
+	imageCompareStore.outputImgBlobUrl = props.info.outputImgBlobUrl;
 }
 
-function remove(): void {
+async function remove(): Promise<void> {
 	terminate();
-
-	void db.delete("files", props.jpegFileHash);
-	imageDisplayList.value.delete(props.jpegFileHash);
-	if (imageCompareStore.jpegBlobUrl === props.info.jpegBlobUrl) {
-		imageCompareStore.jpegBlobUrl = undefined;
-		imageCompareStore.outputImgBlobUrl = undefined;
+	try {
+		await imageDisplayListStore.remove(props.jpegFileHash);
+	} catch (error) {
+		toast.error("Failed to remove image from DB", {
+			description: `${error}`,
+		});
 	}
 }
 
@@ -142,7 +148,7 @@ function reprocess(): void {
 		<div class="grid grid-cols-2 grid-rows-2 gap-2">
 			<div class="grid">
 				<Button
-					v-if="!outputImgBlobUrl"
+					v-if="!props.info.outputImgBlobUrl"
 					:disabled="processing"
 					@click="process">
 					<span v-if="!processing">Process</span>
@@ -151,25 +157,29 @@ function reprocess(): void {
 					</span>
 				</Button>
 				<Button
-					v-if="outputImgBlobUrl"
-					:disabled="!outputImgBlobUrl"
+					v-if="props.info.outputImgBlobUrl"
+					:disabled="!props.info.outputImgBlobUrl"
 					class="relative"
 					@click="download">
 					Download
-					<Badge class="absolute -bottom-3 scale-90 backdrop-blur-sm bg-primary-foreground/90" variant="outline">{{ outputImgFormat }}</Badge>
+					<Badge
+						class="absolute -bottom-3 scale-90 backdrop-blur-sm bg-primary-foreground/90"
+						variant="outline">
+						{{ props.info.outputImgFormat }}
+					</Badge>
 				</Button>
 			</div>
 
 			<Button
 				variant="outline"
-				:disabled="!outputImgBlobUrl"
+				:disabled="!props.info.outputImgBlobUrl"
 				@click="reprocess">
 				Re-process
 			</Button>
 
 			<Button
 				variant="secondary"
-				:disabled="!outputImgBlobUrl"
+				:disabled="!props.info.outputImgBlobUrl"
 				@click="compare">
 				Compare
 			</Button>
