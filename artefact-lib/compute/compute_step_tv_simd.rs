@@ -83,7 +83,7 @@ fn compute_step_tv_inner(
                 f32x8!(&aux.fdata[shift_down_1px_group_idx..=shift_down_1px_group_idx + 7]);
 
             g_ys[c] = shift_down_1px_group - curr_group
-        }
+        };
     }
 
     // compute gradient normalization
