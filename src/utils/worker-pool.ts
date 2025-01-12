@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions, no-unused-vars */
+
 import type { Ref } from "vue";
 
 export enum WorkerMessageType {
-	// eslint-disable-next-line no-unused-vars
 	Ping = "ping", // this to make sure the "onmessage" fn is registerd in main thread
-	// eslint-disable-next-line no-unused-vars
 	Process = "process", // when your data actually being processed
 }
 
@@ -20,7 +20,7 @@ export interface OutputWrapperForWorker<O, E = unknown> {
 	data?: O;
 }
 
-export interface PoolTask<I, O, E = unknown> {
+export interface EngineerTask<I, O, E = unknown> {
 	input: I;
 	output: Ref<O | null>;
 	error: Ref<ErrorEvent | string | E | null>;
@@ -31,134 +31,137 @@ export interface PoolTask<I, O, E = unknown> {
 
 interface Engineer {
 	worker: Worker;
-	available: boolean;
-	countdownGoHomeID?: number;
+	isIdle: boolean;
+	layoffPlanID?: number;
 }
 
-export class WorkerPool<I, O, E = unknown> {
+export class EngineerPool<I, O, E = unknown> {
 	private readonly engineerPool: Engineer[] = [];
-	private readonly taskQueue: Array<PoolTask<I, O, E>> = [];
+	private readonly taskQueue: Array<EngineerTask<I, O, E>> = [];
 
-	private readonly workerCreator: ()=> Worker;
-	private readonly employeeCount: number;
-	private readonly countdownGoHomeInMs: number;
-	private readonly hiringTimeoutInMs: number;
-	private readonly isWorkerReadyYetInMs: number;
+	private readonly hireEngineer: ()=> Worker;
+	private readonly hireEngineerTimeout?: number;
+	private readonly checkWorkerReadyInterval: number;
+	private readonly maxActiveEngineer?: number;
+	private readonly layoffDelayInMs?: number;
 
 	public constructor(props: {
-		workerCreator: ()=> Worker;
-		employeeCount: number;
-		countdownGoHomeInMs?: number;
-		hiringTimeoutInMs?: number;
-		isWorkerReadyYetInMs?: number;
+		hireEngineer: ()=> Worker;
+		hireEngineerTimeout?: number;
+		checkWorkerReadyInterval?: number;
+		maxActiveEngineer?: number;
+		layoffDelayInMs?: number;
 	}) {
-		this.workerCreator = props.workerCreator;
-		this.employeeCount = props.employeeCount;
-		this.countdownGoHomeInMs = props.countdownGoHomeInMs ?? 10000;
-		this.hiringTimeoutInMs = props.hiringTimeoutInMs ?? 5000;
-		this.isWorkerReadyYetInMs = props.isWorkerReadyYetInMs ?? 50;
+		this.hireEngineer = props.hireEngineer;
+		this.hireEngineerTimeout = props.hireEngineerTimeout;
+		this.checkWorkerReadyInterval = props.checkWorkerReadyInterval ?? 0;
+		this.maxActiveEngineer = props.maxActiveEngineer;
+		this.layoffDelayInMs = props.layoffDelayInMs;
 	}
 
-	private layoff(engineer: Engineer): void {
-		const idx = this.engineerPool.indexOf(engineer);
+	private layoff(worker: Engineer): void {
+		const idx = this.engineerPool.indexOf(worker);
 		if (idx !== -1) { this.engineerPool.splice(idx, 1); }
-
-		engineer.worker.terminate();
-		if (process.env.NODE_ENV === "development") {
-			console.log("Pool: 👋 Laid off engineer");
-		}
+		worker.worker.terminate();
+		import.meta.dev && console.log("Pool: 👋 Laid off engineer");
 	}
 
 	// eslint-disable-next-line class-methods-use-this, @typescript-eslint/class-methods-use-this
-	private cancelLayoffPlan(engineer: Engineer): void {
-		window.clearTimeout(engineer.countdownGoHomeID);
-		engineer.available = false;
-		if (process.env.NODE_ENV === "development") {
-			console.log("Pool: 🏠 Cancelled layoff plan for engineer");
-		}
+	private markAsBusyAndCancelLayoffPlan(worker: Engineer): void {
+		worker.isIdle = false;
+		if (worker.layoffPlanID === undefined) { return; }
+		window.clearTimeout(worker.layoffPlanID);
+		import.meta.dev && console.log("Pool: 🏠 Cancelled layoff plan for engineer");
 	}
 
-	private layoffNextMorning(engineer: Engineer): void {
-		engineer.available = true;
-		engineer.countdownGoHomeID = window.setTimeout(
-			() => { this.layoff(engineer); },
-			this.countdownGoHomeInMs,
+	private markAsIdleAndPlanLayoff(worker: Engineer): void {
+		worker.isIdle = true;
+		if (this.layoffDelayInMs === undefined) { return; }
+		worker.layoffPlanID = window.setTimeout(
+			() => { this.layoff(worker); },
+			this.layoffDelayInMs,
 		);
-		if (process.env.NODE_ENV === "development") {
-			console.log("Pool: 🏠 Engineer will go home soon");
-		}
+
+		import.meta.dev && console.log("Pool: 🏠 Engineer will go home soon");
 	}
 
+	/** Returns a ready-to-work engineer, but remember to
+	 * lay off next morning if you don't need it anymore. */
 	private async sendAnEngineer(): Promise<Engineer | undefined> {
-		let engineer = this.engineerPool.find(engineer => engineer.available);
+		let engineer = this.engineerPool.find(engineer => engineer.isIdle);
+
+		// found one available
 		if (engineer !== undefined) {
-			if (process.env.NODE_ENV === "development") {
-				console.log("Pool: 👷‍♂️ Found an existing engineer");
-			}
+			this.markAsBusyAndCancelLayoffPlan(engineer);
+			import.meta.dev && console.log("Pool: 👷‍♂️ Found an existing engineer");
 			return engineer;
 		}
 
 		// can't hire more
-		if (this.engineerPool.length >= this.employeeCount) {
-			if (process.env.NODE_ENV === "development") {
-				console.log("Pool: 🚫 Can't hire more engineers");
-			}
+		console.log(
+			"maxActiveEngineer", this.maxActiveEngineer, "engineerPool.length", this.engineerPool.length, "engineerPool", this.engineerPool,
+		);
+		if (this.maxActiveEngineer !== undefined && (this.engineerPool.length >= this.maxActiveEngineer)) {
+			import.meta.dev && console.log("Pool: 🚫 Can't hire more engineers");
 			return;
 		}
 
 		// or CAN we?
-		engineer = { worker: this.workerCreator(), available: false };
+		engineer = { worker: this.hireEngineer(), isIdle: false };
 		this.engineerPool.push(engineer);
+		import.meta.dev && console.log("Pool: 🤝 Hired a new engineer");
 
-		if (process.env.NODE_ENV === "development") {
-			console.log("Pool: 🤝 Hired a new engineer");
-		}
-
-		// just in case someone else takes the task before this one
-		this.layoffNextMorning(engineer);
-
-		// turns out postMessage and onmessage is async, setting onmessage
-		// before using postMessage doesn't guarantee that the worker is ready
-		const msgSpamIntervalID = window.setInterval(() => {
+		const pollingIntervalID = window.setInterval(() => {
 			engineer.worker.postMessage({ type: WorkerMessageType.Ping });
-		}, this.isWorkerReadyYetInMs);
+		}, this.checkWorkerReadyInterval);
 
-		return new Promise((resolve, reject) => {
-			const creationTimeoutID = window.setTimeout(() => {
-				reject(new Error("Engineer creation timeout"));
-			}, this.hiringTimeoutInMs);
+		// wait for the worker to be ready
+		await new Promise((resolve, reject) => {
+			let hireEngineerTimeoutID: number | undefined;
+			if (this.layoffDelayInMs !== undefined) {
+				hireEngineerTimeoutID = window.setTimeout(() => {
+					reject(new Error("Engineer creation timeout"));
+				}, this.hireEngineerTimeout);
+			}
 
 			engineer.worker.onmessage = (event): void => {
 				const output = event.data as OutputWrapperForWorker<O, E>;
-
 				if (output.type === WorkerMessageType.Ping) {
-					window.clearTimeout(creationTimeoutID);
-					window.clearInterval(msgSpamIntervalID);
-
-					if (process.env.NODE_ENV === "development") {
-						console.log("Pool: 🎉 Engineer is ready");
+					if (hireEngineerTimeoutID !== undefined) {
+						window.clearTimeout(hireEngineerTimeoutID);
 					}
-
-					resolve(engineer);
+					window.clearInterval(pollingIntervalID);
+					import.meta.dev && console.log("Pool: 🎉 Engineer is ready");
+					resolve({});
 				}
 			};
 		});
+
+		return engineer;
 	}
 
 	private async processNext(): Promise<void> {
 		if (this.taskQueue.length === 0) { return; }
 
-		// hello we got work to do
-
 		const engineer = await this.sendAnEngineer();
 		if (engineer === undefined) { return; }
 
 		const task = this.taskQueue.shift();
-		if (task === undefined) { return; }
+		// someone else took the task
+		if (task === undefined) {
+			this.markAsIdleAndPlanLayoff(engineer);
+			return;
+		}
 
-		this.cancelLayoffPlan(engineer);
-		task.__DO_NOT_TOUCH_THIS = engineer;
 		task.processing.value = true;
+		task.__DO_NOT_TOUCH_THIS = engineer;
+
+		const postProcess = (): void => {
+			task.processing.value = false;
+			task.__DO_NOT_TOUCH_THIS = undefined;
+			this.markAsIdleAndPlanLayoff(engineer);
+			void this.processNext();
+		};
 
 		engineer.worker.onmessage = (event): void => {
 			const workerOutput = event.data as OutputWrapperForWorker<O, E>;
@@ -182,28 +185,22 @@ export class WorkerPool<I, O, E = unknown> {
 					break;
 				}
 			}
-
-			task.processing.value = false;
-			task.__DO_NOT_TOUCH_THIS = undefined;
-			this.layoffNextMorning(engineer);
-			void this.processNext();
+			postProcess();
 		};
 
 		engineer.worker.onerror = (error): void => {
 			task.error.value = error;
-
-			task.processing.value = false;
-			task.__DO_NOT_TOUCH_THIS = undefined;
-			this.layoffNextMorning(engineer);
-			void this.processNext();
+			postProcess();
 		};
+
 		engineer.worker.postMessage({
 			type: WorkerMessageType.Process,
 			data: task.input,
 		});
 	}
 
-	public addTask(task: PoolTask<I, O, E>): void {
+	public addTask(task: EngineerTask<I, O, E>): void {
+		task.processing.value = false;
 		this.taskQueue.push(task);
 	}
 
@@ -211,8 +208,10 @@ export class WorkerPool<I, O, E = unknown> {
 		void this.processNext();
 	}
 
-	public terminateTask(task: PoolTask<I, O, E>): void {
-		if (task.__DO_NOT_TOUCH_THIS) { this.layoff(task.__DO_NOT_TOUCH_THIS); }
+	public terminateTask(task: EngineerTask<I, O, E>): void {
+		if (task.__DO_NOT_TOUCH_THIS) {
+			this.layoff(task.__DO_NOT_TOUCH_THIS);
+		}
 
 		const taskIdx = this.taskQueue.indexOf(task);
 		if (taskIdx !== -1) { this.taskQueue.splice(taskIdx, 1); }
