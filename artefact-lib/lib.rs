@@ -89,7 +89,16 @@ impl Artefact {
             });
 
         if jpeg.chan_count == 3 && !self.separate_components {
-            compute(3, &mut coefs, weight[0], pweight, iterations[0]);
+            compute(
+                3,
+                &mut coefs,
+                weight[0],
+                pweight,
+                iterations[0],
+                max_rounded_px_w,
+                max_rounded_px_h,
+                max_rounded_px_count,
+            );
         } else {
             // Process channels separately
             for (c, coef) in coefs.iter().enumerate().take(jpeg.chan_count as usize) {
