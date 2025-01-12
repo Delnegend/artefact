@@ -45,39 +45,31 @@ impl Default for Artefact {
     }
 }
 
+macro_rules! define_methods {
+    ($($name:ident : $t:ty),+) => {
+        $(
+            pub fn $name(mut self, $name: $t) -> Self {
+                if let Some($name) = $name {
+                    self.$name = $name;
+                }
+                self
+            }
+        )+
+    }
+}
+
 impl Artefact {
     pub fn source(mut self, source: JpegSource) -> Self {
         self.source = Some(source);
         self
     }
 
-    pub fn weight(mut self, weight: Option<ValueCollection<f32>>) -> Self {
-        if let Some(weight) = weight {
-            self.weight = weight;
-        };
-        self
-    }
-
-    pub fn pweight(mut self, pweight: Option<ValueCollection<f32>>) -> Self {
-        if let Some(pweight) = pweight {
-            self.pweight = pweight;
-        };
-        self
-    }
-
-    pub fn iterations(mut self, iterations: Option<ValueCollection<u32>>) -> Self {
-        if let Some(iterations) = iterations {
-            self.iterations = iterations;
-        };
-        self
-    }
-
-    pub fn separate_components(mut self, separate_components: Option<bool>) -> Self {
-        if let Some(separate_components) = separate_components {
-            self.separate_components = separate_components;
-        };
-        self
-    }
+    define_methods!(
+        weight: Option<ValueCollection<f32>>,
+        pweight: Option<ValueCollection<f32>>,
+        iterations: Option<ValueCollection<u32>>,
+        separate_components: Option<bool>
+    );
 
     pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
         let jpeg = Jpeg::from(self.source.ok_or("Source is not set")?)?;
