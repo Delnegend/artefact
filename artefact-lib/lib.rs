@@ -126,7 +126,7 @@ impl Artefact {
         }
 
         // Fixup luma range for first channel
-        for i in 0..(coefs[0].rounded_px_h * coefs[0].rounded_px_w) as usize {
+        for i in 0..max_rounded_px_count {
             coefs[0].image_data[i] += 128.0;
         }
 
@@ -136,7 +136,7 @@ impl Artefact {
                 Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
             for i in 0..jpeg.real_px_h {
                 for j in 0..jpeg.real_px_w {
-                    let idx = (i * coefs[0].rounded_px_w + j) as usize;
+                    let idx = (i * max_rounded_px_w + j) as usize;
 
                     let yi = coefs[0].image_data[idx];
                     let cbi = coefs[1].image_data[idx];
@@ -164,7 +164,7 @@ impl Artefact {
         let mut gray: Vec<u8> = Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
         for i in 0..jpeg.real_px_h {
             for j in 0..jpeg.real_px_w {
-                let idx = (i * coefs[0].rounded_px_w + j) as usize;
+                let idx = (i * max_rounded_px_w + j) as usize;
                 gray.push(coefs[0].image_data[idx].clamp(0.0, 255.0) as u8);
             }
         }
