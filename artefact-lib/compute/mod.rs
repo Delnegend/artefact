@@ -71,17 +71,17 @@ macro_rules! f32x8 {
 #[cfg(feature = "simd")]
 pub(crate) use f32x8;
 
+#[allow(clippy::too_many_arguments)]
 pub fn compute(
     nchannel: usize,
     coefs: &mut [Coefficient],
     weight: f32,
     pweight: [f32; 3],
     iterations: u32,
+    max_rounded_px_w: u32,
+    max_rounded_px_h: u32,
+    max_rounded_px_count: usize,
 ) {
-    let max_rounded_px_w = coefs[0].rounded_px_w;
-    let max_rounded_px_h = coefs[0].rounded_px_h;
-    let max_rounded_px_count = (max_rounded_px_w * max_rounded_px_h) as usize;
-
     // Initialize working buffers for each channel
     let mut auxs = (0..nchannel)
         .map(|c| {
