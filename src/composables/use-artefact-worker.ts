@@ -1,14 +1,16 @@
 import { type Ref, ref } from "vue";
 
 import type { WorkerInput, WorkerOutput } from "~/utils/types";
-import { type PoolTask, WorkerPool } from "~/utils/worker-pool";
+import { EngineerPool, type EngineerTask } from "~/utils/worker-pool";
 
-export const workerPool = new WorkerPool<WorkerInput, WorkerOutput>({
-	workerCreator: (): Worker => new Worker(
+export const workerPool = new EngineerPool<WorkerInput, WorkerOutput>({
+	hireEngineer: (): Worker => new Worker(
 		new URL("~/utils/artefact-worker.ts", import.meta.url),
 		{ type: "module", name: "artefact-worker" },
 	),
-	employeeCount: 4,
+	maxActiveEngineer: 4,
+	hireEngineerTimeout: 10000, // 10 seconds
+	layoffDelayInMs: 300000, // 5 minutes
 });
 
 export function useArtefactWorker(input: WorkerInput): {
@@ -22,7 +24,7 @@ export function useArtefactWorker(input: WorkerInput): {
 	const error = ref(null);
 	const processing = ref(false);
 
-	const task: PoolTask<WorkerInput, WorkerOutput> = {
+	const task: EngineerTask<WorkerInput, WorkerOutput> = {
 		input,
 		output,
 		error,
