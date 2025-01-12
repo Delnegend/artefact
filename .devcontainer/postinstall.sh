@@ -1,5 +1,5 @@
-MOLD_VERSION=2.35.1
-MOLD_MD5=aa65b2f71b5944d1ea8d19498e3bb750
+MOLD_VERSION=2.36.0
+MOLD_MD5=0cbdd068a70ef28cad32c4005fd9f1df
 
 if [ ! -d /usr/local/cargo/mold-$MOLD_VERSION-x86_64-linux ]; then
     cd /usr/local/cargo
