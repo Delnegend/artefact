@@ -129,9 +129,9 @@ impl Jpeg {
                             .map_err(|_| "Invalid quant_table length".to_string())?,
 
                         #[cfg(feature = "simd")]
-                        dequant_dct_coefs_min: vec![f32x8!(); comp.rounded_px_count as usize / 8],
+                        dequant_dct_coefs_min: vec![f32x8!(); comp.rounded_px_count / 8],
                         #[cfg(feature = "simd")]
-                        dequant_dct_coefs_max: vec![f32x8!(); comp.rounded_px_count as usize / 8],
+                        dequant_dct_coefs_max: vec![f32x8!(); comp.rounded_px_count / 8],
 
                         image_data: vec![0.0; comp.rounded_px_count],
                     };
