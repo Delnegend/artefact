@@ -67,17 +67,10 @@ self.onmessage = async (event: MessageEvent<InputWrapperForWorker<WorkerInput>>)
 					await tx.done;
 				})();
 
-				// create blob
-				const blob = new Blob([outputImgDataArray], {
-					type: `image/${config.outputFormat}`,
-				});
-				const blobUrl = URL.createObjectURL(blob);
-
 				// respond
 				const output: OutputWrapperForWorker<WorkerOutput> = {
 					type: WorkerMessageType.Process,
 					data: {
-						blobUrl,
 						timeTaken: `${(timer / 1_000).toFixed(2)}s`,
 						outputFormat: config.outputFormat,
 					},
