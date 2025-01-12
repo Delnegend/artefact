@@ -38,7 +38,6 @@ export interface WorkerInput {
 }
 
 export interface WorkerOutput {
-	blobUrl?: string;
 	timeTaken?: string;
 	outputFormat?: OutputImgFormat;
 }
