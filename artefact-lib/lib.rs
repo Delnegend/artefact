@@ -2,6 +2,8 @@ mod compute;
 mod jpeg;
 mod utils;
 
+use rayon::prelude::*;
+
 pub use image;
 
 use compute::compute;
@@ -101,10 +103,26 @@ impl Artefact {
             );
         } else {
             // Process channels separately
-            for (c, coef) in coefs.iter().enumerate().take(jpeg.chan_count as usize) {
-                let mut coef = vec![coef.clone()];
-                compute(1, &mut coef, weight[c], pweight, iterations[c]);
-            }
+            coefs = coefs
+                .into_par_iter()
+                .enumerate()
+                .map(|(c, coef)| {
+                    let mut coef_wrapped = vec![coef];
+
+                    compute(
+                        1,
+                        &mut coef_wrapped,
+                        weight[c],
+                        pweight,
+                        iterations[c],
+                        max_rounded_px_w,
+                        max_rounded_px_h,
+                        max_rounded_px_count,
+                    );
+
+                    std::mem::take(&mut coef_wrapped[0])
+                })
+                .collect::<Vec<_>>();
         }
 
         // Fixup luma range for first channel
