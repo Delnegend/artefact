@@ -1,12 +1,8 @@
-import { type Ref, ref } from "vue";
+import { ref } from "vue";
 
 import type { ResizablePanel } from "~/components/ui/resizable";
-import type { ImageItemForDisplay } from "~/utils";
 
 export const displayMode = ref("horizontal" as "horizontal" | "vertical");
-
-type JpegFileHash = string;
-export const imageDisplayList: Ref<Map<JpegFileHash, ImageItemForDisplay>> = ref(new Map());
 
 export const colorScheme = ref<"light" | "dark">("light");
 
