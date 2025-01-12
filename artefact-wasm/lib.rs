@@ -17,7 +17,7 @@ pub fn compute(
     output_format: Option<OutputFormat>,
     weight: Option<f32>,
     pweight: Option<f32>,
-    iterations: Option<u32>,
+    iterations: Option<usize>,
     separate_components: Option<bool>,
 ) -> Result<Vec<u8>, String> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
