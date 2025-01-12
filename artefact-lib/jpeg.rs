@@ -7,7 +7,7 @@ use wide::f32x8;
 
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Coefficient {
     /// Rounded up until the next multiple of 8
     pub rounded_px_w: u32,

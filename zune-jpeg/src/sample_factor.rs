@@ -1,7 +1,8 @@
 use core::{fmt::Display, ops::Div};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SampleFactor {
+    #[default]
     One,
     Two,
 }
