@@ -30,13 +30,12 @@ export function useArtefactWorker(input: WorkerInput): {
 		error,
 		processing,
 	};
-	workerPool.addTask(task);
 
 	return {
 		output,
 		error,
 		processing,
-		process: (): void => { workerPool.startQueue(); },
+		process: (): void => { workerPool.addTask(task); workerPool.startQueue(); },
 		terminate: (): void => { workerPool.terminateTask(task); },
 	};
 }
