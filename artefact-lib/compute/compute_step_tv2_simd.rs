@@ -121,15 +121,11 @@ fn compute_step_tv2_inner(
         g_xy_syms[c] = (g_xy + g_yx) / 2.0;
     }
 
-    // norm
-    let g2_norm = {
-        let mut g2_norm = f32x8!();
-        for c in 0..nchannel {
-            g2_norm +=
-                g_xxs[c] * g_xxs[c] + 2.0 * g_xy_syms[c] * g_xy_syms[c] + g_yys[c] * g_yys[c];
-        }
-        g2_norm.sqrt()
-    };
+    // gradient normalization
+    let g2_norm = (0..nchannel)
+        .map(|c| g_xxs[c] * g_xxs[c] + 2.0 * g_xy_syms[c] * g_xy_syms[c] + g_yys[c] * g_yys[c])
+        .fold(f32x8!(), |acc, x| acc + x)
+        .sqrt();
 
     // compute derivatives
     for c in 0..nchannel {

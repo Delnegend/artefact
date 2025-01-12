@@ -87,14 +87,10 @@ fn compute_step_tv_inner(
     }
 
     // compute gradient normalization
-    // f64 for high-precision for tv; f32 for low-precision for derivatives aka obj_gradient
-    let g_norm = {
-        let mut f32_ver = f32x8!();
-        for c in 0..nchannel {
-            f32_ver += g_xs[c] * g_xs[c] + g_ys[c] * g_ys[c];
-        }
-        f32_ver.sqrt()
-    };
+    let g_norm = (0..nchannel)
+        .map(|c| g_xs[c] * g_xs[c] + g_ys[c] * g_ys[c])
+        .fold(f32x8!(), |acc, x| acc + x)
+        .sqrt();
 
     // compute derivatives
     for c in 0..nchannel {
