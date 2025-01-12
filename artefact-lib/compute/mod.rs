@@ -12,7 +12,7 @@ use crate::{compute::aux::Aux, jpeg::Coefficient};
 #[cfg(not(feature = "simd"))]
 use scalar::compute_step::compute_step;
 #[cfg(feature = "simd")]
-use simd::compute_step_simd::compute_step_simd as compute_step;
+use simd::compute_step::compute_step_simd as compute_step;
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute(

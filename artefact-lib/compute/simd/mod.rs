@@ -1,8 +1,8 @@
-pub mod compute_projection_simd;
-pub mod compute_step_prob_simd;
-pub mod compute_step_simd;
-pub mod compute_step_tv2_simd;
-pub mod compute_step_tv_simd;
+pub mod compute_projection;
+pub mod compute_step_prob;
+pub mod compute_step;
+pub mod compute_step_tv2;
+pub mod compute_step_tv;
 
 macro_rules! f32x8 {
     // Create a f32x8 from a slice with less than 8 elements
