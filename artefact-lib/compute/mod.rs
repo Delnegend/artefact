@@ -20,7 +20,7 @@ pub fn compute(
     coefs: &mut [Coefficient],
     weight: f32,
     pweight: [f32; 3],
-    iterations: u32,
+    iterations: usize,
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
@@ -42,7 +42,7 @@ pub fn compute(
     let mut term = 1.0_f32;
 
     // Main iteration loop
-    for _i in 0..iterations {
+    for _ in 0..iterations {
         // FISTA update
         let next_term = (1.0 + (1.0 + 4.0 * term.powi(2)).sqrt()) / 2.0;
         let factor = (term - 1.0) / next_term;

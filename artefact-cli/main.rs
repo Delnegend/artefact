@@ -111,7 +111,7 @@ fn main() {
                     s.parse()
                         .unwrap_or_else(|_| panic!("Invalid iterations value: {}", s))
                 })
-                .collect::<Vec<u32>>();
+                .collect::<Vec<usize>>();
             match vals.len() {
                 1 => ValueCollection::ForAll(vals[0]),
                 3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),

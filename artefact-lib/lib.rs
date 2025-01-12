@@ -29,7 +29,7 @@ impl<T: Copy> ValueCollection<T> {
 pub struct Artefact {
     weight: ValueCollection<f32>,
     pweight: ValueCollection<f32>,
-    iterations: ValueCollection<u32>,
+    iterations: ValueCollection<usize>,
     separate_components: bool,
 
     source: Option<JpegSource>,
@@ -69,7 +69,7 @@ impl Artefact {
     define_methods!(
         weight: Option<ValueCollection<f32>>,
         pweight: Option<ValueCollection<f32>>,
-        iterations: Option<ValueCollection<u32>>,
+        iterations: Option<ValueCollection<usize>>,
         separate_components: Option<bool>
     );
 
