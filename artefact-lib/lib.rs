@@ -79,7 +79,15 @@ impl Artefact {
         let pweight = self.pweight.to_slice();
         let iterations = self.iterations.to_slice();
 
-        // Smooth
+        let (max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) =
+            coefs.iter().fold((0, 0, 0), |acc, coef| {
+                (
+                    acc.0.max(coef.rounded_px_w),
+                    acc.1.max(coef.rounded_px_h),
+                    acc.2.max((coef.rounded_px_w * coef.rounded_px_h) as usize),
+                )
+            });
+
         if jpeg.chan_count == 3 && !self.separate_components {
             compute(3, &mut coefs, weight[0], pweight, iterations[0]);
         } else {
