@@ -3,10 +3,13 @@ use wide::f32x8;
 
 use crate::{
     compute::{
-        aux::Aux, compute_projection_simd::compute_projection_simd,
-        compute_step_prob_simd::compute_step_prob_simd,
-        compute_step_tv2_simd::compute_step_tv2_simd, compute_step_tv_simd::compute_step_tv_simd,
-        f32x8,
+        aux::Aux,
+        simd::{
+            compute_projection_simd::compute_projection_simd,
+            compute_step_prob_simd::compute_step_prob_simd,
+            compute_step_tv2_simd::compute_step_tv2_simd,
+            compute_step_tv_simd::compute_step_tv_simd, f32x8,
+        },
     },
     jpeg::Coefficient,
 };

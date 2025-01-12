@@ -1,7 +1,7 @@
 use wide::f32x8;
 use zune_jpeg::sample_factor::SampleFactor;
 
-use crate::{compute::f32x8, jpeg::Coefficient, utils::dct::idct8x8s};
+use crate::{compute::simd::f32x8, jpeg::Coefficient, utils::dct::idct8x8s};
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos

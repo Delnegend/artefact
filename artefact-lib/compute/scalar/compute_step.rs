@@ -1,4 +1,4 @@
-use crate::compute::{
+use crate::compute::scalar::{
     compute_projection::compute_projection, compute_step_prob::compute_step_prob,
     compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
 };

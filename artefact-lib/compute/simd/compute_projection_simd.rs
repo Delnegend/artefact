@@ -2,7 +2,7 @@ use wide::f32x8;
 use zune_jpeg::sample_factor::SampleFactor;
 
 use crate::{
-    compute::{aux::Aux, f32x8},
+    compute::{aux::Aux, simd::f32x8},
     jpeg::Coefficient,
     utils::{
         boxing::{boxing, unboxing},

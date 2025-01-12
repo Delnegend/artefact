@@ -2,7 +2,7 @@
 use wide::f32x8;
 
 #[cfg(feature = "simd")]
-use crate::compute::f32x8;
+use crate::compute::simd::f32x8;
 
 /// Convert from 8x8 block to 64x1 block
 pub fn unboxing(

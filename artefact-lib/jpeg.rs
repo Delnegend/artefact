@@ -1,7 +1,7 @@
 use zune_jpeg::{sample_factor::SampleFactor, zune_core::bytestream::ZCursor, JpegDecoder};
 
 #[cfg(feature = "simd")]
-use crate::compute::f32x8;
+use crate::compute::simd::f32x8;
 #[cfg(feature = "simd")]
 use wide::f32x8;
 
