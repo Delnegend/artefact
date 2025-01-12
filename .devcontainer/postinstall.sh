@@ -18,7 +18,12 @@ fi
 rm -f /usr/local/cargo/config.toml
 printf "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/cargo/mold-$MOLD_VERSION-x86_64-linux/bin/mold\"]" > /usr/local/cargo/config.toml
 
-cargo install flamegraph
+# use binstall so we don't have to compile
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> ~/.zshrc
+
+# 3rd party rust-powered tools
+cargo binstall flamegraph nrr -y
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Install and setup volta
@@ -36,4 +41,3 @@ volta install pnpm
 pnpm config set store-dir ~/.pnpm-store
 
 pnpm i
-
