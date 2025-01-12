@@ -1,5 +1,7 @@
 mod aux;
 
+use rayon::prelude::*;
+
 #[cfg(not(feature = "simd"))]
 mod compute_projection;
 #[cfg(not(feature = "simd"))]
@@ -25,8 +27,6 @@ mod compute_step_tv2_simd;
 mod compute_step_tv_simd;
 #[cfg(feature = "simd")]
 use compute_step_simd::compute_step_simd as compute_step;
-
-use rayon::prelude::*;
 
 use crate::{compute::aux::Aux, jpeg::Coefficient};
 
@@ -104,7 +104,6 @@ pub fn compute(
         let next_term = (1.0 + (1.0 + 4.0 * term.powi(2)).sqrt()) / 2.0;
         let factor = (term - 1.0) / next_term;
 
-        // Update all channels in parallel
         auxs.par_iter_mut().for_each(|aux| {
             for i in 0..max_rounded_px_count {
                 aux.fista[i] = aux.fdata[i] + factor * (aux.fdata[i] - aux.fista[i]);
@@ -126,7 +125,6 @@ pub fn compute(
             weight,
             &pweight,
         );
-
     }
 
     // Update coefficients with results

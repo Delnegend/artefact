@@ -88,6 +88,7 @@ dependencies = [
  "image",
  "rand",
  "rand_core",
+ "rayon",
  "wide",
  "zune-jpeg",
 ]

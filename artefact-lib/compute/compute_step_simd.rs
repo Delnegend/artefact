@@ -1,4 +1,4 @@
-use std::time::Duration;
+use rayon::prelude::*;
 use wide::f32x8;
 
 use crate::{
@@ -23,10 +23,7 @@ pub fn compute_step_simd(
     weight: f32,
     pweight: &[f32; 3],
 ) {
-    for c in 0..nchannel {
-        let aux = &mut auxs[c];
-        let coef = &coefs[c];
-
+    auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
         aux.obj_gradient = vec![0.0; max_rounded_px_count];
 
         // DCT coefficient distance
@@ -35,12 +32,12 @@ pub fn compute_step_simd(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt(),
-                coef,
+                &coefs[c],
                 &aux.cos,
                 &mut aux.obj_gradient,
             );
         }
-    }
+    });
 
     // TV computation
     compute_step_tv_simd(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
@@ -54,9 +51,11 @@ pub fn compute_step_simd(
         weight / 2.0_f32.sqrt(),
     );
 
-    // Performs a gradient descent step in the direction of the objective gradient
-    // with a specified step size. The gradient is normalized before applying the step.
-    for aux in auxs.iter_mut() {
+    auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
+        // ===== Performs a gradient descent step in the direction of the
+        // objective gradient with a specified step size. The gradient is
+        // normalized before applying the step. =====
+
         // Calculate Euclidean norm of the objective gradient
         let norm = aux
             .obj_gradient
@@ -66,7 +65,6 @@ pub fn compute_step_simd(
 
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
-            #[cfg(feature = "simd")]
             for i in (0..max_rounded_px_count).step_by(8) {
                 let original = &mut aux.fdata[i..i + 8];
 
@@ -76,10 +74,8 @@ pub fn compute_step_simd(
                 original.copy_from_slice(update.as_array_ref());
             }
         }
-    }
 
-    // Project onto DCT basis
-    auxs.iter_mut().enumerate().for_each(|(c, aux)| {
+        // ===== Project onto DCT basis =====
         compute_projection_simd(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
     });
 }
