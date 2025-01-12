@@ -7,7 +7,7 @@ use wide::f32x8;
 
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Coefficient {
     /// Rounded up until the next multiple of 8
     pub rounded_px_w: u32,
@@ -40,6 +40,40 @@ pub struct Coefficient {
     pub dequant_dct_coefs_max: Vec<f32x8>,
 
     pub image_data: Vec<f32>,
+}
+
+impl Default for Coefficient {
+    fn default() -> Self {
+        Self {
+            rounded_px_w: 0,
+            rounded_px_h: 0,
+            rounded_px_count: 0,
+            block_w: 0,
+            block_h: 0,
+            block_count: 0,
+            horizontal_samp_factor: SampleFactor::One,
+            vertical_samp_factor: SampleFactor::One,
+
+            #[cfg(not(feature = "simd"))]
+            dct_coefs: vec![],
+
+            #[cfg(feature = "simd")]
+            dct_coefs: vec![f32x8!(); 64],
+
+            #[cfg(not(feature = "simd"))]
+            quant_table: [0.0; 64],
+
+            #[cfg(feature = "simd")]
+            quant_table: [f32x8!(); 8],
+
+            #[cfg(feature = "simd")]
+            dequant_dct_coefs_min: vec![f32x8!(); 64 / 8],
+            #[cfg(feature = "simd")]
+            dequant_dct_coefs_max: vec![f32x8!(); 64 / 8],
+
+            image_data: vec![],
+        }
+    }
 }
 
 #[derive(Debug)]
