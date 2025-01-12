@@ -3,61 +3,17 @@ import { useFileDialog } from "@vueuse/core";
 import { ref } from "vue";
 import { toast } from "vue-sonner";
 
-import { imageDisplayList } from "~/composables";
+import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
 import { cn } from "~/utils/cn";
-import { db } from "~/utils/db";
-import { hashArrayBuffer } from "~/utils/hash-array-buffer";
-import type { ImageItemForDB } from "~/utils/types";
 
 import { buttonBaseClassTw, buttonVariantsTw } from "./ui/button";
 
+const imageDisplayListStore = useImageDisplayListStore();
+
 async function handleIncomingFiles(files: FileList | null): Promise<void> {
 	if (!files) { return; }
-
 	try {
-		const fileOps = await Promise.all(
-			Array.from(files).map(async (file) => {
-				const jpegArrayBuffer = await file.arrayBuffer();
-				const hash = await hashArrayBuffer(jpegArrayBuffer);
-
-				const img = new Image();
-				img.src = URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" }));
-				await new Promise((resolve) => { img.onload = resolve; });
-
-				return { file, jpegArrayBuffer, hash, width: img.width, height: img.height };
-			}),
-		);
-
-		const tx = db.transaction("files", "readwrite");
-		const store = tx.objectStore("files");
-
-		await Promise.all(
-			fileOps.map(async ({ file, jpegArrayBuffer, hash, width, height }) => {
-				const now = new Date();
-
-				const itemToInsert: ImageItemForDB = {
-					jpegFileHash: hash,
-					jpegFileName: file.name,
-					dateAdded: now,
-					jpegFileSize: jpegArrayBuffer.byteLength,
-					jpegArrayBuffer,
-					width,
-					height,
-				};
-				await store.put(itemToInsert);
-
-				imageDisplayList.value.set(hash, {
-					name: file.name,
-					dateAdded: now,
-					size: jpegArrayBuffer.byteLength,
-					jpegBlobUrl: URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" })),
-					width,
-					height,
-				});
-			}),
-		);
-
-		await tx.done;
+		await imageDisplayListStore.addFileList(files);
 	} catch (error) {
 		toast.error("Failed to process files", {
 			description: `${error}`,
