@@ -36,7 +36,7 @@ fn compute_step_tv_inner(
 ) {
     // a "group" = 8 consecutive pixels horizontally
 
-    let curr_group_idx = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
+    let px_idx_start_of_group = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
     let group_at_right_edge = curr_row_px_idx + 8 >= max_rounded_px_w;
     let group_at_bottom_edge = curr_row == max_rounded_px_h - 1;
 
@@ -48,33 +48,35 @@ fn compute_step_tv_inner(
         let aux = &auxs[c];
 
         // forward difference x
-        g_xs[c] = match group_at_right_edge {
-            true => {
-                // only handle 7 consecutive pixels because the last one is at the
-                // edge, and there's no more pixel to the right for us to calculate
-                // the difference with
+        g_xs[c] = if group_at_right_edge {
+            // only handle 7 consecutive pixels because the last one is at the
+            // edge, and there's no more pixel to the right for us to calculate
+            // the difference with
 
-                let curr_px_group = f32x8!(..=6, &aux.fdata[curr_group_idx..=curr_group_idx + 6]);
-                let shift_right_1px_group =
-                    f32x8!(..=6, &aux.fdata[curr_group_idx + 1..=curr_group_idx + 7]);
+            let curr_group = f32x8!(
+                ..=6,
+                &aux.fdata[px_idx_start_of_group..=px_idx_start_of_group + 6]
+            );
+            let shift_right_1px_group = f32x8!(
+                ..=6,
+                &aux.fdata[px_idx_start_of_group + 1..=px_idx_start_of_group + 7]
+            );
 
-                shift_right_1px_group - curr_px_group
-            }
-            false => {
-                // 8 pixels
+            shift_right_1px_group - curr_group
+        } else {
+            // 8 pixels
 
-                let curr_group = f32x8!(&aux.fdata[curr_group_idx..=curr_group_idx + 7]);
+            let curr_group = f32x8!(&aux.fdata[px_idx_start_of_group..=px_idx_start_of_group + 7]);
 
-                let shift_right_1px_group =
-                    f32x8!(&aux.fdata[curr_group_idx + 1..=curr_group_idx + 8]);
+            let shift_right_1px_group =
+                f32x8!(&aux.fdata[px_idx_start_of_group + 1..=px_idx_start_of_group + 8]);
 
-                shift_right_1px_group - curr_group
-            }
+            shift_right_1px_group - curr_group
         };
 
         // forward difference y
         if !group_at_bottom_edge {
-            let curr_group = f32x8!(&aux.fdata[curr_group_idx..=curr_group_idx + 7]);
+            let curr_group = f32x8!(&aux.fdata[px_idx_start_of_group..=px_idx_start_of_group + 7]);
 
             let shift_down_1px_group_idx =
                 ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
@@ -97,7 +99,7 @@ fn compute_step_tv_inner(
         let aux = &mut auxs[c];
 
         '_for_current_group: {
-            let target = &mut aux.obj_gradient[curr_group_idx..=curr_group_idx + 7];
+            let target = &mut aux.obj_gradient[px_idx_start_of_group..=px_idx_start_of_group + 7];
             let original = f32x8!(&target[..]);
             let update = f32x8!(div: alpha * -(g_xs[c] + g_ys[c]), g_norm);
 
@@ -111,12 +113,14 @@ fn compute_step_tv_inner(
                 // ignore the last pixel in the group because it's out of bounds
                 // [1] [2] [3] [4] [5] [6] [7] [_] (i.e the image width is 8px)
 
-                let target = &mut aux.obj_gradient[curr_group_idx + 1..=curr_group_idx + 7];
+                let target =
+                    &mut aux.obj_gradient[px_idx_start_of_group + 1..=px_idx_start_of_group + 7];
                 let original = f32x8!(..=6, &target[..]);
 
                 target.copy_from_slice(&(original + update).as_array_ref()[..=6]);
             } else {
-                let target = &mut aux.obj_gradient[curr_group_idx + 1..=curr_group_idx + 8];
+                let target =
+                    &mut aux.obj_gradient[px_idx_start_of_group + 1..=px_idx_start_of_group + 8];
                 let original = f32x8!(&target[..]);
 
                 target.copy_from_slice((original + update).as_array_ref());
@@ -137,11 +141,11 @@ fn compute_step_tv_inner(
 
     // store for use in tv2
     for c in 0..nchannel {
-        auxs[c].pixel_diff.x[curr_group_idx..=curr_group_idx + 7]
+        auxs[c].pixel_diff.x[px_idx_start_of_group..=px_idx_start_of_group + 7]
             .copy_from_slice(g_xs[c].as_array_ref());
 
         if !group_at_bottom_edge {
-            auxs[c].pixel_diff.y[curr_group_idx..=curr_group_idx + 7]
+            auxs[c].pixel_diff.y[px_idx_start_of_group..=px_idx_start_of_group + 7]
                 .copy_from_slice(g_ys[c].as_array_ref());
         }
     }
