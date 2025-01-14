@@ -1,3 +1,5 @@
+#![feature(portable_simd)]
+
 mod compute;
 mod jpeg;
 mod utils;
