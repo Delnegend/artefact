@@ -28,6 +28,7 @@ path = "lib.rs"
 [features]
 simd = ["dep:wide"]
 mozjpeg = ["dep:mozjpeg-sys"]
+simd_unstable = []
 
 [[bench]]
 name = "bench"
