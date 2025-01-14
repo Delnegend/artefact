@@ -34,8 +34,7 @@ export VOLTA_HOME="$HOME/.volta"
 export PATH="$VOLTA_HOME/bin:$PATH"
 
 # Install node and pnpm
-volta install node@lts
-volta install pnpm
+volta install node@lts pnpm
 
 # change pnpm store
 pnpm config set store-dir ~/.pnpm-store
