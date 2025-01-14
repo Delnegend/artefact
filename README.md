@@ -32,6 +32,19 @@ cargo build --release --package artefact-cli
 
 The binary will be located at `./target/release/artefact-cli`
 
+#### Build features
+To toggle specific features when building the CLI, modify `artefact-cli/Cargo.toml` and add the desired features to the `[dependencies.artefact-lib] features` list.
+
+```toml
+[dependencies.artefact-lib]
+path = "../artefact-lib"
+features = [
+    "simd", # enable SIMD acceleration using `wide` crate
+    "simd_unstable", # enable SIMD acceleration using unstable `std::simd` module, this (might) provide better performance but requires nightly Rust, unstable features, and unsafe code
+    "mozjpeg", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
+]
+```
+
 ### Usage
 ```
 Usage: artefact-cli [OPTIONS] <INPUT>
