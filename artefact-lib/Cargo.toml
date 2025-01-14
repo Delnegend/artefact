@@ -14,6 +14,8 @@ zune-jpeg = { path = "../zune-jpeg" }
 mozjpeg-sys = { version = "2.2.2", optional = true }
 wide = { version = "0.7.30", optional = true }
 rayon = "1.10.0"
+thiserror = { version = "2.0.11", optional = true }
+libc = { version = "0.2.169", optional = true }
 
 [dev-dependencies]
 criterion = "0.5.1"
@@ -27,7 +29,7 @@ path = "lib.rs"
 
 [features]
 simd = ["dep:wide"]
-mozjpeg = ["dep:mozjpeg-sys"]
+mozjpeg = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
 simd_unstable = []
 
 [[bench]]
