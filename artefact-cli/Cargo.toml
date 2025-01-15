@@ -8,7 +8,7 @@ clap = { version = "4.5.23", features = ["derive"] }
 
 [dependencies.artefact-lib]
 path = "../artefact-lib"
-features = ["simd", "simd_unstable"]
+features = ["simd"]
 
 [[bin]]
 name = "artefact-cli"
