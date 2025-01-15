@@ -95,8 +95,8 @@ fn compute_step_tv_inner(
         .fold(f32x8!(), |acc, x| acc + x)
         .sqrt();
 
-    // compute derivatives
     for c in 0..nchannel {
+        // ===== compute derivatives =====
         let aux = &mut auxs[c];
 
         '_for_current_group: {
@@ -140,13 +140,10 @@ fn compute_step_tv_inner(
 
             target.copy_from_slice((original + update).as_array_ref());
         }
-    }
 
-    // store for use in tv2
-    for c in 0..nchannel {
+        // ===== store for use in tv2 =====
         let a = px_idx_start_of_group;
         let b = px_idx_start_of_group + 7;
-
         auxs[c].pixel_diff.x[a..=b].copy_from_slice(g_xs[c].as_array_ref());
         if !group_at_bottom_edge {
             auxs[c].pixel_diff.y[a..=b].copy_from_slice(g_ys[c].as_array_ref());
