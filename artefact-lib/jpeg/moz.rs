@@ -266,6 +266,8 @@ impl MozDecoder {
                     .collect::<Vec<_>>()
                     .try_into()
                     .map_err(|_| MozDecoderErr::InvalidQuantTable)?,
+                #[cfg(feature = "simd")]
+                quant_table_squared: [f32x8::splat(0.0); 8],
 
                 #[cfg(feature = "simd")]
                 dequant_dct_coefs_min: vec![f32x8!(); rounded_px_count as usize / 8],

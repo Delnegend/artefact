@@ -73,6 +73,7 @@ impl Default for Coefficient {
             #[cfg(feature = "simd")]
             quant_table: [f32x8::splat(0.0); 8],
             #[cfg(feature = "simd")]
+            quant_table_squared: [f32x8::splat(0.0); 8],
 
             #[cfg(feature = "simd")]
             dequant_dct_coefs_min: vec![f32x8::splat(0.0); 8],
@@ -123,6 +124,14 @@ impl Coefficient {
                     .try_into()
                     .expect("Invalid coef's image data length"),
             );
+
+            self.quant_table_squared = self
+                .quant_table
+                .iter()
+                .map(|&x| x * x)
+                .collect::<Vec<f32x8>>()
+                .try_into()
+                .expect("Invalid quant_table_squared length");
         }
 
         #[cfg(all(feature = "simd", not(feature = "simd_std")))]

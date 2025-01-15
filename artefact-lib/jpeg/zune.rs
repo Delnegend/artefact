@@ -100,6 +100,7 @@ impl Jpeg {
                             .collect::<Vec<f32x8>>()
                             .try_into()
                             .map_err(|_| "Invalid quant_table length".to_string())?,
+                        quant_table_squared: [f32x8::splat(0.0); 8],
 
                         #[cfg(feature = "simd")]
                         dequant_dct_coefs_min: vec![f32x8::splat(0.0); comp.rounded_px_count / 8],

@@ -27,10 +27,10 @@ pub fn compute_step_prob_simd(
             // Process each coefficient in current block
             for j in 0..8 {
                 let target = &mut cosbs[j * 8..j * 8 + 8];
-
                 let original = f32x8!(&target[..]);
+
                 let update_a = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
-                let update_b = coef.quant_table[j] * coef.quant_table[j];
+                let update_b = coef.quant_table_squared[j];
 
                 target.copy_from_slice(((original - update_a) / update_b).as_array_ref());
             }
