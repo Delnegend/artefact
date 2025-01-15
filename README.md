@@ -4,7 +4,7 @@
 
 - <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code.
 - <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser.
-- ⚡  ***FASTER***, ***SAFER*** than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
+- ⚡  ***FASTER*** (~40-50%) than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
 ## Tests
 
@@ -40,9 +40,26 @@ To toggle specific features when building the CLI, modify `artefact-cli/Cargo.to
 path = "../artefact-lib"
 features = [
     "simd", # enable SIMD acceleration using `wide` crate
-    "simd_unstable", # enable SIMD acceleration using unstable `std::simd` module, this (might) provide better performance but requires nightly Rust, unstable features, and unsafe code
+    "simd_std", # enable SIMD acceleration using `std::simd` module, requires nightly Rust
     "mozjpeg", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
 ]
+```
+
+Recommendation: just stick with `simd` only.
+
+#### Cross-compile
+- Windows x64:
+```bash
+sudo apt update && sudo apt install gcc-mingw-w64-x86-64
+rustup target add x86_64-pc-windows-gnu
+nrr build-win-64
+```
+
+- Windows x86:
+```bash
+sudo apt update && sudo apt install gcc-mingw-w64-i686
+rustup target add i686-pc-windows-gnu
+nrr build-win-32
 ```
 
 ### Usage
