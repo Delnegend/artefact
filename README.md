@@ -4,7 +4,7 @@
 
 - <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code.
 - <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser.
-- ⚡  ***FASTER*** (~40-50%) than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
+- ⚡  ***FASTER*** (~2x) than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
 ## Tests
 
