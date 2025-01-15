@@ -44,7 +44,7 @@ struct Args {
     /// Iterations
     /// Higher values give better results but take more time
     ///
-    /// Default: 50 for all channels, use comma separated values for each channel
+    /// Default: 100 for all channels, use comma separated values for each channel
     #[arg(short, long, verbatim_doc_comment)]
     iterations: Option<String>,
 
