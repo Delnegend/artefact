@@ -73,8 +73,12 @@ impl Aux {
                 let mut cos = vec![0.0; (coef.rounded_px_count) as usize];
                 for i in 0..coef.block_count as usize {
                     for j in 0..8 {
-                        let res = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
-                        cos[i * 8 + j..(i + 1) * 8 + j].copy_from_slice(res.as_array_ref());
+                        let result = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
+
+                        #[cfg(not(feature = "simd_std"))]
+                        cos[i * 8 + j..(i + 1) * 8 + j].copy_from_slice(result.as_array_ref());
+                        #[cfg(feature = "simd_std")]
+                        cos[i * 8 + j..(i + 1) * 8 + j].copy_from_slice(&result.to_array());
                     }
                 }
                 cos

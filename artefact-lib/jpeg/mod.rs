@@ -3,11 +3,13 @@ mod moz;
 #[cfg(not(feature = "mozjpeg"))]
 mod zune;
 
-#[cfg(feature = "simd")]
-use crate::compute::simd::f32x8;
-use crate::utils::{boxing::unboxing, dct::idct8x8s};
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", not(feature = "simd_std")))]
 use wide::f32x8;
+
+#[cfg(all(feature = "simd", feature = "simd_std"))]
+use std::simd::f32x8;
+
+use crate::utils::{boxing::unboxing, dct::idct8x8s};
 use zune_jpeg::sample_factor::SampleFactor;
 
 #[derive(Debug, Clone)]
@@ -36,6 +38,8 @@ pub struct Coefficient {
     pub dct_coefs: Vec<f32x8>,
     #[cfg(feature = "simd")]
     pub quant_table: [f32x8; 8],
+    #[cfg(feature = "simd")]
+    pub quant_table_squared: [f32x8; 8],
 
     #[cfg(feature = "simd")]
     pub dequant_dct_coefs_min: Vec<f32x8>,
@@ -61,18 +65,19 @@ impl Default for Coefficient {
             dct_coefs: vec![],
 
             #[cfg(feature = "simd")]
-            dct_coefs: vec![f32x8!(); 64],
+            dct_coefs: vec![f32x8::splat(0.0); 64],
 
             #[cfg(not(feature = "simd"))]
             quant_table: [0.0; 64],
 
             #[cfg(feature = "simd")]
-            quant_table: [f32x8!(); 8],
+            quant_table: [f32x8::splat(0.0); 8],
+            #[cfg(feature = "simd")]
 
             #[cfg(feature = "simd")]
-            dequant_dct_coefs_min: vec![f32x8!(); 8],
+            dequant_dct_coefs_min: vec![f32x8::splat(0.0); 8],
             #[cfg(feature = "simd")]
-            dequant_dct_coefs_max: vec![f32x8!(); 8],
+            dequant_dct_coefs_max: vec![f32x8::splat(0.0); 8],
 
             image_data: vec![],
         }
@@ -102,10 +107,14 @@ impl Coefficient {
             for j in 0..8 {
                 let dct_coefs = self.dct_coefs[i * 8 + j];
                 let quant_table = self.quant_table[j];
+                let result = dct_coefs * quant_table;
 
                 let idx = i * 64 + j * 8;
-                self.image_data[idx..idx + 8]
-                    .copy_from_slice((dct_coefs * quant_table).as_array_ref());
+
+                #[cfg(not(feature = "simd_std"))]
+                self.image_data[idx..idx + 8].copy_from_slice(result.as_array_ref());
+                #[cfg(feature = "simd_std")]
+                self.image_data[idx..idx + 8].copy_from_slice(&result.to_array());
             }
 
             idct8x8s(
@@ -116,7 +125,7 @@ impl Coefficient {
             );
         }
 
-        #[cfg(feature = "simd")]
+        #[cfg(all(feature = "simd", not(feature = "simd_std")))]
         {
             self.dequant_dct_coefs_min = self
                 .dct_coefs
@@ -130,6 +139,29 @@ impl Coefficient {
                 .iter()
                 .enumerate()
                 .map(|(idx, dct_coefs)| (*dct_coefs + 0.5) * self.quant_table[idx % 8])
+                .collect();
+        }
+
+        #[cfg(all(feature = "simd", feature = "simd_std"))]
+        {
+            self.dequant_dct_coefs_min = self
+                .dct_coefs
+                .iter()
+                .enumerate()
+                .map(|(idx, dct_coefs)| {
+                    let quant_table = self.quant_table[idx % 8];
+                    (dct_coefs - f32x8::splat(0.5)) * quant_table
+                })
+                .collect();
+
+            self.dequant_dct_coefs_max = self
+                .dct_coefs
+                .iter()
+                .enumerate()
+                .map(|(idx, dct_coefs)| {
+                    let quant_table = self.quant_table[idx % 8];
+                    (dct_coefs + f32x8::splat(0.5)) * quant_table
+                })
                 .collect();
         }
 
