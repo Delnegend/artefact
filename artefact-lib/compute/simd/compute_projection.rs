@@ -98,12 +98,11 @@ pub fn compute_projection_simd(
         for j in 0..8 {
             let idx = i * 64 + j * 8;
             let target = &mut aux.pixel_diff.x[idx..idx + 8];
-            target.copy_from_slice(
-                f32x8!(&target[..])
-                    .min(coef.dequant_dct_coefs_max[i * 8 + j])
-                    .max(coef.dequant_dct_coefs_min[i * 8 + j])
-                    .as_array_ref(),
-            );
+
+            let max = coef.dequant_dct_coefs_max[i * 8 + j];
+            let min = coef.dequant_dct_coefs_min[i * 8 + j];
+
+            target.copy_from_slice(f32x8!(&target[..]).min(max).max(min).as_array_ref());
         }
     }
 
