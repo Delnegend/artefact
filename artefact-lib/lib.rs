@@ -42,7 +42,7 @@ impl Default for Artefact {
         Self {
             weight: ValueCollection::ForAll(0.3),
             pweight: ValueCollection::ForAll(0.001),
-            iterations: ValueCollection::ForAll(50),
+            iterations: ValueCollection::ForAll(100),
             separate_components: false,
             source: None,
         }
