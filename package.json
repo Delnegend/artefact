@@ -13,7 +13,7 @@
 		"build": "nuxt build",
 		"build-wasm": "rm -rf src/utils/artefact-wasm && cd artefact-wasm && wasm-pack build --target web --out-dir ../src/utils/artefact-wasm && cd .. && rm -f src/utils/artefact-wasm/.gitignore",
 		"dev": "nuxt dev",
-		"generate": "nuxt generate",
+		"generate": "nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest",
 		"preview": "nuxt preview",
 		"postinstall": "nuxt prepare",
 		"lint": "eslint --fix --cache .",
