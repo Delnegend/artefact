@@ -30,7 +30,7 @@ path = "lib.rs"
 [features]
 simd = ["dep:wide"]
 mozjpeg = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
-simd_unstable = []
+simd_std = []
 
 [[bench]]
 name = "bench"
