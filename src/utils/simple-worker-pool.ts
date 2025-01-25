@@ -11,12 +11,12 @@ export interface WorkerOutputWrapper<T, E = unknown> {
 
 export class SimpleWorkerPool<I, O, E = unknown> {
 	private readonly pool: Worker[] = [];
-	private remaining: number;
+	private semaphore: number;
 	private readonly queue: Array<(_: Worker)=> void> = [];
 	private readonly newWorkerFn: ()=> Worker;
 
 	public constructor(maxWorker: number, newWorkerFn: ()=> Worker) {
-		this.remaining = maxWorker;
+		this.semaphore = maxWorker;
 		this.newWorkerFn = newWorkerFn;
 	}
 
@@ -29,32 +29,24 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 		}, 0);
 
 		return new Promise((resolve) => {
-			worker.onmessage = async (event): Promise<void> => {
+			worker.onmessage = (event): void => {
 				onmessage(event);
 				const out = event.data as WorkerOutputWrapper<O, E>;
 				if (out.type === "pong") {
 					window.clearInterval(polling);
 					resolve(worker);
-				} else {
-					await this.releaseWorker(onmessage, worker);
 				}
 			};
 		});
 	}
 
-	public async getWorker(abort: Promise<void>, onmessage: (_: MessageEvent)=> void): Promise<Worker> {
+	public async getWorker(onmessage: (_: MessageEvent)=> void): Promise<Worker> {
 		const worker = this.pool.shift();
 		if (worker) { return worker; }
 
-		if (this.remaining > 0) {
-			this.remaining--;
-			const worker = await Promise.race([this.createWorker(onmessage), abort]);
-			if (!worker) {
-				this.remaining++;
-				await this.releaseWorker(onmessage);
-				throw new Error("Worker creation aborted");
-			}
-			return worker;
+		if (this.semaphore > 0) {
+			this.semaphore--;
+			return this.createWorker(onmessage);
 		}
 
 		return new Promise((resolve) => {
@@ -62,12 +54,18 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 		});
 	}
 
-	private async releaseWorker(onmessage: (_: MessageEvent)=> void, worker?: Worker): Promise<void> {
-		let worker_ = worker;
-		if (!worker_) { worker_ = await this.createWorker(onmessage); }
+	public releaseExistingWorker(worker: Worker): void {
 		const next = this.queue.shift();
-		if (next) { next(worker_); return; }
-		this.pool.push(worker_);
-		this.remaining++;
+		if (next) { next(worker); return; }
+		this.pool.push(worker);
+		this.semaphore++;
+	}
+
+	public async releaseNewWorker(onmessage: (_: MessageEvent)=> void): Promise<void> {
+		const worker = await this.createWorker(onmessage);
+		const next = this.queue.shift();
+		if (next) { next(worker); return; }
+		this.pool.push(worker);
+		this.semaphore++;
 	}
 }
