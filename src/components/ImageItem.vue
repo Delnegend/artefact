@@ -118,21 +118,21 @@ function reprocess(): void {
 
 <template>
 	<div :class="cn('px-4 flex flex-col gap-3', props.class)">
-		<div class="grid grid-cols-[auto,1fr] gap-4 items-center">
+		<div class="grid grid-cols-[auto,1fr] items-center gap-4">
 			<img
 				:src="info.jpegBlobUrl"
-				class="rounded-md size-16 object-cover aspect-square">
+				class="aspect-square size-16 rounded-md object-cover">
 
-			<div class="flex flex-col size-full justify-between overflow-hidden">
+			<div class="flex size-full flex-col justify-between overflow-hidden">
 				<div
-					class="font-medium text-transparent bg-clip-text line-clamp-1 text-ellipsis overflow-hidden"
+					class="line-clamp-1 overflow-hidden text-ellipsis bg-clip-text font-medium text-transparent"
 					:style="{
 						backgroundImage: 'linear-gradient(90deg, hsl(var(--primary)) 70%, transparent 100%)'
 					}">
 					{{ info.name }}
 				</div>
 
-				<div class="text-neutral-500 flex flex-col text-sm">
+				<div class="flex flex-col text-sm text-neutral-500">
 					<span class="-mb-1">{{ humanReadableSize(info.size) }} | {{ info.width }}x{{ info.height }}</span>
 					<span>{{ new Date(info.dateAdded).toLocaleTimeString("en-US", {
 						year: "numeric",
@@ -152,7 +152,9 @@ function reprocess(): void {
 					:disabled="processing"
 					@click="process">
 					<span v-if="!processing">Process</span>
-					<span v-else class="animate-spin">
+					<span
+						v-else
+						class="animate-spin">
 						<LoaderCircle />
 					</span>
 				</Button>
@@ -163,7 +165,7 @@ function reprocess(): void {
 					@click="download">
 					Download
 					<Badge
-						class="absolute -bottom-3 scale-90 backdrop-blur-sm bg-primary-foreground/90"
+						class="absolute -bottom-3 scale-90 bg-primary-foreground/90 backdrop-blur-sm"
 						variant="outline">
 						{{ props.info.outputImgFormat }}
 					</Badge>

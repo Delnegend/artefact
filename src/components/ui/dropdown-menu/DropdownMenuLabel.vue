@@ -7,7 +7,7 @@ import { cn } from "~/utils/cn";
 const props = defineProps<DropdownMenuLabelProps & { class?: HTMLAttributes["class"]; inset?: boolean }>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unsafe-assignment
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
 	const { class: _, ...delegated } = props;
 
 	return delegated;

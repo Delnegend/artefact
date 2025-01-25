@@ -41,17 +41,20 @@ function handleDisplayModeChange(): void {
 </script>
 
 <template>
-	<header class="w-full h-16 px-4 grid grid-cols-[1fr,auto,1fr] items-center border-b">
-		<div class="[&>button]:size-10 [&>button]:aspect-square [&>button]:p-0 flex gap-3">
+	<header class="grid h-16 w-full grid-cols-[1fr,auto,1fr] items-center border-b px-4">
+		<div class="flex gap-3 [&>button]:aspect-square [&>button]:size-10 [&>button]:p-0">
 			<Sheet>
 				<SheetTrigger as-child>
 					<Button
 						variant="outline"
-						class="size-10 aspect-square p-0">
+						class="aspect-square size-10 p-0">
 						<Settings />
 					</Button>
 				</SheetTrigger>
-				<SheetContent side="left" class="items-start" description="Configuration sheet">
+				<SheetContent
+					side="left"
+					class="items-start"
+					description="Configuration sheet">
 					<SheetHeader>
 						<SheetTitle>Configurations</SheetTitle>
 						<AppDrawer />
@@ -67,14 +70,16 @@ function handleDisplayModeChange(): void {
 			</Button>
 		</div>
 
-		<div class="select-none relative">
-			<div class="font-black text-4xl italic drop-shadow-xl">artefact</div>
-			<div class="-bottom-6 z-10 whitespace-nowrap -right-6 absolute px-2 py-1 italic font-black rounded-full text-red-500 drop-shadow-md bg-primary text-sm">
+		<div class="relative select-none">
+			<div class="text-4xl font-black italic drop-shadow-xl">
+				artefact
+			</div>
+			<div class="absolute -bottom-6 -right-6 z-10 whitespace-nowrap rounded-full bg-primary px-2 py-1 text-sm font-black italic text-red-500 drop-shadow-md">
 				beta
 			</div>
 		</div>
 
-		<div class="justify-self-end flex flex-row items-center gap-4">
+		<div class="flex flex-row items-center gap-4 justify-self-end">
 			<Button
 				variant="outline"
 				class="size-10"
@@ -87,7 +92,7 @@ function handleDisplayModeChange(): void {
 				href="https://github.com/Delnegend/artefact"
 				target="_blank"
 				rel="noopener noreferrer">
-				<div class="aspect-square size-6 hover:scale-110 transition-transform dark:invert">
+				<div class="aspect-square size-6 transition-transform hover:scale-110 dark:invert">
 					<svg
 						role="img"
 						viewBox="0 0 24 24"

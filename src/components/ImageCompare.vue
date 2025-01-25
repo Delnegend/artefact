@@ -27,6 +27,7 @@ function handleWheel(e: WheelEvent): void {
 let initialDistance = 0;
 let rafId: number | null = null;
 let initialScale = 1;
+
 // eslint-disable-next-line no-unused-vars
 let touchMoveHandler: ((e: TouchEvent)=> void) | null = null;
 
@@ -167,20 +168,19 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 	<div
 		v-if="imageCompareStore.jpegBlobUrl && imageCompareStore.outputImgBlobUrl"
 		ref="containerRef"
-		class="size-full relative"
+		class="relative size-full"
 		:class="{ 'grid grid-cols-2 gap-[2px]': imageCompareStore.compareMode === 'side-by-side' }"
 		@wheel.prevent="handleWheel">
-
 		<!-- second/processed image -->
 		<div
-			class="flex size-full justify-center items-center overflow-hidden cursor-grab active:cursor-grabbing order-1"
-			:class="{ 'absolute top-0 left-0': imageCompareStore.compareMode === 'overlay' }"
+			class="order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
+			:class="{ 'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay' }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
 				:src="imageCompareStore.outputImgBlobUrl"
-				class="size-auto max-w-none select-none origin-center"
+				class="size-auto max-w-none origin-center select-none"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
 					transition: isDragging ? 'none' : 'transform 0.1s ease-out',
@@ -190,15 +190,15 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 
 		<!-- first/jpeg image -->
 		<div
-			class="justify-center size-full cursor-grab overflow-hidden flex items-center active:cursor-grabbing -order-1"
-			:class="{ 'absolute top-0 left-0': imageCompareStore.compareMode === 'overlay' }"
+			class="-order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
+			:class="{ 'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay' }"
 			:style="{ clipPath: imageCompareStore.compareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined }"
 
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
 				:src="imageCompareStore.jpegBlobUrl"
-				class="size-auto max-w-none select-none origin-center"
+				class="size-auto max-w-none origin-center select-none"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
 					transition: isDragging ? 'none' : 'transform 0.1s ease-out',
@@ -209,30 +209,30 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 		<!-- compare sliding handle -->
 		<div
 			v-if="imageCompareStore.compareMode === 'overlay'"
-			class="absolute top-0 -translate-x-1/2 w-[2px] bg-secondary h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+			class="absolute top-0 flex h-full w-[2px] -translate-x-1/2 cursor-grab items-center justify-center bg-secondary active:cursor-grabbing"
 			:style="{ left: `${slidingHandlePositionPercent}%` }"
 			@mousedown.prevent="startDragSlidingHandle"
 			@touchstart="startDragSlidingHandle">
 			<ChevronsLeftRight
 				:size="50"
 				color="hsl(var(--primary))"
-				class="p-2 shadow-lg bg-primary-foreground overflow-visible rounded-full" />
+				class="overflow-visible rounded-full bg-primary-foreground p-2 shadow-lg" />
 		</div>
 
 		<!-- control buttons, bottom left -->
 		<div
-			class="flex absolute bottom-4 left-5 backdrop-blur bg-secondary/60 rounded-md">
+			class="absolute bottom-4 left-5 flex rounded-md bg-secondary/60 backdrop-blur">
 			<DropdownMenu>
 				<DropdownMenuTrigger>
 					<div class="px-3">
-						<ChevronUp class="translate-x-[1px]" />
+						<ChevronUp class="translate-x-px" />
 					</div>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent>
 					<DropdownMenuItem
 						v-for="n in [20, 10, 5, 2, 1]"
 						:key="n"
-						class="h-12 font-mono flex justify-center"
+						class="flex h-12 justify-center font-mono"
 						@click="scale = n">
 						x{{ n }}
 						<DropdownMenuSeparator />
@@ -243,7 +243,7 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 			<Button
 				size="lg"
 				variant="secondary"
-				class="aspect-square px-4 shadow-sm hover:shadow-md transition-all font-mono"
+				class="aspect-square px-4 font-mono shadow-sm transition-all hover:shadow-md"
 				:disabled="scale === 1 && position.x === 0 && position.y === 0"
 				@click="{ scale = 1; position = { x: 0, y: 0 }; }">
 				x{{ Math.round(scale * 10) / 10 }}
@@ -252,11 +252,11 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 
 		<!-- control buttons, bottom right -->
 		<div
-			class="flex absolute bottom-4 right-5 backdrop-blur bg-primary-foreground/60 rounded-md gap-[1px] z-10">
+			class="absolute bottom-4 right-5 z-10 flex gap-px rounded-md bg-primary-foreground/60 backdrop-blur">
 			<Button
 				size="lg"
 				variant="secondary"
-				class="shadow-sm hover:shadow-md rounded-r-none p-4"
+				class="rounded-r-none p-4 shadow-sm hover:shadow-md"
 				:disabled="imageCompareStore.compareMode === 'side-by-side'"
 				@click="imageCompareStore.compareMode = 'side-by-side'">
 				<Columns2 />
@@ -264,7 +264,7 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 			<Button
 				size="lg"
 				variant="secondary"
-				class="shadow-sm hover:shadow-md rounded-l-none p-4"
+				class="rounded-l-none p-4 shadow-sm hover:shadow-md"
 				:disabled="imageCompareStore.compareMode === 'overlay'"
 				@click="imageCompareStore.compareMode = 'overlay'">
 				<SquareSplitHorizontal />
@@ -273,7 +273,7 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 
 		<!-- collapse image input btn -->
 		<Button
-			class="absolute top-4 left-5 aspect-square p-0 backdrop-blur"
+			class="absolute left-5 top-4 aspect-square p-0 backdrop-blur"
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')">
@@ -286,7 +286,7 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 
 	<div
 		v-else
-		class="size-full flex items-center justify-center text-balance text-center">
+		class="flex size-full items-center justify-center text-balance text-center">
 		<p class="text-lg text-gray-500">
 			Hit the compare button on any image.
 		</p>

@@ -17,8 +17,14 @@ try {
 </script>
 
 <template>
-	<TransitionGroup name="list" tag="div" class="relative">
-		<div ref="dummyElementRef" key="dummy" class="w-full" />
+	<TransitionGroup
+		name="list"
+		tag="div"
+		class="relative">
+		<div
+			ref="dummyElementRef"
+			key="dummy"
+			class="w-full" />
 		<ImageItem
 			v-for="[jpegFileHash, info] in imageDisplayListStore.list"
 			:key="jpegFileHash"

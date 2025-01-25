@@ -40,7 +40,7 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="max-h-dvh h-dvh w-full">
+	<div class="h-dvh max-h-dvh w-full">
 		<AppHeader />
 		<Toaster />
 		<NuxtPwaManifest />
@@ -49,7 +49,6 @@ onMounted(() => {
 			:direction="displayMode"
 			class="h-full max-h-[calc(100vh-4rem)]"
 			auto-save-id="app-layout">
-
 			<ResizablePanel
 				ref="imageInputPanelRef"
 				collapsible
@@ -57,7 +56,7 @@ onMounted(() => {
 				:default-size="20"
 				class="image-input-panel">
 				<div
-					class="grid grid-rows-[auto,1fr,auto] h-full"
+					class="grid h-full grid-rows-[auto,1fr,auto]"
 					:style="{
 						'min-width': displayMode === 'horizontal' ? '320px' : 0,
 						'min-height': displayMode === 'vertical' ? '370px' : undefined,

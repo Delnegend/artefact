@@ -12,7 +12,7 @@ import { cn } from "~/utils/cn";
 const props = defineProps<DropdownMenuSubTriggerProps & { class?: HTMLAttributes["class"] }>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unsafe-assignment
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
 	const { class: _, ...delegated } = props;
 
 	return delegated;
@@ -29,6 +29,6 @@ const forwardedProps = useForwardProps(delegatedProps);
 			props.class,
 		)">
 		<slot />
-		<ChevronRight class="ml-auto h-4 w-4" />
+		<ChevronRight class="ml-auto size-4" />
 	</DropdownMenuSubTrigger>
 </template>

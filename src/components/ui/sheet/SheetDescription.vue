@@ -7,7 +7,7 @@ import { cn } from "~/utils/cn";
 const props = defineProps<DialogDescriptionProps & { class?: HTMLAttributes["class"] }>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unsafe-assignment
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
 	const { class: _, ...delegated } = props;
 
 	return delegated;
@@ -17,8 +17,7 @@ const delegatedProps = computed(() => {
 <template>
 	<DialogDescription
 		:class="cn('text-sm text-muted-foreground', props.class)"
-		v-bind="delegatedProps"
-	>
+		v-bind="delegatedProps">
 		<slot />
 	</DialogDescription>
 </template>

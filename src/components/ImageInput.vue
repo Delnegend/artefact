@@ -47,7 +47,7 @@ fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
 	<div class="relative">
 		<input
 			id="image-input"
-			class="absolute left-0 top-0 bg-transparent w-[calc(100%-2rem)] h-28 m-4 rounded-md"
+			class="absolute left-0 top-0 m-4 h-28 w-[calc(100%-2rem)] rounded-md bg-transparent"
 			aria-label="image-input"
 			@click.prevent="fileDialog.open()">
 
@@ -60,6 +60,6 @@ fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
 			{{ nothingOver ? "Drag JPEG files here or click to select" : "Drop here" }}
 		</label>
 
-		<div class="h-28 m-4" />
+		<div class="m-4 h-28" />
 	</div>
 </template>
