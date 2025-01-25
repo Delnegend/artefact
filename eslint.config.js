@@ -1,30 +1,34 @@
 import hagemanto from "eslint-plugin-hagemanto";
-import globals from "globals";
+import pluginVue from "eslint-plugin-vue";
 
-import withNuxt from "./.nuxt/eslint.config.mjs";
-
-export default withNuxt(
-	{
-		rules: {
-			"vue/multi-word-component-names": "off",
-		},
-	},
-).prepend(
+export default [
 	{ files: ["**/*.{ts,vue}"] },
-	{ ignores: ["artefact-wasm/**/*", "src/utils/artefact-wasm/**/*"] },
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
+	{ ignores: ["artefact-wasm/**/*", "src/utils/artefact-wasm/**/*", "node_modules/**/*", "src/dev-dist/**/*", ".nuxt/**/*"] },
+
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	...hagemanto({
 		enableJsx: false,
-		enableTailwind: false,
-		enableTs: true,
-		sortImports: true,
-		styler: "stylistic",
+		extraFileExtensions: [".vue"],
 	}),
+	...pluginVue.configs["flat/recommended"],
+
 	{
-		languageOptions: {
-			globals: globals.browser, parserOptions: {
-				project: true, parser: "@typescript-eslint/parser", extraFileExtensions: [".vue"],
-			},
+		rules: {
+			"no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+			"tailwindcss/no-custom-classname": "off",
+			"vue/html-indent": ["error", "tab"],
+			"vue/multi-word-component-names": "off",
+			"vue/html-closing-bracket-newline": [
+				"error",
+				{
+					singleline: "never",
+					multiline: "never",
+					selfClosingTag: {
+						singleline: "never",
+						multiline: "never",
+					},
+				},
+			],
 		},
 	},
-);
+];
