@@ -48,6 +48,7 @@ export function useSimpleArtefactWorker(input: WorkerInput): {
 
 			const wi: WorkerInputWrapper<WorkerInput> = { type: "process", data: input };
 			worker.postMessage(wi);
+			processing.value = true;
 
 			if (await Promise.race([abortSignal, completeSignal]) === "abort") {
 				worker.terminate();
