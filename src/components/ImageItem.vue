@@ -4,7 +4,7 @@ import { h, ref, watchEffect } from "vue";
 import { toast } from "vue-sonner";
 
 import Badge from "~/components/ui/badge/Badge.vue";
-import { useArtefactWorker, useImageCompareStore, useProcessConfigStore } from "~/composables";
+import { useImageCompareStore, useProcessConfigStore, useSimpleArtefactWorker } from "~/composables";
 import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
 import { cn } from "~/utils/cn";
 import { humanReadableSize } from "~/utils/human-readable-size";
@@ -26,11 +26,11 @@ const {
 	processing,
 	process: startProcess,
 	terminate,
-} = useArtefactWorker({ config: processingConfig.allConfig, jpegFileHash: props.jpegFileHash });
+} = useSimpleArtefactWorker({ config: processingConfig.allConfig, jpegFileHash: props.jpegFileHash });
 const queued = ref(false);
 
 watchEffect(() => {
-	if (!error.value) { return; }
+	if (error.value === null || error.value === "") { return; }
 	toast.error("Error", { description: error.value });
 });
 
