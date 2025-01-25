@@ -20,9 +20,8 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 		this.newWorkerFn = newWorkerFn;
 	}
 
-	private async createWorker(onmessage: (_: MessageEvent)=> void): Promise<Worker> {
-		const worker = this.newWorkerFn();
-
+	// eslint-disable-next-line @typescript-eslint/class-methods-use-this, class-methods-use-this
+	private async ensureWorkerReady(worker: Worker, onmessage: (_: MessageEvent)=> void): Promise<Worker> {
 		const polling = window.setInterval(() => {
 			const input: WorkerInputWrapper<I> = { type: "ping" };
 			worker.postMessage(input);
@@ -42,11 +41,13 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 
 	public async getWorker(onmessage: (_: MessageEvent)=> void): Promise<Worker> {
 		const worker = this.pool.shift();
-		if (worker) { return worker; }
+		if (worker) {
+			return this.ensureWorkerReady(worker, onmessage);
+		}
 
 		if (this.semaphore > 0) {
 			this.semaphore--;
-			return this.createWorker(onmessage);
+			return this.ensureWorkerReady(this.newWorkerFn(), onmessage);
 		}
 
 		return new Promise((resolve) => {
@@ -62,7 +63,7 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 	}
 
 	public async releaseNewWorker(onmessage: (_: MessageEvent)=> void): Promise<void> {
-		const worker = await this.createWorker(onmessage);
+		const worker = await this.ensureWorkerReady(this.newWorkerFn(), onmessage);
 		const next = this.queue.shift();
 		if (next) { next(worker); return; }
 		this.pool.push(worker);
