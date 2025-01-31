@@ -7,7 +7,7 @@ mod zune;
 
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
 #[cfg(feature = "simd")]
-use crate::{f32x8, traits::WriteTo};
+use crate::utils::{f32x8, traits::WriteTo};
 
 #[derive(Debug, Clone)]
 pub struct Coefficient {
