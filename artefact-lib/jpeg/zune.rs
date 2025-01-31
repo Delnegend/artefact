@@ -27,13 +27,13 @@ impl Jpeg {
                 let mut coefs = Vec::with_capacity(img.components.len());
 
                 for comp in img.components {
-                    let block_w = comp.rounded_px_w as u32 / 8;
-                    let block_h = comp.rounded_px_h as u32 / 8;
+                    let block_w = u32::from(comp.rounded_px_w) / 8;
+                    let block_h = u32::from(comp.rounded_px_h) / 8;
                     let block_count = block_w * block_h;
 
                     let mut coef = Coefficient {
-                        rounded_px_w: comp.rounded_px_w as u32,
-                        rounded_px_h: comp.rounded_px_h as u32,
+                        rounded_px_w: u32::from(comp.rounded_px_w),
+                        rounded_px_h: u32::from(comp.rounded_px_h),
                         rounded_px_count: comp.rounded_px_count as u32,
                         block_w,
                         block_h,
@@ -45,14 +45,14 @@ impl Jpeg {
                         dct_coefs: comp
                             .dct_coefs
                             .iter()
-                            .map(|&x| x as f32)
+                            .map(|&x| f32::from(x))
                             .collect::<Vec<_>>(),
 
                         #[cfg(feature = "simd")]
                         dct_coefs: comp
                             .dct_coefs
                             .iter()
-                            .map(|&x| x as f32)
+                            .map(|&x| f32::from(x))
                             .collect::<Vec<_>>()
                             .chunks_exact(8)
                             .map(f32x8::from_slc)

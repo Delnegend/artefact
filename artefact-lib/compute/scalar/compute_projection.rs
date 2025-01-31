@@ -29,7 +29,8 @@ pub fn compute_projection(
                         mean += aux.fdata[(y * max_rounded_px_w + x) as usize];
                     }
                 }
-                mean /= (coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8()) as f32;
+                mean /=
+                    f32::from(coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8());
 
                 debug_assert!(cx < coef.rounded_px_w && cy < coef.rounded_px_h);
                 aux.pixel_diff.y[(cy * coef.rounded_px_w + cx) as usize] = mean;
@@ -49,9 +50,10 @@ pub fn compute_projection(
 
     // Project onto DCT box
     boxing(
-        match resample {
-            true => &aux.pixel_diff.y,
-            false => &aux.fdata,
+        if resample {
+            &aux.pixel_diff.y
+        } else {
+            &aux.fdata
         },
         aux.pixel_diff.x.as_mut(),
         coef.rounded_px_w,
@@ -74,7 +76,7 @@ pub fn compute_projection(
         for j in 0..64 {
             let min = (coef.dct_coefs[i * 64 + j] - 0.5) * coef.quant_table[j];
             let max = (coef.dct_coefs[i * 64 + j] + 0.5) * coef.quant_table[j];
-            aux.pixel_diff.x[i * 64 + j] = aux.pixel_diff.x[i * 64 + j].clamp(min, max)
+            aux.pixel_diff.x[i * 64 + j] = aux.pixel_diff.x[i * 64 + j].clamp(min, max);
         }
     }
 
@@ -93,9 +95,10 @@ pub fn compute_projection(
 
     unboxing(
         &aux.pixel_diff.x,
-        match resample {
-            true => aux.pixel_diff.y.as_mut(),
-            false => aux.fdata.as_mut(),
+        if resample {
+            aux.pixel_diff.y.as_mut()
+        } else {
+            aux.fdata.as_mut()
         },
         coef.rounded_px_w,
         coef.rounded_px_h,

@@ -68,7 +68,7 @@ pub fn compute_step_tv_inner(
     g_norm = g_norm.sqrt();
 
     let alpha = 1.0 / (nchannel as f32).sqrt();
-    *tv += alpha as f64 * g_norm as f64;
+    *tv += f64::from(alpha) * f64::from(g_norm);
 
     // compute derivatives
     if g_norm != 0.0 {
