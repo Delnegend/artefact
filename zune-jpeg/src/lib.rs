@@ -94,6 +94,7 @@
     clippy::inline_always,
     clippy::similar_names,
     clippy::doc_markdown,
+    clippy::manual_div_ceil,
     clippy::module_name_repetitions,
     clippy::missing_panics_doc,
     clippy::missing_errors_doc

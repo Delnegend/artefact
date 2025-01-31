@@ -42,7 +42,7 @@ pub(crate) const MAX_DIMENSIONS: usize = 1 << 27;
 /// 1. The `&[i16]` slices passed contain 16 items
 ///
 /// 2. The slices passed are in the following order
-///     `y,cb,cr`
+///    `y,cb,cr`
 ///
 /// 3. `&mut [u8]` is zero initialized
 ///
