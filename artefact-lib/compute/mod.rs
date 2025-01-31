@@ -44,12 +44,12 @@ pub fn compute(
     // Main iteration loop
     for _ in 0..iterations {
         // FISTA update
-        let next_term = (1.0 + (1.0 + 4.0 * term.powi(2)).sqrt()) / 2.0;
+        let next_term = (1.0 + mul_add!(4.0_f32, term.powi(2), 1.0).sqrt()) / 2.0;
         let factor = (term - 1.0) / next_term;
 
         auxs.par_iter_mut().for_each(|aux| {
             for i in 0..max_rounded_px_count {
-                aux.fista[i] = aux.fdata[i] + factor * (aux.fdata[i] - aux.fista[i]);
+                aux.fista[i] = mul_add!(factor, aux.fdata[i] - aux.fista[i], aux.fdata[i]);
             }
             std::mem::swap(&mut aux.fdata, &mut aux.fista);
         });
