@@ -30,6 +30,7 @@ pub use image;
 use compute::compute;
 use jpeg::Jpeg;
 pub use jpeg::JpegSource;
+use utils::macros::mul_add;
 
 #[derive(Debug)]
 pub enum ValueCollection<T> {
@@ -164,9 +165,10 @@ impl Artefact {
                     let cri = coefs[2].image_data[idx];
 
                     rgb.push([
-                        (yi + 1.402 * cri).clamp(0.0, 255.0) as u8,
-                        (yi - 0.34414 * cbi - 0.71414 * cri).clamp(0.0, 255.0) as u8,
-                        (yi + 1.772 * cbi).clamp(0.0, 255.0) as u8,
+                        mul_add!(1.402_f32, cri, yi).clamp(0.0, 255.0) as u8,
+                        mul_add!(0.71414_f32, -cri, mul_add!(0.34414_f32, -cbi, yi))
+                            .clamp(0.0, 255.0) as u8,
+                        mul_add!(1.772_f32, cbi, yi).clamp(0.0, 255.0) as u8,
                     ]);
                 }
             }

@@ -11,6 +11,8 @@
 #![allow(clippy::erasing_op)]
 #![allow(clippy::excessive_precision)]
 
+use crate::utils::macros::mul_add;
+
 // Cn_kR = sqrt(2.0/n) * cos(pi/2*k/n)
 // Cn_kI = sqrt(2.0/n) * sin(pi/2*k/n)
 // Wn_kR = cos(pi/2*k/n)
@@ -38,18 +40,18 @@ pub fn idct8x8s(a: &mut [f32; 64]) {
     let mut xi: f32;
 
     for j in 0..8 {
-        x1r = C8_1R * a[1 * 8 + j] + C8_1I * a[7 * 8 + j];
-        x1i = C8_1R * a[7 * 8 + j] - C8_1I * a[1 * 8 + j];
-        x3r = C8_3R * a[3 * 8 + j] + C8_3I * a[5 * 8 + j];
-        x3i = C8_3R * a[5 * 8 + j] - C8_3I * a[3 * 8 + j];
+        x1r = mul_add!(C8_1R, a[1 * 8 + j], C8_1I * a[7 * 8 + j]);
+        x1i = mul_add!(C8_1R, a[7 * 8 + j], -(C8_1I * a[1 * 8 + j]));
+        x3r = mul_add!(C8_3R, a[3 * 8 + j], C8_3I * a[5 * 8 + j]);
+        x3i = mul_add!(C8_3R, a[5 * 8 + j], -(C8_3I * a[3 * 8 + j]));
         xr = x1r - x3r;
         xi = x1i + x3i;
         x1r += x3r;
         x3i -= x1i;
         x1i = W8_4R * (xr + xi);
         x3r = W8_4R * (xr - xi);
-        xr = C8_2R * a[2 * 8 + j] + C8_2I * a[6 * 8 + j];
-        xi = C8_2R * a[6 * 8 + j] - C8_2I * a[2 * 8 + j];
+        xr = mul_add!(C8_2R, a[2 * 8 + j], C8_2I * a[6 * 8 + j]);
+        xi = mul_add!(C8_2R, a[6 * 8 + j], -(C8_2I * a[2 * 8 + j]));
         x0r = C8_4R * (a[0 * 8 + j] + a[4 * 8 + j]);
         x0i = C8_4R * (a[0 * 8 + j] - a[4 * 8 + j]);
         x2r = x0r - xr;
@@ -66,18 +68,18 @@ pub fn idct8x8s(a: &mut [f32; 64]) {
         a[1 * 8 + j] = x2i + x3r;
     }
     for j in 0..8 {
-        x1r = C8_1R * a[j * 8 + 1] + C8_1I * a[j * 8 + 7];
-        x1i = C8_1R * a[j * 8 + 7] - C8_1I * a[j * 8 + 1];
-        x3r = C8_3R * a[j * 8 + 3] + C8_3I * a[j * 8 + 5];
-        x3i = C8_3R * a[j * 8 + 5] - C8_3I * a[j * 8 + 3];
+        x1r = mul_add!(C8_1R, a[j * 8 + 1], C8_1I * a[j * 8 + 7]);
+        x1i = mul_add!(C8_1R, a[j * 8 + 7], -(C8_1I * a[j * 8 + 1]));
+        x3r = mul_add!(C8_3R, a[j * 8 + 3], C8_3I * a[j * 8 + 5]);
+        x3i = mul_add!(C8_3R, a[j * 8 + 5], -(C8_3I * a[j * 8 + 3]));
         xr = x1r - x3r;
         xi = x1i + x3i;
         x1r += x3r;
         x3i -= x1i;
         x1i = W8_4R * (xr + xi);
         x3r = W8_4R * (xr - xi);
-        xr = C8_2R * a[j * 8 + 2] + C8_2I * a[j * 8 + 6];
-        xi = C8_2R * a[j * 8 + 6] - C8_2I * a[j * 8 + 2];
+        xr = mul_add!(C8_2R, a[j * 8 + 2], C8_2I * a[j * 8 + 6]);
+        xi = mul_add!(C8_2R, a[j * 8 + 6], -(C8_2I * a[j * 8 + 2]));
         x0r = C8_4R * (a[j * 8 + 0] + a[j * 8 + 4]);
         x0i = C8_4R * (a[j * 8 + 0] - a[j * 8 + 4]);
         x2r = x0r - xr;
@@ -122,18 +124,18 @@ pub fn dct8x8s(a: &mut [f32; 64]) {
         a[4 * 8 + j] = C8_4R * (xr - xi);
         xr = x0r - x2r;
         xi = x0i - x2i;
-        a[2 * 8 + j] = C8_2R * xr - C8_2I * xi;
-        a[6 * 8 + j] = C8_2R * xi + C8_2I * xr;
+        a[2 * 8 + j] = mul_add!(C8_2R, xr, -(C8_2I * xi));
+        a[6 * 8 + j] = mul_add!(C8_2R, xi, C8_2I * xr);
         xr = W8_4R * (x1i - x3i);
         x1i = W8_4R * (x1i + x3i);
         x3i = x1i - x3r;
         x1i += x3r;
         x3r = x1r - xr;
         x1r += xr;
-        a[1 * 8 + j] = C8_1R * x1r - C8_1I * x1i;
-        a[7 * 8 + j] = C8_1R * x1i + C8_1I * x1r;
-        a[3 * 8 + j] = C8_3R * x3r - C8_3I * x3i;
-        a[5 * 8 + j] = C8_3R * x3i + C8_3I * x3r;
+        a[1 * 8 + j] = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
+        a[7 * 8 + j] = mul_add!(C8_1R, x1i, C8_1I * x1r);
+        a[3 * 8 + j] = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
+        a[5 * 8 + j] = mul_add!(C8_3R, x3i, C8_3I * x3r);
     }
 
     for j in 0..8 {
@@ -151,17 +153,17 @@ pub fn dct8x8s(a: &mut [f32; 64]) {
         a[j * 8 + 4] = C8_4R * (xr - xi);
         xr = x0r - x2r;
         xi = x0i - x2i;
-        a[j * 8 + 2] = C8_2R * xr - C8_2I * xi;
-        a[j * 8 + 6] = C8_2R * xi + C8_2I * xr;
+        a[j * 8 + 2] = mul_add!(C8_2R, xr, -(C8_2I * xi));
+        a[j * 8 + 6] = mul_add!(C8_2R, xi, C8_2I * xr);
         xr = W8_4R * (x1i - x3i);
         x1i = W8_4R * (x1i + x3i);
         x3i = x1i - x3r;
         x1i += x3r;
         x3r = x1r - xr;
         x1r += xr;
-        a[j * 8 + 1] = C8_1R * x1r - C8_1I * x1i;
-        a[j * 8 + 7] = C8_1R * x1i + C8_1I * x1r;
-        a[j * 8 + 3] = C8_3R * x3r - C8_3I * x3i;
-        a[j * 8 + 5] = C8_3R * x3i + C8_3I * x3r;
+        a[j * 8 + 1] = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
+        a[j * 8 + 7] = mul_add!(C8_1R, x1i, C8_1I * x1r);
+        a[j * 8 + 3] = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
+        a[j * 8 + 5] = mul_add!(C8_3R, x3i, C8_3I * x3r);
     }
 }
