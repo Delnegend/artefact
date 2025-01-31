@@ -3,7 +3,7 @@ MOLD_MD5=0cbdd068a70ef28cad32c4005fd9f1df
 
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal -c clippy rustfmt
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal -c clippy rustfmt --default-toolchain nightly
 
 echo 'export CARGO_HOME="/usr/local/cargo"' >> ~/.zshrc
 echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> ~/.zshrc
