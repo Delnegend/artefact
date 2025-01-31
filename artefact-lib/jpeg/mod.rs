@@ -108,11 +108,7 @@ impl Coefficient {
                 let result = dct_coefs * quant_table;
 
                 let idx = i * 64 + j * 8;
-
-                #[cfg(not(feature = "simd_std"))]
-                self.image_data[idx..idx + 8].copy_from_slice(result.as_array_ref());
-                #[cfg(feature = "simd_std")]
-                self.image_data[idx..idx + 8].copy_from_slice(&result.to_array());
+                result.write_to(&mut self.image_data[idx..idx + 8]);
             }
 
             idct8x8s(
