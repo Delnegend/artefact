@@ -72,7 +72,7 @@ impl Default for Artefact {
 macro_rules! define_methods {
     ($($name:ident : $t:ty),+) => {
         $(
-            pub fn $name(mut self, $name: $t) -> Self {
+            #[must_use] pub fn $name(mut self, $name: $t) -> Self {
                 if let Some($name) = $name {
                     self.$name = $name;
                 }
@@ -83,6 +83,7 @@ macro_rules! define_methods {
 }
 
 impl Artefact {
+    #[must_use]
     pub fn source(mut self, source: JpegSource) -> Self {
         self.source = Some(source);
         self
