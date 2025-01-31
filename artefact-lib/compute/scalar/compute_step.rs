@@ -3,7 +3,7 @@ use crate::compute::scalar::{
     compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
 };
 
-use crate::{compute::aux::Aux, jpeg::Coefficient};
+use crate::{compute::aux::Aux, jpeg::Coefficient, utils::macros::mul_add};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute_step(
@@ -55,7 +55,7 @@ pub fn compute_step(
         let norm = aux
             .obj_gradient
             .iter()
-            .fold(0.0, |acc, &x| acc + x.powi(2))
+            .fold(0.0, |acc, &x| mul_add!(x, x, acc))
             .sqrt();
 
         // Only update if gradient norm is non-zero
