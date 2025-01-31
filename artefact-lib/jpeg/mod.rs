@@ -86,14 +86,13 @@ impl Coefficient {
     fn post_process(&mut self) {
         // DCT coefs + quantization table -> image data
         #[cfg(not(feature = "simd"))]
-        for i in 0..(block_count as usize) {
+        for i in 0..(self.block_count as usize) {
             for j in 0..64 {
-                coef.image_data[i * 64 + j] =
-                    coef.dct_coefs[i * 64 + j] as f32 * coef.quant_table[j] as f32;
+                self.image_data[i * 64 + j] = self.dct_coefs[i * 64 + j] * self.quant_table[j];
             }
 
             idct8x8s(
-                coef.image_data[i * 64..(i + 1) * 64]
+                self.image_data[i * 64..(i + 1) * 64]
                     .as_mut()
                     .try_into()
                     .expect("Invalid coef's image data length"),
