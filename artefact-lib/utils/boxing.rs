@@ -1,12 +1,8 @@
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-use crate::compute::simd::f32x8;
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-use wide::f32x8;
-
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-use crate::compute::simd_std::f32x8;
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-use std::simd::f32x8;
+#[cfg(feature = "simd")]
+use crate::utils::{
+    f32x8,
+    traits::{FromSlice, WriteTo},
+};
 
 /// Convert from 8x8 block to 64x1 block
 pub fn unboxing(
@@ -27,13 +23,10 @@ pub fn unboxing(
         for block_x in 0..block_w {
             #[cfg(feature = "simd")]
             for in_y in 0..8 {
-                let result = f32x8!(&input[index..index + 8]);
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
 
-                #[cfg(all(feature = "simd", not(feature = "simd_std")))]
-                output[row_start..row_start + 8].copy_from_slice(result.as_array_ref());
-                #[cfg(all(feature = "simd", feature = "simd_std"))]
-                output[row_start..row_start + 8].copy_from_slice(&result.to_array());
+                f32x8::from_slc(&input[index..index + 8])
+                    .write_to(&mut output[row_start..row_start + 8]);
 
                 index += 8;
             }
@@ -71,12 +64,9 @@ pub fn boxing(
             #[cfg(feature = "simd")]
             for in_y in 0..8 {
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-                let result = f32x8!(&input[row_start..row_start + 8]);
 
-                #[cfg(all(feature = "simd", not(feature = "simd_std")))]
-                output[index..index + 8].copy_from_slice(result.as_array_ref());
-                #[cfg(all(feature = "simd", feature = "simd_std"))]
-                output[index..index + 8].copy_from_slice(&result.to_array());
+                f32x8::from_slc(&input[row_start..row_start + 8])
+                    .write_to(&mut output[index..index + 8]);
 
                 index += 8;
             }

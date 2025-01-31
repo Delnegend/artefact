@@ -1,16 +1,13 @@
+use zune_jpeg::sample_factor::SampleFactor;
+
 #[cfg(feature = "mozjpeg")]
 mod moz;
 #[cfg(not(feature = "mozjpeg"))]
 mod zune;
 
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-use wide::f32x8;
-
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-use std::simd::f32x8;
-
 use crate::utils::{boxing::unboxing, dct::idct8x8s};
-use zune_jpeg::sample_factor::SampleFactor;
+#[cfg(feature = "simd")]
+use crate::{f32x8, traits::WriteTo};
 
 #[derive(Debug, Clone)]
 pub struct Coefficient {
@@ -134,24 +131,7 @@ impl Coefficient {
                 .expect("Invalid quant_table_squared length");
         }
 
-        #[cfg(all(feature = "simd", not(feature = "simd_std")))]
-        {
-            self.dequant_dct_coefs_min = self
-                .dct_coefs
-                .iter()
-                .enumerate()
-                .map(|(idx, dct_coefs)| (*dct_coefs - 0.5) * self.quant_table[idx % 8])
-                .collect();
-
-            self.dequant_dct_coefs_max = self
-                .dct_coefs
-                .iter()
-                .enumerate()
-                .map(|(idx, dct_coefs)| (*dct_coefs + 0.5) * self.quant_table[idx % 8])
-                .collect();
-        }
-
-        #[cfg(all(feature = "simd", feature = "simd_std"))]
+        #[cfg(feature = "simd")]
         {
             self.dequant_dct_coefs_min = self
                 .dct_coefs
@@ -159,7 +139,7 @@ impl Coefficient {
                 .enumerate()
                 .map(|(idx, dct_coefs)| {
                     let quant_table = self.quant_table[idx % 8];
-                    (dct_coefs - f32x8::splat(0.5)) * quant_table
+                    (*dct_coefs - f32x8::splat(0.5)) * quant_table
                 })
                 .collect();
 
@@ -169,7 +149,7 @@ impl Coefficient {
                 .enumerate()
                 .map(|(idx, dct_coefs)| {
                     let quant_table = self.quant_table[idx % 8];
-                    (dct_coefs + f32x8::splat(0.5)) * quant_table
+                    (*dct_coefs + f32x8::splat(0.5)) * quant_table
                 })
                 .collect();
         }

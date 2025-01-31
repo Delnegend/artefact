@@ -2,21 +2,17 @@ mod aux;
 
 #[cfg(not(feature = "simd"))]
 mod scalar;
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-pub mod simd;
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-pub mod simd_std;
+#[cfg(feature = "simd")]
+mod simd;
 
 use rayon::prelude::*;
 
-use crate::{compute::aux::Aux, jpeg::Coefficient};
+use crate::{compute::aux::Aux, jpeg::Coefficient, utils::macros::mul_add};
 
 #[cfg(not(feature = "simd"))]
 use scalar::compute_step::compute_step;
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-use simd::compute_step::compute_step_simd as compute_step;
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-use simd_std::compute_step::compute_step_simd_std as compute_step;
+#[cfg(feature = "simd")]
+use simd::compute_step::compute_step;
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute(

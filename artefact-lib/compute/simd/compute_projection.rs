@@ -1,16 +1,17 @@
-use wide::f32x8;
 use zune_jpeg::sample_factor::SampleFactor;
 
 use crate::{
-    compute::{aux::Aux, simd::f32x8},
+    compute::aux::Aux,
     jpeg::Coefficient,
     utils::{
         boxing::{boxing, unboxing},
         dct::{dct8x8s, idct8x8s},
+        f32x8,
+        traits::{Clamp, FromSlice, WriteTo},
     },
 };
 
-pub fn compute_projection_simd(
+pub fn compute_projection(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     aux: &mut Aux,
@@ -43,7 +44,8 @@ pub fn compute_projection_simd(
                     }
                 };
 
-                mean /= (coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8()) as f32;
+                mean /=
+                    f32::from(coef.horizontal_samp_factor.u8() * coef.vertical_samp_factor.u8());
 
                 debug_assert!(cx < coef.rounded_px_w && cy < coef.rounded_px_h);
                 aux.pixel_diff.y[(cy * coef.rounded_px_w + cx) as usize] = mean;
@@ -73,9 +75,10 @@ pub fn compute_projection_simd(
 
     // Project onto DCT box
     boxing(
-        match resample {
-            true => &aux.pixel_diff.y,
-            false => &aux.fdata,
+        if resample {
+            &aux.pixel_diff.y
+        } else {
+            &aux.fdata
         },
         aux.pixel_diff.x.as_mut(),
         coef.rounded_px_w,
@@ -96,13 +99,15 @@ pub fn compute_projection_simd(
     // Clamp DCT coefficients
     for i in 0..coef.block_count as usize {
         for j in 0..8 {
-            let idx = i * 64 + j * 8;
-            let target = &mut aux.pixel_diff.x[idx..idx + 8];
+            let a = i * 64 + j * 8;
+            let b = a + 7;
+            let old = &mut aux.pixel_diff.x[a..=b];
 
             let max = coef.dequant_dct_coefs_max[i * 8 + j];
             let min = coef.dequant_dct_coefs_min[i * 8 + j];
 
-            target.copy_from_slice(f32x8!(&target[..]).min(max).max(min).as_array_ref());
+            let new = f32x8::from_slc(old).clmp(min, max);
+            new.write_to(old);
         }
     }
 
@@ -121,9 +126,10 @@ pub fn compute_projection_simd(
 
     unboxing(
         &aux.pixel_diff.x,
-        match resample {
-            true => aux.pixel_diff.y.as_mut(),
-            false => aux.fdata.as_mut(),
+        if resample {
+            aux.pixel_diff.y.as_mut()
+        } else {
+            aux.fdata.as_mut()
         },
         coef.rounded_px_w,
         coef.rounded_px_h,

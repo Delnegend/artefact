@@ -1,15 +1,26 @@
-use wide::f32x8;
+#[cfg(feature = "simd_std")]
+use std::{
+    ops::Div,
+    simd::{cmp::SimdPartialEq, StdFloat},
+};
 
-use crate::compute::{aux::Aux, simd::f32x8};
+#[cfg(not(feature = "simd_std"))]
+use crate::utils::traits::SafeDiv;
 
-pub fn compute_step_tv_simd(
+use crate::{
+    compute::aux::Aux,
+    utils::{
+        f32x8,
+        traits::{AddSlice, FromSlice, WriteTo},
+    },
+};
+
+pub fn compute_step_tv(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
     auxs: &mut [Aux],
 ) {
-    let alpha = 1.0 / (nchannel as f32).sqrt();
-
     for curr_row in 0..max_rounded_px_h {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
             compute_step_tv_inner(
@@ -19,7 +30,6 @@ pub fn compute_step_tv_simd(
                 auxs,
                 curr_row_px_idx,
                 curr_row,
-                alpha,
             );
         }
     }
@@ -32,7 +42,6 @@ fn compute_step_tv_inner(
     auxs: &mut [Aux],
     curr_row_px_idx: u32,
     curr_row: u32,
-    alpha: f32,
 ) {
     // a "group" = 8 consecutive pixels horizontally
 
@@ -40,8 +49,8 @@ fn compute_step_tv_inner(
     let group_at_right_edge = curr_row_px_idx + 8 == max_rounded_px_w;
     let group_at_bottom_edge = curr_row + 1 == max_rounded_px_h;
 
-    let mut g_xs = [f32x8!(); 3];
-    let mut g_ys = [f32x8!(); 3];
+    let mut g_xs = [f32x8::splat(0.0); 3];
+    let mut g_ys = [f32x8::splat(0.0); 3];
 
     // compute forward differences
     for c in 0..nchannel {
@@ -55,11 +64,11 @@ fn compute_step_tv_inner(
 
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 6;
-            let curr_group = f32x8!(..=6, &aux.fdata[a..=b]);
+            let curr_group = f32x8::from_short_slc(&aux.fdata[a..=b]);
 
             let a = px_idx_start_of_group + 1;
             let b = px_idx_start_of_group + 7;
-            let shift_right_1px_group = f32x8!(..=6, &aux.fdata[a..=b]);
+            let shift_right_1px_group = f32x8::from_short_slc(&aux.fdata[a..=b]);
 
             shift_right_1px_group - curr_group
         } else {
@@ -67,11 +76,11 @@ fn compute_step_tv_inner(
 
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 7;
-            let curr_group = f32x8!(&aux.fdata[a..=b]);
+            let curr_group = f32x8::from_slc(&aux.fdata[a..=b]);
 
             let a = px_idx_start_of_group + 1;
             let b = px_idx_start_of_group + 8;
-            let shift_right_1px_group = f32x8!(&aux.fdata[a..=b]);
+            let shift_right_1px_group = f32x8::from_slc(&aux.fdata[a..=b]);
 
             shift_right_1px_group - curr_group
         };
@@ -80,73 +89,111 @@ fn compute_step_tv_inner(
         if !group_at_bottom_edge {
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 7;
-            let curr_group = f32x8!(&aux.fdata[a..=b]);
+            let curr_group = f32x8::from_slc(&aux.fdata[a..=b]);
 
             let i = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let shift_down_1px_group = f32x8!(&aux.fdata[i..=i + 7]);
+            let a = i;
+            let b = i + 7;
+            let shift_down_1px_group = f32x8::from_slc(&aux.fdata[a..=b]);
 
-            g_ys[c] = shift_down_1px_group - curr_group
-        };
+            g_ys[c] = shift_down_1px_group - curr_group;
+        }
     }
 
     // compute gradient normalization
+    let alpha = f32x8::splat(1.0 / (nchannel as f32).sqrt());
     let g_norm = (0..nchannel)
         .map(|c| g_xs[c] * g_xs[c] + g_ys[c] * g_ys[c])
-        .fold(f32x8!(), |acc, x| acc + x)
+        .fold(f32x8::splat(0.0), |acc, x| acc + x)
         .sqrt();
+
+    #[cfg(feature = "simd_std")]
+    let mask = g_norm.simd_ne(f32x8::splat(0.0));
 
     for c in 0..nchannel {
         // ===== compute derivatives =====
         let aux = &mut auxs[c];
 
         '_for_current_group: {
-            let target = &mut aux.obj_gradient[px_idx_start_of_group..=px_idx_start_of_group + 7];
-            let original = f32x8!(&target[..]);
-            let update = f32x8!(div: alpha * -(g_xs[c] + g_ys[c]), g_norm);
+            let a = px_idx_start_of_group;
+            let b = px_idx_start_of_group + 7;
+            let target = &mut aux.obj_gradient[a..=b];
 
-            target.copy_from_slice((original + update).as_array_ref());
+            #[cfg(not(feature = "simd_std"))]
+            (alpha * -(g_xs[c] + g_ys[c]))
+                .safe_div(g_norm)
+                .add_slice(target)
+                .write_to(target);
+
+            #[cfg(feature = "simd_std")]
+            (alpha * -(g_xs[c] + g_ys[c]))
+                .div(g_norm)
+                .add_slice(target)
+                .store_select(target, mask);
         }
 
         '_for_shifted_right_1px_group: {
-            let update = f32x8!(div: alpha * g_xs[c], g_norm);
-
             if group_at_right_edge {
-                // ignore the last pixel in the group because it's out of bounds
-                // [1] [2] [3] [4] [5] [6] [7] [_] (i.e the image width is 8px)
-
                 let a = px_idx_start_of_group + 1;
                 let b = px_idx_start_of_group + 7;
                 let target = &mut aux.obj_gradient[a..=b];
-                let original = f32x8!(..=6, &target[..]);
 
-                target.copy_from_slice(&(original + update).as_array_ref()[..=6]);
+                #[cfg(not(feature = "simd_std"))]
+                (alpha * g_xs[c])
+                    .safe_div(g_norm)
+                    .add_short_slice(target)
+                    .write_partial_to(target, 0..=6);
+
+                #[cfg(feature = "simd_std")]
+                (alpha * g_xs[c])
+                    .div(g_norm)
+                    .add_short_slice(target)
+                    .store_select(target, mask);
             } else {
                 let a = px_idx_start_of_group + 1;
                 let b = px_idx_start_of_group + 8;
                 let target = &mut aux.obj_gradient[a..=b];
-                let original = f32x8!(&target[..]);
 
-                target.copy_from_slice((original + update).as_array_ref());
+                #[cfg(not(feature = "simd_std"))]
+                (alpha * g_xs[c])
+                    .safe_div(g_norm)
+                    .add_slice(target)
+                    .write_to(target);
+
+                #[cfg(feature = "simd_std")]
+                (alpha * g_xs[c])
+                    .div(g_norm)
+                    .add_slice(target)
+                    .store_select(target, mask);
             }
         }
 
         // for shifted_down_1px_group aka group below the current group
         if !group_at_bottom_edge {
-            let i = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            let b = a + 7;
+            let target = &mut aux.obj_gradient[a..=b];
 
-            let target = aux.obj_gradient[i..=i + 7].as_mut();
-            let original = f32x8!(&target[..]);
-            let update = f32x8!(div: alpha * g_ys[c], g_norm);
+            #[cfg(not(feature = "simd_std"))]
+            (alpha * g_ys[c])
+                .safe_div(g_norm)
+                .add_slice(target)
+                .write_to(target);
 
-            target.copy_from_slice((original + update).as_array_ref());
+            #[cfg(feature = "simd_std")]
+            (alpha * g_ys[c])
+                .div(g_norm)
+                .add_slice(target)
+                .store_select(target, mask);
         }
 
         // ===== store for use in tv2 =====
         let a = px_idx_start_of_group;
         let b = px_idx_start_of_group + 7;
-        auxs[c].pixel_diff.x[a..=b].copy_from_slice(g_xs[c].as_array_ref());
+
+        g_xs[c].write_to(&mut auxs[c].pixel_diff.x[a..=b]);
         if !group_at_bottom_edge {
-            auxs[c].pixel_diff.y[a..=b].copy_from_slice(g_ys[c].as_array_ref());
+            g_ys[c].write_to(&mut auxs[c].pixel_diff.y[a..=b]);
         }
     }
 }

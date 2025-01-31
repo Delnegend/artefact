@@ -1,12 +1,8 @@
-#[cfg(all(feature = "simd", feature = "simd_std"))]
-use std::simd::f32x8;
-
-#[cfg(all(feature = "simd", not(feature = "simd_std")))]
-use wide::f32x8;
-
 use zune_jpeg::{zune_core::bytestream::ZCursor, JpegDecoder};
 
 use crate::jpeg::{Coefficient, Jpeg, JpegSource};
+#[cfg(feature = "simd")]
+use crate::utils::{f32x8, traits::FromSlice};
 
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Jpeg, String> {
@@ -46,26 +42,20 @@ impl Jpeg {
                         vertical_samp_factor: comp.vertical_samp_factor,
 
                         #[cfg(not(feature = "simd"))]
-                        dct_coefs: comp.dct_coefs.iter().map(|&x| x as f32).collect::<Vec<_>>(),
+                        dct_coefs: comp
+                            .dct_coefs
+                            .iter()
+                            .map(|&x| x as f32)
+                            .collect::<Vec<_>>(),
 
-                        #[cfg(all(feature = "simd", not(feature = "simd_std")))]
+                        #[cfg(feature = "simd")]
                         dct_coefs: comp
                             .dct_coefs
                             .iter()
                             .map(|&x| x as f32)
                             .collect::<Vec<_>>()
                             .chunks_exact(8)
-                            .map(f32x8::from)
-                            .collect(),
-
-                        #[cfg(all(feature = "simd", feature = "simd_std"))]
-                        dct_coefs: comp
-                            .dct_coefs
-                            .iter()
-                            .map(|&x| x as f32)
-                            .collect::<Vec<_>>()
-                            .chunks_exact(8)
-                            .map(f32x8::from_slice)
+                            .map(f32x8::from_slc)
                             .collect(),
 
                         #[cfg(not(feature = "simd"))]
@@ -77,29 +67,18 @@ impl Jpeg {
                             .try_into()
                             .map_err(|_| "Invalid quant_table_aligned length".to_string())?,
 
-                        #[cfg(all(feature = "simd", not(feature = "simd_std")))]
+                        #[cfg(feature = "simd")]
                         quant_table: comp
                             .quant_table
                             .iter()
                             .map(|&x| x as f32)
                             .collect::<Vec<_>>()
                             .chunks_exact(8)
-                            .map(f32x8::from)
+                            .map(f32x8::from_slc)
                             .collect::<Vec<f32x8>>()
                             .try_into()
                             .map_err(|_| "Invalid quant_table length".to_string())?,
-
-                        #[cfg(all(feature = "simd", feature = "simd_std"))]
-                        quant_table: comp
-                            .quant_table
-                            .iter()
-                            .map(|&x| x as f32)
-                            .collect::<Vec<_>>()
-                            .chunks_exact(8)
-                            .map(f32x8::from_slice)
-                            .collect::<Vec<f32x8>>()
-                            .try_into()
-                            .map_err(|_| "Invalid quant_table length".to_string())?,
+                        #[cfg(feature = "simd")]
                         quant_table_squared: [f32x8::splat(0.0); 8],
 
                         #[cfg(feature = "simd")]

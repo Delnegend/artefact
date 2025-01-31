@@ -1,12 +1,18 @@
-use wide::f32x8;
 use zune_jpeg::sample_factor::SampleFactor;
 
-use crate::{compute::simd::f32x8, jpeg::Coefficient, utils::dct::idct8x8s};
+use crate::{
+    jpeg::Coefficient,
+    utils::{
+        dct::idct8x8s,
+        f32x8,
+        traits::{FromSlice, WriteTo},
+    },
+};
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos
 #[allow(unused_variables)]
-pub fn compute_step_prob_simd(
+pub fn compute_step_prob(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     max_rounded_px_h: u32,    // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
@@ -27,12 +33,12 @@ pub fn compute_step_prob_simd(
             // Process each coefficient in current block
             for j in 0..8 {
                 let target = &mut cosbs[j * 8..j * 8 + 8];
-                let original = f32x8!(&target[..]);
+                let original = f32x8::from_slc(target);
 
                 let update_a = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
                 let update_b = coef.quant_table_squared[j];
 
-                target.copy_from_slice(((original - update_a) / update_b).as_array_ref());
+                ((original - update_a) / update_b).write_to(target);
             }
 
             // Apply inverse DCT to get spatial domain gradient
