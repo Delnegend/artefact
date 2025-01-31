@@ -1,4 +1,23 @@
 // #![feature(portable_simd)]
+#![warn(clippy::perf, clippy::pedantic, clippy::nursery, clippy::unwrap_used)]
+#![allow(
+    clippy::use_self,
+    clippy::missing_const_for_fn,
+    clippy::redundant_closure_for_method_calls,
+    clippy::doc_markdown,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::unused_self,
+    clippy::too_many_lines,
+    clippy::too_many_arguments,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::inefficient_to_string,
+    clippy::similar_names,
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss,
+    clippy::branches_sharing_code
+)]
 
 mod compute;
 mod jpeg;
