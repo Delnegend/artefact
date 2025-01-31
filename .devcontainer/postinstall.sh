@@ -1,6 +1,13 @@
 MOLD_VERSION=2.36.0
 MOLD_MD5=0cbdd068a70ef28cad32c4005fd9f1df
 
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal -c clippy rustfmt
+
+echo 'export CARGO_HOME="/usr/local/cargo"' >> ~/.zshrc
+echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> ~/.zshrc
+
 if [ ! -d /usr/local/cargo/mold-$MOLD_VERSION-x86_64-linux ]; then
     cd /usr/local/cargo
     curl -L -o mold-$MOLD_VERSION-x86_64-linux.tar.gz https://github.com/rui314/mold/releases/download/v$MOLD_VERSION/mold-$MOLD_VERSION-x86_64-linux.tar.gz
@@ -20,7 +27,7 @@ printf "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\nrustflags = [\"-C
 
 # use binstall so we don't have to compile
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> ~/.zshrc
+
 
 # 3rd party rust-powered tools
 cargo binstall flamegraph nrr -y
