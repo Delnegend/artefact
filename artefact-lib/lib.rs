@@ -1,4 +1,4 @@
-// #![feature(portable_simd)]
+#![feature(portable_simd)]
 #![warn(clippy::perf, clippy::pedantic, clippy::nursery, clippy::unwrap_used)]
 #![allow(
     clippy::use_self,
