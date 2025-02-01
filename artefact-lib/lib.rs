@@ -104,11 +104,16 @@ impl Artefact {
         self
     }
 
+    #[must_use]
+    pub fn separate_components(mut self, separate_components: bool) -> Self {
+        self.separate_components = separate_components;
+        self
+    }
+
     define_methods!(
         weight: Option<ValueCollection<f32>>,
         pweight: Option<ValueCollection<f32>>,
-        iterations: Option<ValueCollection<usize>>,
-        separate_components: Option<bool>
+        iterations: Option<ValueCollection<usize>>
     );
 
     pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
