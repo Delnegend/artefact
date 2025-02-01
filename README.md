@@ -78,6 +78,13 @@ Options:
 
           Default: input file with png extension
 
+  -f, --format <FORMAT>
+          Output format
+
+          Default: png Possible values: png, webp, tiff, bmp, gif
+
+          [default: png]
+
   -y, --overwrite
           Overwrite existing output file
 
@@ -97,15 +104,14 @@ Options:
           Iterations
           Higher values give better results but take more time
 
-          Default: 50 for all channels, use comma separated values for each channel
+          Default: 100 for all channels, use comma separated values for each channel
 
-  -s, --spearate-components <SPEARATE_COMPONENTS>
+  -s, --spearate-components
           Separate components
-          Separately optimize components instead of all together
+          Separately optimize components instead of all together, exchanges quality for speed
 
-          Default: false
-
-          [possible values: true, false]
+  -b, --benchmark
+          Benchmark mode
 
   -h, --help
           Print help (see a summary with '-h')

@@ -49,15 +49,11 @@ struct Args {
     iterations: Option<String>,
 
     /// Separate components
-    /// Separately optimize components instead of all together
-    ///
-    /// Default: false
-    #[arg(short, long, verbatim_doc_comment)]
-    spearate_components: Option<bool>,
+    /// Separately optimize components instead of all together, exchanges quality for speed
+    #[arg(short, long, verbatim_doc_comment, default_value = "false")]
+    spearate_components: bool,
 
-    /// Benchmark mode
-    ///
-    /// Default: false
+    /// Benchmark mode, do not save output image
     #[arg(short, long, verbatim_doc_comment, default_value = "false")]
     benchmark: bool,
 }
