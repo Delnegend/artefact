@@ -70,7 +70,7 @@ impl Default for Artefact {
 }
 
 macro_rules! define_methods {
-    ($($name:ident : $t:ty),+) => {
+    ($($name:ident: $t:ty),+) => {
         $(
             #[must_use] pub fn $name(mut self, $name: $t) -> Self {
                 if let Some($name) = $name {
