@@ -6,15 +6,14 @@ mod compute_step_prob;
 mod compute_step_tv;
 mod compute_step_tv2;
 
-use rayon::prelude::*;
-
 use crate::{
     jpeg::Coefficient,
-    pipeline_simd_adaptive::{
-        adaptive_width::get_adaptive_widths, coef::SIMDAdaptiveCoef, compute_step::compute_step,
-    },
     utils::{aux::Aux, macros::mul_add},
 };
+use adaptive_width::get_adaptive_widths;
+use coef::SIMDAdaptiveCoef;
+use compute_step::compute_step;
+use rayon::prelude::*;
 
 #[allow(unused)]
 pub fn compute(
@@ -27,8 +26,10 @@ pub fn compute(
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
 ) -> Vec<Vec<f32>> {
-    let mut coefs: Vec<SIMDAdaptiveCoef> =
-        coefs.into_par_iter().map(SIMDAdaptiveCoef::from).collect();
+    let mut coefs = coefs
+        .into_par_iter()
+        .map(SIMDAdaptiveCoef::from)
+        .collect::<Vec<_>>();
 
     // Initialize working buffers for each channel
     let mut auxs = (0..nchannel)

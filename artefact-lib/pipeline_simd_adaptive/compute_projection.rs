@@ -1,14 +1,13 @@
+use std::simd::{f32x64, num::SimdFloat};
+
 use zune_jpeg::sample_factor::SampleFactor;
 
-use crate::{
-    pipeline_simd_8::f32x8,
-    pipeline_simd_adaptive::coef::SIMDAdaptiveCoef,
-    utils::{
-        aux::Aux,
-        boxing::{boxing, unboxing},
-        dct::{dct8x8s, idct8x8s},
-        traits::{Clamp, FromSlice, WriteTo},
-    },
+use super::coef::SIMDAdaptiveCoef;
+use crate::utils::{
+    aux::Aux,
+    boxing::{boxing, unboxing},
+    dct::{dct8x8s, idct8x8s},
+    traits::WriteTo,
 };
 
 pub fn compute_projection(
@@ -98,16 +97,14 @@ pub fn compute_projection(
 
     // Clamp DCT coefficients
     for i in 0..coef.block_count as usize {
-        for j in 0..8 {
-            let a = i * 64 + j * 8;
-            let b = a + 7;
-            let old = &mut aux.pixel_diff.x[a..=b];
+        let a = i * 64;
+        let b = a + 63;
+        let old = &mut aux.pixel_diff.x[a..=b];
 
-            let max = coef.dequant_dct_coefs_max[i * 8 + j];
-            let min = coef.dequant_dct_coefs_min[i * 8 + j];
+        let max = coef.dequant_dct_coefs_max[i];
+        let min = coef.dequant_dct_coefs_min[i];
 
-            f32x8::from_slc(old).clmp(min, max).write_to(old);
-        }
+        f32x64::from_slice(old).simd_clamp(min, max).write_to(old);
     }
 
     // Save a copy of the DCT values for step_prob

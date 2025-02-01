@@ -1,13 +1,12 @@
+use std::{
+    ops::{Div, Sub},
+    simd::f32x64,
+};
+
 use zune_jpeg::sample_factor::SampleFactor;
 
-use crate::{
-    pipeline_simd_8::f32x8,
-    pipeline_simd_adaptive::coef::SIMDAdaptiveCoef,
-    utils::{
-        dct::idct8x8s,
-        traits::{FromSlice, WriteTo},
-    },
-};
+use super::coef::SIMDAdaptiveCoef;
+use crate::utils::{dct::idct8x8s, traits::WriteTo};
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos
@@ -25,21 +24,14 @@ pub fn compute_step_prob(
         for block_x in 0..coef.block_w {
             // Calculate block index and prepare cosine buffer
             let i = (block_y * coef.block_w + block_x) as usize;
+
             // 8x8 block buffer
-            let mut cosbs: [f32; 64] = cos[i * 64..(i + 1) * 64]
-                .try_into()
-                .expect("Invalid cosine transform data length");
+            let mut cosbs = [0.0; 64];
 
-            // Process each coefficient in current block
-            for j in 0..8 {
-                let target = &mut cosbs[j * 8..j * 8 + 8];
-                let original = f32x8::from_slc(target);
-
-                let update_a = coef.dct_coefs[i * 8 + j] * coef.quant_table[j];
-                let update_b = coef.quant_table_squared[j];
-
-                ((original - update_a) / update_b).write_to(target);
-            }
+            f32x64::from_slice(&cos[i * 64..(i + 1) * 64])
+                .sub(coef.dct_coefs[i] * coef.quant_table)
+                .div(coef.quant_table_squared)
+                .write_to(&mut cosbs);
 
             // Apply inverse DCT to get spatial domain gradient
             idct8x8s(&mut cosbs);
