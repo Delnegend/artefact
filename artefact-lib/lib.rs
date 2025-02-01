@@ -82,9 +82,7 @@ macro_rules! define_methods {
     ($($name:ident: $t:ty),+) => {
         $(
             #[must_use] pub fn $name(mut self, $name: $t) -> Self {
-                if let Some($name) = $name {
-                    self.$name = $name;
-                }
+                self.$name = $name;
                 self
             }
         )+
@@ -98,22 +96,12 @@ impl Artefact {
         self
     }
 
-    #[must_use]
-    pub fn benchmark(mut self, benchmark: bool) -> Self {
-        self.benchmark = benchmark;
-        self
-    }
-
-    #[must_use]
-    pub fn separate_components(mut self, separate_components: bool) -> Self {
-        self.separate_components = separate_components;
-        self
-    }
-
     define_methods!(
-        weight: Option<ValueCollection<f32>>,
-        pweight: Option<ValueCollection<f32>>,
-        iterations: Option<ValueCollection<usize>>
+        weight: ValueCollection<f32>,
+        pweight: ValueCollection<f32>,
+        iterations: ValueCollection<usize>,
+        benchmark: bool,
+        separate_components: bool
     );
 
     pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {

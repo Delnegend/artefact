@@ -14,29 +14,28 @@ pub enum OutputFormat {
 #[wasm_bindgen]
 pub fn compute(
     buffer: Vec<u8>,
-    output_format: Option<OutputFormat>,
-    weight: Option<f32>,
-    pweight: Option<f32>,
-    iterations: Option<usize>,
-    separate_components: Option<bool>,
+    output_format: OutputFormat,
+    weight: f32,
+    pweight: f32,
+    iterations: usize,
+    separate_components: bool,
 ) -> Result<Vec<u8>, String> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     let output_format = match output_format {
-        Some(OutputFormat::Png) => ImageFormat::Png,
-        Some(OutputFormat::Webp) => ImageFormat::WebP,
-        Some(OutputFormat::Tiff) => ImageFormat::Tiff,
-        Some(OutputFormat::Bmp) => ImageFormat::Bmp,
-        None => ImageFormat::Png,
+        OutputFormat::Png => ImageFormat::Png,
+        OutputFormat::Webp => ImageFormat::WebP,
+        OutputFormat::Tiff => ImageFormat::Tiff,
+        OutputFormat::Bmp => ImageFormat::Bmp,
     };
 
     let mut cursor = Cursor::new(Vec::new());
 
     Artefact::default()
         .source(JpegSource::Buffer(buffer))
-        .weight(weight.map(ValueCollection::ForAll))
-        .pweight(pweight.map(ValueCollection::ForAll))
-        .iterations(iterations.map(ValueCollection::ForAll))
+        .weight(ValueCollection::ForAll(weight))
+        .pweight(ValueCollection::ForAll(pweight))
+        .iterations(ValueCollection::ForAll(iterations))
         .separate_components(separate_components)
         .process()?
         .write_to(&mut cursor, output_format)
