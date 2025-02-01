@@ -14,6 +14,45 @@ use scalar::compute_step::compute_step;
 #[cfg(feature = "simd")]
 use simd::compute_step::compute_step;
 
+#[cfg(feature = "simd")]
+pub mod adaptive_simd {
+    #[derive(Debug, Clone, Copy)]
+    pub enum AdaptiveWidth {
+        X8(u32),
+        X16(u32),
+        X32(u32),
+        X64(u32),
+    }
+
+    /// Returns the indexes of the current row in the image, wrapped inside a
+    /// `GroupWidth` enum to indicate how many pixels can be processed at once.
+    pub fn get_adaptive_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
+        let (mut tmp, mut idx) = (vec![], 0);
+        loop {
+            match idx {
+                x if x + 64 <= max_rounded_px_w => {
+                    tmp.push(AdaptiveWidth::X64(idx));
+                    idx += 64;
+                }
+                x if x + 32 <= max_rounded_px_w => {
+                    tmp.push(AdaptiveWidth::X32(idx));
+                    idx += 32;
+                }
+                x if x + 16 <= max_rounded_px_w => {
+                    tmp.push(AdaptiveWidth::X16(idx));
+                    idx += 16;
+                }
+                x if x + 8 <= max_rounded_px_w => {
+                    tmp.push(AdaptiveWidth::X8(idx));
+                    idx += 8;
+                }
+                _ => break,
+            }
+        }
+        tmp
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn compute(
     nchannel: usize,
@@ -41,6 +80,8 @@ pub fn compute(
     let radius = (max_rounded_px_count as f32).sqrt() / 2.0;
     let mut term = 1.0_f32;
 
+    let adaptive_widths = adaptive_simd::get_adaptive_widths(max_rounded_px_w);
+
     // Main iteration loop
     for _ in 0..iterations {
         // FISTA update
@@ -67,6 +108,7 @@ pub fn compute(
             radius / (1.0 + iterations as f32).sqrt(),
             weight,
             &pweight,
+            &adaptive_widths,
         );
     }
 

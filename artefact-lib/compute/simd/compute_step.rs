@@ -4,10 +4,12 @@ use rayon::prelude::*;
 
 use crate::{
     compute::{
+        adaptive_simd::AdaptiveWidth,
         aux::Aux,
         simd::{
             compute_projection::compute_projection, compute_step_prob::compute_step_prob,
-            compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
+            compute_step_tv2_adaptive::compute_step_tv2_adaptive,
+            compute_step_tv_adaptive::compute_step_tv_adaptive,
         },
     },
     jpeg::Coefficient,
@@ -29,6 +31,7 @@ pub fn compute_step(
     step_size: f32,
     weight: f32,
     pweight: &[f32; 3],
+    adaptive_widths: &[AdaptiveWidth],
 ) {
     auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
         aux.obj_gradient = vec![0.0; max_rounded_px_count];
@@ -47,15 +50,22 @@ pub fn compute_step(
     });
 
     // TV computation
-    compute_step_tv(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
+    compute_step_tv_adaptive(
+        max_rounded_px_w,
+        max_rounded_px_h,
+        nchannel,
+        auxs,
+        adaptive_widths,
+    );
 
     // TGV second order
-    compute_step_tv2(
+    compute_step_tv2_adaptive(
         max_rounded_px_w,
         max_rounded_px_h,
         nchannel,
         auxs,
         weight / 2.0_f32.sqrt(),
+        adaptive_widths,
     );
 
     auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
