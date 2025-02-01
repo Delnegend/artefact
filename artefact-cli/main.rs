@@ -54,6 +54,12 @@ struct Args {
     /// Default: false
     #[arg(short, long, verbatim_doc_comment)]
     spearate_components: Option<bool>,
+
+    /// Benchmark mode
+    ///
+    /// Default: false
+    #[arg(short, long, verbatim_doc_comment, default_value = "false")]
+    benchmark: bool,
 }
 
 fn main() {
@@ -69,7 +75,7 @@ fn main() {
         let input_path = PathBuf::from(&args.input);
         input_path.with_extension(output_format)
     });
-    if output.exists() && !args.overwrite {
+    if output.exists() && !args.overwrite && !args.benchmark {
         eprintln!("Output file already exists, use -y to overwrite");
         return;
     }
@@ -118,9 +124,15 @@ fn main() {
                 _ => panic!("Invalid number of iterations values"),
             }
         }))
+        .benchmark(args.benchmark)
         .process()
     {
         Ok(img) => img.save(output).expect("Cannot save output image"),
-        Err(e) => eprintln!("Error: {e:?}"),
+        Err(e) => {
+            if e == "BENCHMARK" {
+                return;
+            }
+            eprintln!("Error: {e:?}");
+        }
     }
 }

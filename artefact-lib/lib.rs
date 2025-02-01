@@ -60,6 +60,7 @@ pub struct Artefact {
     pweight: ValueCollection<f32>,
     iterations: ValueCollection<usize>,
     separate_components: bool,
+    benchmark: bool,
 
     source: Option<JpegSource>,
 }
@@ -71,6 +72,7 @@ impl Default for Artefact {
             pweight: ValueCollection::ForAll(0.001),
             iterations: ValueCollection::ForAll(100),
             separate_components: false,
+            benchmark: false,
             source: None,
         }
     }
@@ -93,6 +95,12 @@ impl Artefact {
     #[must_use]
     pub fn source(mut self, source: JpegSource) -> Self {
         self.source = Some(source);
+        self
+    }
+
+    #[must_use]
+    pub fn benchmark(mut self, benchmark: bool) -> Self {
+        self.benchmark = benchmark;
         self
     }
 
@@ -152,6 +160,10 @@ impl Artefact {
                 })
                 .collect::<Vec<_>>()
         };
+
+        if self.benchmark {
+            return Err("BENCHMARK".to_string());
+        }
 
         // Fixup luma range for first channel
         for i in 0..max_rounded_px_count {
