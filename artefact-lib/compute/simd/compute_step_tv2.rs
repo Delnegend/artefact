@@ -1,14 +1,18 @@
 #[cfg(feature = "simd_std")]
-use std::{ops::Div, simd::cmp::SimdPartialEq};
+use std::{
+    ops::Div,
+    simd::{cmp::SimdPartialEq, StdFloat},
+};
 
 use crate::{
     compute::aux::Aux,
     utils::{
         f32x8,
-        traits::{AddSlice, FromSlice, SafeDiv, Squirt, WriteTo},
+        traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
     },
 };
 
+#[allow(unused)]
 pub fn compute_step_tv2(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
@@ -144,7 +148,7 @@ fn compute_step_tv2_inner(
                 + g_yys[c] * g_yys[c]
         })
         .fold(f32x8::splat(0.0), |acc, x| acc + x)
-        .squirt();
+        .sqrt();
 
     #[cfg(feature = "simd_std")]
     let mask = g2_norm.simd_ne(f32x8::splat(0.0));
