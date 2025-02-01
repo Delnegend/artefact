@@ -90,10 +90,6 @@ function passArray8ToWasm0(arg, malloc) {
     return ptr;
 }
 
-function isLikeNone(x) {
-    return x === undefined || x === null;
-}
-
 function takeFromExternrefTable0(idx) {
     const value = wasm.__wbindgen_export_3.get(idx);
     wasm.__externref_table_dealloc(idx);
@@ -106,17 +102,17 @@ function getArrayU8FromWasm0(ptr, len) {
 }
 /**
  * @param {Uint8Array} buffer
- * @param {OutputFormat | undefined} [output_format]
- * @param {number | undefined} [weight]
- * @param {number | undefined} [pweight]
- * @param {number | undefined} [iterations]
- * @param {boolean | undefined} [separate_components]
+ * @param {OutputFormat} output_format
+ * @param {number} weight
+ * @param {number} pweight
+ * @param {number} iterations
+ * @param {boolean} separate_components
  * @returns {Uint8Array}
  */
 export function compute(buffer, output_format, weight, pweight, iterations, separate_components) {
     const ptr0 = passArray8ToWasm0(buffer, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.compute(ptr0, len0, isLikeNone(output_format) ? 4 : output_format, isLikeNone(weight) ? 0x100000001 : Math.fround(weight), isLikeNone(pweight) ? 0x100000001 : Math.fround(pweight), isLikeNone(iterations) ? 0x100000001 : (iterations) >>> 0, isLikeNone(separate_components) ? 0xFFFFFF : separate_components ? 1 : 0);
+    const ret = wasm.compute(ptr0, len0, output_format, weight, pweight, iterations, separate_components);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }

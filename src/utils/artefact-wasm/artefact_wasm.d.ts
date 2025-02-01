@@ -1,6 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
-export function compute(buffer: Uint8Array, output_format?: OutputFormat, weight?: number, pweight?: number, iterations?: number, separate_components?: boolean): Uint8Array;
+export function compute(buffer: Uint8Array, output_format: OutputFormat, weight: number, pweight: number, iterations: number, separate_components: boolean): Uint8Array;
 export enum OutputFormat {
   Png = 0,
   Webp = 1,
