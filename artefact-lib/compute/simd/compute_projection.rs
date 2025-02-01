@@ -106,8 +106,7 @@ pub fn compute_projection(
             let max = coef.dequant_dct_coefs_max[i * 8 + j];
             let min = coef.dequant_dct_coefs_min[i * 8 + j];
 
-            let new = f32x8::from_slc(old).clmp(min, max);
-            new.write_to(old);
+            f32x8::from_slc(old).clmp(min, max).write_to(old);
         }
     }
 
