@@ -2,13 +2,13 @@ use std::ops::{Div, Mul, Sub};
 
 use rayon::prelude::*;
 
+use super::{
+    adaptive_width::AdaptiveWidth, coef::SIMDAdaptiveCoef, compute_projection::compute_projection,
+    compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
+    compute_step_tv2::compute_step_tv2,
+};
 use crate::{
     pipeline_simd_8::f32x8,
-    pipeline_simd_adaptive::{
-        adaptive_width::AdaptiveWidth, coef::SIMDAdaptiveCoef,
-        compute_projection::compute_projection, compute_step_prob::compute_step_prob,
-        compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
-    },
     utils::{
         aux::Aux,
         macros::mul_add,

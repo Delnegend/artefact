@@ -2,17 +2,14 @@ use std::ops::{Div, Mul, Sub};
 
 use rayon::prelude::*;
 
-use crate::{
-    pipeline_simd_8::{
-        coef::SIMD8Coef, compute_projection::compute_projection,
-        compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
-        compute_step_tv2::compute_step_tv2, f32x8,
-    },
-    utils::{
-        aux::Aux,
-        macros::mul_add,
-        traits::{FromSlice, WriteTo},
-    },
+use super::{
+    coef::SIMD8Coef, compute_projection::compute_projection, compute_step_prob::compute_step_prob,
+    compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2, f32x8,
+};
+use crate::utils::{
+    aux::Aux,
+    macros::mul_add,
+    traits::{FromSlice, WriteTo},
 };
 
 #[allow(clippy::too_many_arguments)]

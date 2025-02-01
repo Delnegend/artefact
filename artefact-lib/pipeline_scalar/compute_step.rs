@@ -1,11 +1,8 @@
-use crate::{
-    pipeline_scalar::{
-        coef::ScalarCoef, compute_projection::compute_projection,
-        compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
-        compute_step_tv2::compute_step_tv2,
-    },
-    utils::{aux::Aux, macros::mul_add},
+use super::{
+    coef::ScalarCoef, compute_projection::compute_projection, compute_step_prob::compute_step_prob,
+    compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
 };
+use crate::utils::{aux::Aux, macros::mul_add};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute_step(

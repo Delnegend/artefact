@@ -1,8 +1,8 @@
 use std::ops::Mul;
 
+use super::f32x8;
 use crate::{
     jpeg::Coefficient,
-    pipeline_simd_8::f32x8,
     utils::{
         aux::AuxTraits,
         boxing::unboxing,

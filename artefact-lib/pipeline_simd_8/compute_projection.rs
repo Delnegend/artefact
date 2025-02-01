@@ -1,11 +1,9 @@
-use crate::{
-    pipeline_simd_8::{f32x8, SIMD8Coef},
-    utils::{
-        aux::Aux,
-        boxing::{boxing, unboxing},
-        dct::{dct8x8s, idct8x8s},
-        traits::{Clamp, FromSlice, WriteTo},
-    },
+use super::{f32x8, SIMD8Coef};
+use crate::utils::{
+    aux::Aux,
+    boxing::{boxing, unboxing},
+    dct::{dct8x8s, idct8x8s},
+    traits::{Clamp, FromSlice, WriteTo},
 };
 use zune_jpeg::sample_factor::SampleFactor;
 

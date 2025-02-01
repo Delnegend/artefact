@@ -1,9 +1,7 @@
-use crate::{
-    pipeline_simd_8::{f32x8, SIMD8Coef},
-    utils::{
-        dct::idct8x8s,
-        traits::{FromSlice, WriteTo},
-    },
+use super::{f32x8, SIMD8Coef};
+use crate::utils::{
+    dct::idct8x8s,
+    traits::{FromSlice, WriteTo},
 };
 use zune_jpeg::sample_factor::SampleFactor;
 

@@ -5,12 +5,10 @@ use std::{
 
 use paste::paste;
 
-use crate::{
-    pipeline_simd_adaptive::adaptive_width::AdaptiveWidth,
-    utils::{
-        aux::Aux,
-        traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
-    },
+use super::adaptive_width::AdaptiveWidth;
+use crate::utils::{
+    aux::Aux,
+    traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
 
 pub fn compute_step_tv2(

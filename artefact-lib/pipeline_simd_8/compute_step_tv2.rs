@@ -4,12 +4,10 @@ use std::{
     simd::{cmp::SimdPartialEq, StdFloat},
 };
 
-use crate::{
-    pipeline_simd_8::f32x8,
-    utils::{
-        aux::Aux,
-        traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
-    },
+use super::f32x8;
+use crate::utils::{
+    aux::Aux,
+    traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
 
 #[allow(unused)]

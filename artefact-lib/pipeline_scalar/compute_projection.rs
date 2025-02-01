@@ -1,10 +1,8 @@
-use crate::{
-    pipeline_scalar::ScalarCoef,
-    utils::{
-        aux::Aux,
-        boxing::{boxing, unboxing},
-        dct::{dct8x8s, idct8x8s},
-    },
+use super::ScalarCoef;
+use crate::utils::{
+    aux::Aux,
+    boxing::{boxing, unboxing},
+    dct::{dct8x8s, idct8x8s},
 };
 
 pub fn compute_projection(

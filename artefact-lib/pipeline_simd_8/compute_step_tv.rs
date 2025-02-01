@@ -7,12 +7,10 @@ use std::{
 #[cfg(not(feature = "simd_std"))]
 use crate::utils::traits::SafeDiv;
 
-use crate::{
-    pipeline_simd_8::f32x8,
-    utils::{
-        aux::Aux,
-        traits::{AddSlice, FromSlice, WriteTo},
-    },
+use super::f32x8;
+use crate::utils::{
+    aux::Aux,
+    traits::{AddSlice, FromSlice, WriteTo},
 };
 
 #[allow(unused)]

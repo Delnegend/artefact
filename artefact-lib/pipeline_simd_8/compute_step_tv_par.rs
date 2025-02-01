@@ -3,12 +3,10 @@ use std::simd::StdFloat;
 
 use rayon::prelude::*;
 
-use crate::{
-    pipeline_simd_8::f32x8,
-    utils::{
-        aux::Aux,
-        traits::{FromSlice, SafeDiv, WriteTo},
-    },
+use super::f32x8;
+use crate::utils::{
+    aux::Aux,
+    traits::{FromSlice, SafeDiv, WriteTo},
 };
 
 /// A slower version (for some reason) of [`compute_step_tv_simd`] with
