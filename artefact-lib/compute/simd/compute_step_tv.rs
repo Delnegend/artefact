@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+#[allow(unused)]
 pub fn compute_step_tv(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
