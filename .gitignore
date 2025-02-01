@@ -10,6 +10,7 @@ node_modules/
 src/dev-dist
 
 dist
+dist-cli/
 *.c
 *.d
 *.h
