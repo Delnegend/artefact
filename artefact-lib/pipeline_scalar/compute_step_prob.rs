@@ -1,4 +1,4 @@
-use crate::{jpeg::Coefficient, utils::dct::idct8x8s};
+use crate::{pipeline_scalar::coef::ScalarCoef, utils::dct::idct8x8s};
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos
@@ -6,7 +6,7 @@ pub fn compute_step_prob(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     max_rounded_px_h: u32,    // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
-    coef: &Coefficient,       // JPEG coefficient data
+    coef: &ScalarCoef,        // JPEG coefficient data
     cos: &[f32],              // Cosine transform data
     obj_gradient: &mut [f32], // Output gradient buffer
 ) {

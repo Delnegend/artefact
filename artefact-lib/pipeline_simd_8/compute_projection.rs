@@ -1,21 +1,19 @@
-use zune_jpeg::sample_factor::SampleFactor;
-
 use crate::{
-    compute::aux::Aux,
-    jpeg::Coefficient,
+    pipeline_simd_8::{f32x8, SIMD8Coef},
     utils::{
+        aux::Aux,
         boxing::{boxing, unboxing},
         dct::{dct8x8s, idct8x8s},
-        f32x8,
         traits::{Clamp, FromSlice, WriteTo},
     },
 };
+use zune_jpeg::sample_factor::SampleFactor;
 
 pub fn compute_projection(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     aux: &mut Aux,
-    coef: &Coefficient,
+    coef: &SIMD8Coef,
 ) {
     let resample = coef.rounded_px_w != max_rounded_px_w || coef.rounded_px_h != max_rounded_px_h;
 

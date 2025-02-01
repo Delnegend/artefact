@@ -6,15 +6,10 @@ use mozjpeg_sys::{
     jpeg_stdio_src,
 };
 
-#[cfg(feature = "simd")]
-use wide::f32x8;
+use crate::jpeg::{Coefficient, Jpeg, JpegSource};
 use zune_jpeg::sample_factor::SampleFactor;
 
-#[cfg(feature = "simd")]
-use crate::compute::simd::f32x8;
-use crate::jpeg::{Coefficient, Jpeg, JpegSource};
-
-#[cfg(feature = "mozjpeg")]
+#[cfg(feature = "moz")]
 struct MozDecoder {
     pub cinfo: Box<jpeg_decompress_struct>,
     jerr: Box<jpeg_error_mgr>,
@@ -58,14 +53,14 @@ pub enum MozDecoderErr {
     Other(String),
 }
 
-#[cfg(feature = "mozjpeg")]
+#[cfg(feature = "moz")]
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Jpeg, String> {
         let mut decoder = MozDecoder::new().map_err(|e| e.to_string())?;
         decoder.set_source(jpeg_source).map_err(|e| e.to_string())?;
         decoder.read_header().map_err(|e| e.to_string())?;
         Ok(Self {
-            chan_count: decoder.cinfo.num_components as u32,
+            nchannel: decoder.cinfo.num_components as u32,
             real_px_w: decoder.cinfo.image_width,
             real_px_h: decoder.cinfo.image_height,
             coefs: decoder.read_coefficients().map_err(|e| e.to_string())?,
@@ -115,7 +110,7 @@ impl MozDecoder {
                     return Err(MozDecoderErr::FileIsNotFile);
                 }
                 let mut file = catch_unwind(|| unsafe {
-                    let ptr = libc::fopen(path.as_ptr() as *const i8, "rb".as_ptr() as *const i8);
+                    let ptr = libc::fopen(path.as_ptr().cast::<i8>(), "rb".as_ptr().cast::<i8>());
                     if ptr.is_null() {
                         return Err(MozDecoderErr::DerefNull("libc::open".to_string()))?;
                     }
@@ -141,13 +136,13 @@ impl MozDecoder {
         if !self.is_source_set {
             return Err(MozDecoderErr::SourceNotSet);
         }
-        if unsafe { jpeg_read_header(self.cinfo.as_mut(), true as boolean) } != 1 {
+        if unsafe { jpeg_read_header(self.cinfo.as_mut(), boolean::from(true)) } != 1 {
             return Err(MozDecoderErr::ParseHeaderErr('get_last_err: {
                 let buffer = [0u8; 80];
                 if let Some(format_fn) = self.jerr.format_message {
                     unsafe {
                         format_fn(&mut self.cinfo.common, &buffer);
-                        break 'get_last_err std::ffi::CStr::from_ptr(buffer.as_ptr() as *const i8)
+                        break 'get_last_err std::ffi::CStr::from_ptr(buffer.as_ptr().cast::<i8>())
                             .to_string_lossy()
                             .into_owned();
                     }
@@ -200,7 +195,7 @@ impl MozDecoder {
                             *coef_arrays.add(c),
                             y,
                             1,
-                            false as boolean,
+                            boolean::from(false),
                         );
                         if block_arr_ptr.is_null() {
                             return Err(MozDecoderErr::DerefNull("block_arr".to_string()));
@@ -218,7 +213,8 @@ impl MozDecoder {
                         data.extend_from_slice(&block);
                     }
                 }
-                data.iter().map(|x| *x as f32).collect::<Vec<_>>()
+
+                data.into_iter().map(f32::from).collect::<Vec<_>>()
             };
 
             let quant_table = unsafe {
@@ -226,12 +222,14 @@ impl MozDecoder {
                     .as_ref()
                     .ok_or(MozDecoderErr::NoQuantizationTable)?
                     .quantval
-                    .iter()
-                    .map(|x| *x as f32)
+                    .into_iter()
+                    .map(f32::from)
                     .collect::<Vec<_>>()
+                    .try_into()
+                    .map_err(|_| MozDecoderErr::InvalidQuantTable)?
             };
 
-            let mut coef = Coefficient {
+            coefs.push(Coefficient {
                 rounded_px_w,
                 rounded_px_h,
                 rounded_px_count,
@@ -252,30 +250,9 @@ impl MozDecoder {
                     2 => SampleFactor::Two,
                     _ => return Err(MozDecoderErr::InvalidVerticalSampFactor),
                 },
-                #[cfg(not(feature = "simd"))]
                 dct_coefs,
-                #[cfg(feature = "simd")]
-                dct_coefs: dct_coefs.chunks_exact(8).map(f32x8::from).collect(),
-                image_data: vec![0.0; rounded_px_count as usize],
-                #[cfg(not(feature = "simd"))]
                 quant_table,
-                #[cfg(feature = "simd")]
-                quant_table: quant_table
-                    .chunks_exact(8)
-                    .map(f32x8::from)
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .map_err(|_| MozDecoderErr::InvalidQuantTable)?,
-                #[cfg(feature = "simd")]
-                quant_table_squared: [f32x8::splat(0.0); 8],
-
-                #[cfg(feature = "simd")]
-                dequant_dct_coefs_min: vec![f32x8!(); rounded_px_count as usize / 8],
-                #[cfg(feature = "simd")]
-                dequant_dct_coefs_max: vec![f32x8!(); rounded_px_count as usize / 8],
-            };
-            coef.post_process();
-            coefs.push(coef);
+            });
         }
         Ok(coefs)
     }

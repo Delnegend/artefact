@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::{
     ops::RangeInclusive,
     simd::{cmp::SimdPartialEq, num::SimdFloat},
@@ -116,6 +118,7 @@ impl Clamp for wide::f32x8 {
         self.min(max).max(min)
     }
 }
+
 macro_rules! gen_clamp {
     ($($width:literal),+) => {
         $(paste! {

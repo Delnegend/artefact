@@ -1,9 +1,11 @@
-use crate::compute::scalar::{
-    compute_projection::compute_projection, compute_step_prob::compute_step_prob,
-    compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
+use crate::{
+    pipeline_scalar::{
+        coef::ScalarCoef, compute_projection::compute_projection,
+        compute_step_prob::compute_step_prob, compute_step_tv::compute_step_tv,
+        compute_step_tv2::compute_step_tv2,
+    },
+    utils::{aux::Aux, macros::mul_add},
 };
-
-use crate::{compute::aux::Aux, jpeg::Coefficient, utils::macros::mul_add};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute_step(
@@ -11,7 +13,7 @@ pub fn compute_step(
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
     nchannel: usize,
-    coefs: &[Coefficient],
+    coefs: &[ScalarCoef],
     auxs: &mut [Aux],
     step_size: f32,
     weight: f32,
@@ -68,7 +70,6 @@ pub fn compute_step(
 
     // Project onto DCT basis
     auxs.iter_mut().enumerate().for_each(|(c, aux)| {
-        #[cfg(not(feature = "simd"))]
         compute_projection(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
     });
 }

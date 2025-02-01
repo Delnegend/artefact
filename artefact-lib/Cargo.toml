@@ -30,9 +30,10 @@ path = "lib.rs"
 
 [features]
 simd = ["dep:wide"]
-mozjpeg = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
 simd_std = []
+simd_adaptive = []
 native = []
+moz = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
 
 [[bench]]
 name = "bench"

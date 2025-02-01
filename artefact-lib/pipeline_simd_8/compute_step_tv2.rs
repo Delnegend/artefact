@@ -5,9 +5,9 @@ use std::{
 };
 
 use crate::{
-    compute::aux::Aux,
+    pipeline_simd_8::f32x8,
     utils::{
-        f32x8,
+        aux::Aux,
         traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
     },
 };

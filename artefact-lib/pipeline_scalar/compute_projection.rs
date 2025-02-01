@@ -1,7 +1,7 @@
 use crate::{
-    compute::aux::Aux,
-    jpeg::Coefficient,
+    pipeline_scalar::ScalarCoef,
     utils::{
+        aux::Aux,
         boxing::{boxing, unboxing},
         dct::{dct8x8s, idct8x8s},
     },
@@ -11,7 +11,7 @@ pub fn compute_projection(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     aux: &mut Aux,
-    coef: &Coefficient,
+    coef: &ScalarCoef,
 ) {
     let resample = coef.rounded_px_w != max_rounded_px_w || coef.rounded_px_h != max_rounded_px_h;
 

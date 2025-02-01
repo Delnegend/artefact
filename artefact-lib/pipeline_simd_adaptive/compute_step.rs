@@ -3,18 +3,14 @@ use std::ops::{Div, Mul, Sub};
 use rayon::prelude::*;
 
 use crate::{
-    compute::{
-        adaptive_simd::AdaptiveWidth,
-        aux::Aux,
-        simd::{
-            compute_projection::compute_projection, compute_step_prob::compute_step_prob,
-            compute_step_tv2_adaptive::compute_step_tv2_adaptive,
-            compute_step_tv_adaptive::compute_step_tv_adaptive,
-        },
+    pipeline_simd_8::f32x8,
+    pipeline_simd_adaptive::{
+        adaptive_width::AdaptiveWidth, coef::SIMDAdaptiveCoef,
+        compute_projection::compute_projection, compute_step_prob::compute_step_prob,
+        compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
     },
-    jpeg::Coefficient,
     utils::{
-        f32x8,
+        aux::Aux,
         macros::mul_add,
         traits::{FromSlice, WriteTo},
     },
@@ -26,7 +22,7 @@ pub fn compute_step(
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
     nchannel: usize,
-    coefs: &[Coefficient],
+    coefs: &[SIMDAdaptiveCoef],
     auxs: &mut [Aux],
     step_size: f32,
     weight: f32,
@@ -50,7 +46,7 @@ pub fn compute_step(
     });
 
     // TV computation
-    compute_step_tv_adaptive(
+    compute_step_tv(
         max_rounded_px_w,
         max_rounded_px_h,
         nchannel,
@@ -59,7 +55,7 @@ pub fn compute_step(
     );
 
     // TGV second order
-    compute_step_tv2_adaptive(
+    compute_step_tv2(
         max_rounded_px_w,
         max_rounded_px_h,
         nchannel,

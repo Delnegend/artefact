@@ -1,7 +1,15 @@
-use rayon::prelude::*;
-use wide::f32x8;
+#[cfg(feature = "simd_std")]
+use std::simd::StdFloat;
 
-use crate::compute::{aux::Aux, simd::f32x8};
+use rayon::prelude::*;
+
+use crate::{
+    pipeline_simd_8::f32x8,
+    utils::{
+        aux::Aux,
+        traits::{FromSlice, SafeDiv, WriteTo},
+    },
+};
 
 /// A slower version (for some reason) of [`compute_step_tv_simd`] with
 /// [`rayon`] parallelization.
@@ -14,15 +22,15 @@ pub fn compute_step_tv_simd_par(
     nchannel: usize,
     auxs: &mut [Aux],
 ) {
-    let alpha = 1.0 / (nchannel as f32).sqrt();
+    let alpha = f32x8::splat(1.0 / (nchannel as f32).sqrt());
     let max_rounded_px_count = (max_rounded_px_w * max_rounded_px_h) as usize;
     let group_count = max_rounded_px_count / 8;
 
     let chans_forward_diffs = (0..nchannel)
         .into_par_iter()
         .map(|c| {
-            let mut chan_g_xs = vec![f32x8!(); group_count];
-            let mut chan_g_ys = vec![f32x8!(); group_count];
+            let mut chan_g_xs = vec![f32x8::splat(0.0); group_count];
+            let mut chan_g_ys = vec![f32x8::splat(0.0); group_count];
 
             for curr_row in 0..max_rounded_px_h {
                 for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
@@ -42,9 +50,9 @@ pub fn compute_step_tv_simd_par(
         })
         .collect::<Vec<_>>();
 
-    let mut g_norm = vec![f32x8!(); group_count];
+    let mut g_norm = vec![f32x8::splat(0.0); group_count];
     for group_idx in 0..group_count {
-        for (chan_g_xs, chan_g_ys) in chans_forward_diffs.iter() {
+        for (chan_g_xs, chan_g_ys) in &chans_forward_diffs {
             let g_xs = chan_g_xs[group_idx];
             let g_ys = chan_g_ys[group_idx];
             g_norm[group_idx] += (g_xs * g_xs + g_ys * g_ys).sqrt();
@@ -99,39 +107,40 @@ fn compute_forward_differents(
         // edge, and there's no more pixel to the right for us to calculate
         // the difference with
 
-        let curr_group = f32x8!(
-            ..=6,
-            &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 6]
+        let curr_group = f32x8::from_short_slc(
+            &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 6],
         );
-        let shift_right_1px_group = f32x8!(
-            ..=6,
-            &aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 7]
+        let shift_right_1px_group = f32x8::from_short_slc(
+            &aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 7],
         );
 
         shift_right_1px_group - curr_group
     } else {
         // 8 pixels
 
-        let curr_group =
-            f32x8!(&aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7]);
-        let shift_right_1px_group =
-            f32x8!(&aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 8]);
+        let curr_group = f32x8::from_slc(
+            &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
+        );
+        let shift_right_1px_group = f32x8::from_slc(
+            &aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 8],
+        );
 
         shift_right_1px_group - curr_group
     };
 
     // forward difference y
     if !group_at_bottom_edge {
-        let curr_group =
-            f32x8!(&aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7]);
+        let curr_group = f32x8::from_slc(
+            &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
+        );
 
         let shift_down_1px_group_idx =
             ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
         let shift_down_1px_group =
-            f32x8!(&aux.fdata[shift_down_1px_group_idx..=shift_down_1px_group_idx + 7]);
+            f32x8::from_slc(&aux.fdata[shift_down_1px_group_idx..=shift_down_1px_group_idx + 7]);
 
         chan_g_ys[group_idx] = shift_down_1px_group - curr_group;
-    };
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -144,7 +153,7 @@ fn compute_derivatives(
     curr_px_idx_start_of_group: usize,
     g_xs: f32x8,
     g_ys: f32x8,
-    alpha: f32,
+    alpha: f32x8,
     g_norm: &f32x8,
 ) {
     let group_at_right_edge = curr_row_px_idx + 8 >= max_rounded_px_w;
@@ -153,14 +162,14 @@ fn compute_derivatives(
     '_for_current_group: {
         let target =
             &mut aux.obj_gradient[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7];
-        let original = f32x8!(&target[..]);
-        let update = f32x8!(div: alpha * -(g_xs + g_ys), g_norm);
+        let original = f32x8::from_slc(target);
+        let update = (alpha * -(g_xs + g_ys)).safe_div(*g_norm);
 
-        target.copy_from_slice((original + update).as_array_ref());
+        (original + update).write_to(target);
     }
 
     '_for_shifted_right_1px_group: {
-        let update = f32x8!(div: alpha * g_xs, g_norm);
+        let update = (alpha * g_xs).safe_div(*g_norm);
 
         if group_at_right_edge {
             // ignore the last pixel in the group because it's out of bounds
@@ -168,15 +177,15 @@ fn compute_derivatives(
 
             let target = &mut aux.obj_gradient
                 [curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 7];
-            let original = f32x8!(..=6, &target[..]);
+            let original = f32x8::from_short_slc(target);
 
-            target.copy_from_slice(&(original + update).as_array_ref()[..=6]);
+            (original + update).write_partial_to(target, 0..=6);
         } else {
             let target = &mut aux.obj_gradient
                 [curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 8];
-            let original = f32x8!(&target[..]);
+            let original = f32x8::from_slc(target);
 
-            target.copy_from_slice((original + update).as_array_ref());
+            (original + update).write_to(target);
         }
     }
 
@@ -185,18 +194,20 @@ fn compute_derivatives(
         let start = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
 
         let target = aux.obj_gradient[start..=start + 7].as_mut();
-        let original = f32x8!(&target[..]);
-        let update = f32x8!(div: alpha * g_ys, g_norm);
+        let original = f32x8::from_slc(target);
+        let update = (alpha * g_ys).safe_div(*g_norm);
 
-        target.copy_from_slice((original + update).as_array_ref());
+        (original + update).write_to(target);
     }
 
     // store for use in tv2
-    aux.pixel_diff.x[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7]
-        .copy_from_slice(g_xs.as_array_ref());
+    g_xs.write_to(
+        &mut aux.pixel_diff.x[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
+    );
 
     if !group_at_bottom_edge {
-        aux.pixel_diff.y[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7]
-            .copy_from_slice(g_ys.as_array_ref());
+        g_ys.write_to(
+            &mut aux.pixel_diff.y[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
+        );
     }
 }

@@ -6,11 +6,14 @@ use std::{
 use paste::paste;
 
 use crate::{
-    compute::{adaptive_simd::AdaptiveWidth, aux::Aux},
-    utils::traits::{AddSlice, FromSlice, WriteTo},
+    pipeline_simd_adaptive::adaptive_width::AdaptiveWidth,
+    utils::{
+        aux::Aux,
+        traits::{AddSlice, FromSlice, WriteTo},
+    },
 };
 
-pub fn compute_step_tv_adaptive(
+pub fn compute_step_tv(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,

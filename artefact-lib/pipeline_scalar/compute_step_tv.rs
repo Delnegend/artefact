@@ -1,4 +1,4 @@
-use crate::compute::aux::Aux;
+use crate::utils::aux::Aux;
 
 /// Computes the Total Variation (TV) regularization term and its gradient
 pub fn compute_step_tv(

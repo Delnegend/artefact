@@ -19,18 +19,25 @@
     clippy::branches_sharing_code
 )]
 
-mod compute;
 mod jpeg;
+mod pipeline_scalar;
+mod pipeline_simd_8;
+mod pipeline_simd_adaptive;
 mod utils;
 
+pub use image;
 use rayon::prelude::*;
 
-pub use image;
-
-use compute::compute;
 use jpeg::Jpeg;
 pub use jpeg::JpegSource;
 use utils::macros::mul_add;
+
+#[cfg(not(feature = "simd"))]
+use pipeline_scalar::compute;
+#[cfg(all(feature = "simd", not(feature = "simd_adaptive")))]
+use pipeline_simd_8::compute;
+#[cfg(all(feature = "simd", feature = "simd_adaptive"))]
+use pipeline_simd_adaptive::compute;
 
 #[derive(Debug)]
 pub enum ValueCollection<T> {
@@ -97,73 +104,71 @@ impl Artefact {
     );
 
     pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
-        let jpeg = Jpeg::from(self.source.ok_or("Source is not set")?)?;
-        let mut coefs = jpeg.coefs;
+        let jpeg = Jpeg::from(self.source.ok_or("Source is not set")?)
+            .map_err(|e| format!("Failed to read JPEG: {e}"))?;
+        let (max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = {
+            let mut w = 0;
+            let mut h = 0;
+            for coef in &jpeg.coefs {
+                w = w.max(coef.rounded_px_w);
+                h = h.max(coef.rounded_px_h);
+            }
+            (w, h, (w * h) as usize)
+        };
 
         let weight = self.weight.to_slice();
         let pweight = self.pweight.to_slice();
         let iterations = self.iterations.to_slice();
 
-        let (max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) =
-            coefs.iter().fold((0, 0, 0), |acc, coef| {
-                (
-                    acc.0.max(coef.rounded_px_w),
-                    acc.1.max(coef.rounded_px_h),
-                    acc.2.max((coef.rounded_px_w * coef.rounded_px_h) as usize),
-                )
-            });
-
-        if jpeg.chan_count == 3 && !self.separate_components {
+        let mut output = if jpeg.nchannel == 3 && !self.separate_components {
             compute(
                 3,
-                &mut coefs,
+                jpeg.coefs,
                 weight[0],
                 pweight,
                 iterations[0],
                 max_rounded_px_w,
                 max_rounded_px_h,
                 max_rounded_px_count,
-            );
+            )
         } else {
             // Process channels separately
-            coefs = coefs
+            jpeg.coefs
                 .into_par_iter()
                 .enumerate()
                 .map(|(c, coef)| {
-                    let mut coef_wrapped = vec![coef];
-
-                    compute(
-                        1,
-                        &mut coef_wrapped,
-                        weight[c],
-                        pweight,
-                        iterations[c],
-                        max_rounded_px_w,
-                        max_rounded_px_h,
-                        max_rounded_px_count,
-                    );
-
-                    std::mem::take(&mut coef_wrapped[0])
+                    std::mem::take(
+                        &mut compute(
+                            1,
+                            vec![coef],
+                            weight[c],
+                            pweight,
+                            iterations[c],
+                            max_rounded_px_w,
+                            max_rounded_px_h,
+                            max_rounded_px_count,
+                        )[0],
+                    )
                 })
-                .collect::<Vec<_>>();
-        }
+                .collect::<Vec<_>>()
+        };
 
         // Fixup luma range for first channel
         for i in 0..max_rounded_px_count {
-            coefs[0].image_data[i] += 128.0;
+            output[0][i] += 128.0;
         }
 
         // YCbCr -> RGB
-        if jpeg.chan_count == 3 {
+        if jpeg.nchannel == 3 {
             let mut rgb: Vec<[u8; 3]> =
                 Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
             for i in 0..jpeg.real_px_h {
                 for j in 0..jpeg.real_px_w {
                     let idx = (i * max_rounded_px_w + j) as usize;
 
-                    let yi = coefs[0].image_data[idx];
-                    let cbi = coefs[1].image_data[idx];
-                    let cri = coefs[2].image_data[idx];
+                    let yi = output[0][idx];
+                    let cbi = output[1][idx];
+                    let cri = output[2][idx];
 
                     rgb.push([
                         mul_add!(1.402_f32, cri, yi).clamp(0.0, 255.0) as u8,
@@ -189,7 +194,7 @@ impl Artefact {
         for i in 0..jpeg.real_px_h {
             for j in 0..jpeg.real_px_w {
                 let idx = (i * max_rounded_px_w + j) as usize;
-                gray.push(coefs[0].image_data[idx].clamp(0.0, 255.0) as u8);
+                gray.push(output[0][idx].clamp(0.0, 255.0) as u8);
             }
         }
 

@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
-use crate::utils::{
-    f32x8,
-    traits::{FromSlice, WriteTo},
+use crate::{
+    pipeline_simd_8::f32x8,
+    utils::traits::{FromSlice, WriteTo},
 };
 
 /// Convert from 8x8 block to 64x1 block

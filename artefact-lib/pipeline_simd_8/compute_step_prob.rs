@@ -1,13 +1,11 @@
-use zune_jpeg::sample_factor::SampleFactor;
-
 use crate::{
-    jpeg::Coefficient,
+    pipeline_simd_8::{f32x8, SIMD8Coef},
     utils::{
         dct::idct8x8s,
-        f32x8,
         traits::{FromSlice, WriteTo},
     },
 };
+use zune_jpeg::sample_factor::SampleFactor;
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos
@@ -16,7 +14,7 @@ pub fn compute_step_prob(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     max_rounded_px_h: u32,    // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
-    coef: &Coefficient,       // JPEG coefficient data
+    coef: &SIMD8Coef,         // JPEG coefficient data
     cos: &[f32],              // Cosine transform data
     obj_gradient: &mut [f32], // Output gradient buffer
 ) {

@@ -1,4 +1,4 @@
-use crate::{compute::aux::Aux, utils::macros::mul_add};
+use crate::utils::{aux::Aux, macros::mul_add};
 
 /// Computes the Total Generalized Variation (TGV) regularization term and its gradient
 pub fn compute_step_tv2(
