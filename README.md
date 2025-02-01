@@ -20,10 +20,10 @@
 
 ## CLI version
 
-### Pre-build binaries
-WIP
+### 1. Pre-build binaries
+Get the latest release from the [releases page](https://github.com/Delnegend/artefact/releases/latest).
 
-### Build
+### 2. Build guide
 Pre-requisites: [Rust toolchain](https://www.rust-lang.org/learn/get-started)
 
 ```bash
@@ -62,6 +62,14 @@ nrr build-win-64
 sudo apt update && sudo apt install gcc-mingw-w64-i686
 rustup target add i686-pc-windows-gnu
 nrr build-win-32
+```
+
+- Linux x86:
+```bash
+sudo dpkg --add-architecture i386
+sudo apt update && sudo apt install -y gcc-multilib libc6-dev-i386
+rustup target add i686-unknown-linux-gnu
+nrr build-linux-32
 ```
 
 ### Usage
