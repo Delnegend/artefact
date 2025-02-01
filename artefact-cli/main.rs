@@ -121,6 +121,7 @@ fn main() {
             }
         }))
         .benchmark(args.benchmark)
+        .separate_components(args.spearate_components)
         .process()
     {
         Ok(img) => img.save(output).expect("Cannot save output image"),
