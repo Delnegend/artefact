@@ -4,7 +4,7 @@
 
 - <img src="./assets/rust.svg" width=18 align="center"> Written in pure Rust, no `unsafe` code.
 - <img src="./assets/wasm.svg" width=18 align="center"> WASM-ready, check out the [web version](https://artefact.delnegend.com/), everything runs in your browser.
-- ⚡  ***FASTER*** (~2x) than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
+- ⚡  ***~3x FASTER*** than the of the original implementation [jpeg2png](https://github.com/victorvde/jpeg2png) project. ([backup link](https://github.com/ThioJoe/jpeg2png/tree/95f888f61c046d9adb55cd76ea9fde89c005b14f))
 
 ## Tests
 
@@ -39,13 +39,15 @@ To toggle specific features when building the CLI, modify `artefact-cli/Cargo.to
 [dependencies.artefact-lib]
 path = "../artefact-lib"
 features = [
-    "simd", # enable SIMD acceleration using `wide` crate
-    "simd_std", # enable SIMD acceleration using `std::simd` module, requires nightly Rust
-    "mozjpeg", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
+    "simd", # enable SIMD
+    "simd_std", # using `std::simd` instead of `wide`
+    "simd_adaptive", # dynamically switch between x8, x16, x32 and x64
+    "native", # use LLVM "mul_add" intrinsic for more accurate rounding, requires "-Ctarget-cpu=native" or else it'll most likely be slower
+    "moz", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
 ]
 ```
 
-Recommendation: just stick with `simd` only.
+Recommendation: enable all first 4.
 
 #### Cross-compile
 - Windows x64:
