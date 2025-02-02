@@ -10,51 +10,42 @@ struct Args {
     #[arg(index = 1)]
     input: String,
 
-    /// The output png file
-    ///
-    /// Default: input file with png extension
+    /// The output file
     #[arg(short, long)]
     output: Option<String>,
 
-    /// Output format
-    ///
-    /// Default: png
-    /// Possible values: png, webp, tiff, bmp, gif
-    #[arg(short, long, default_value = "png")]
+    /// Output format (auto, png, webp, tiff, bmp, gif)
+    #[arg(short, long, default_value = "auto")]
     format: String,
 
     /// Overwrite existing output file
     #[arg(short = 'y', long, default_value = "false")]
     overwrite: bool,
 
-    /// Second order weight
-    /// Higher values give smoother transitions with less staircasing
+    /// Higher second order weight give smoother transitions with less staircasing
     ///
-    /// Default: 0.3 for all channels, use comma separated values for each channel
-    #[arg(short, long, verbatim_doc_comment, default_value = "0.3")]
+    /// Use comma separated values for each channel
+    #[arg(short, long, default_value = "0.3")]
     weight: String,
 
-    /// Probability weight
-    /// Higher values make the result more similar to the source JPEG
+    /// Higher probability weight make the result more similar to the source JPEG
     ///
-    /// Default: 0.001 for all channels, use comma separated values for each channel
-    #[arg(short, long, verbatim_doc_comment, default_value = "0.001")]
+    /// Use comma separated values for each channel
+    #[arg(short, long, default_value = "0.001")]
     pweight: String,
 
-    /// Iterations
-    /// Higher values give better results but take more time
+    /// Higher iteration give better results but take more time
     ///
-    /// Default: 100 for all channels, use comma separated values for each channel
-    #[arg(short, long, verbatim_doc_comment, default_value = "100")]
+    /// Use comma separated values for each channel
+    #[arg(short, long, default_value = "50")]
     iterations: String,
 
-    /// Separate components
-    /// Separately optimize components instead of all together, exchanges quality for speed
-    #[arg(short, long, verbatim_doc_comment, default_value = "false")]
+    /// Separately optimize components instead of all together
+    #[arg(short, long, default_value = "false")]
     spearate_components: bool,
 
     /// Benchmark mode, do not save output image
-    #[arg(short, long, verbatim_doc_comment, default_value = "false")]
+    #[arg(short, long, default_value = "false")]
     benchmark: bool,
 }
 
