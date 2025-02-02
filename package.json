@@ -17,7 +17,7 @@
 		"preview": "nuxt preview",
 		"postinstall": "nuxt prepare",
 		"lint": "eslint --fix --cache .",
-		"tidy": "cargo clippy && cargo fmt"
+		"tidy": "cargo fmt && cargo clippy"
 	},
 	"dependencies": {
 		"@nuxtjs/color-mode": "3.5.2",
