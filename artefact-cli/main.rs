@@ -49,18 +49,54 @@ struct Args {
     benchmark: bool,
 }
 
+const POSSIBLE_FORMATS: [&str; 5] = ["png", "webp", "tiff", "bmp", "gif"];
+
 fn main() {
     let args = Args::parse();
 
-    if !["png", "webp", "tiff", "bmp", "gif"].contains(&args.format.as_str()) {
-        eprintln!("Invalid output format. Possible values: png, webp, tiff, bmp, gif");
-        return;
-    }
+    let output = {
+        let final_format = match (&args.format, &args.output) {
+            (f, Some(output)) if f == "auto" => {
+                let output = PathBuf::from(output);
+                output
+                    .extension()
+                    .map(|ext| ext.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "png".to_string())
+            }
+            (f, None) if f == "auto" => "png".to_string(),
+            (f, _) => {
+                if !POSSIBLE_FORMATS.contains(&f.as_str()) {
+                    eprintln!(
+                        "Invalid output format ({f}), possible values: {}",
+                        POSSIBLE_FORMATS.join(", ")
+                    );
+                    return;
+                }
+                f.clone()
+            }
+        };
 
-    let output = args.output.map(PathBuf::from).unwrap_or_else(|| {
-        let input_path = PathBuf::from(&args.input);
-        input_path.with_extension(args.format)
-    });
+        match args.output.map(PathBuf::from).map(|p| {
+            (
+                p.extension().map(|ext| ext.to_string_lossy().to_string()),
+                p,
+            )
+        }) {
+            Some((Some(output_ext), output_path)) => {
+                if args.format != "auto" && output_ext != final_format {
+                    eprintln!("Output file extension does not match output format");
+                    return;
+                }
+                output_path
+            }
+            Some((None, output)) => output.with_extension(&final_format),
+            _ => {
+                let input_path = PathBuf::from(&args.input);
+                input_path.with_extension(&final_format)
+            }
+        }
+    };
+
     if output.exists() && !args.overwrite && !args.benchmark {
         eprintln!("Output file already exists, use -y to overwrite");
         return;
