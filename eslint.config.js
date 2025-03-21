@@ -8,7 +8,7 @@ export default [
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	...hagemanto({
 		enableJsx: false,
-		pluginVue: pluginVue.configs["flat/recommended"],
+		vueConfig: pluginVue.configs["flat/recommended"],
 	}),
 	{
 		rules: {
