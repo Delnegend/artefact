@@ -47,12 +47,19 @@ jobs:
         with:
           node-version: 23
           cache: pnpm
+      - name: Setup Just
+        run: |
+          cd /tmp
+          wget "https://github.com/casey/just/releases/download/1.40.0/just-1.40.0-x86_64-unknown-linux-musl.tar.gz" -O just.tar.gz
+          tar -xvf just.tar.gz
+          chmod +x just
+          mv just /usr/local/bin
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Install dependencies
         run: pnpm i
       - name: Generate static site
-        run: pnpm generate
+        run: just generate
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
