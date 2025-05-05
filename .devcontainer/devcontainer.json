@@ -6,38 +6,23 @@
 	},
 	"customizations": {
 		"vscode": {
-			"settings": {
-				"terminal.integrated.defaultProfile.linux": "zsh",
-				"editor.formatOnSave": true
-			},
 			"extensions": [
 				"rust-lang.rust-analyzer",
-				"tamasfe.even-better-toml",
 				"Vue.volar",
 				"bradlc.vscode-tailwindcss",
-				"naumovs.color-highlight"
+				"esbenp.prettier-vscode"
 			]
 		}
 	},
-	"mounts": [
-		{
-			"source": "cargo-cache",
-			"target": "/usr/local/cargo",
-			"type": "volume"
-		},
-		{
-			"source": "global-pnpm-store",
-			"target": "/home/vscode/.pnpm-store",
-			"type": "volume"
-		}
-	],
 	"runArgs": [
 		"--cap-add",
 		"PERFMON",
 		"-p",
 		"3000:3000",
 		"-p",
-		"3001:3001"
+		"3001:3001",
+		"-v",
+		"cargo-cache:/usr/local/cargo"
 	],
 	"postCreateCommand": "zsh .devcontainer/postinstall.sh"
 }
