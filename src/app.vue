@@ -6,6 +6,8 @@ import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
 import { displayMode, imageInputPanelRef } from "./composables";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./components/ui/resizable";
+import { Toaster } from "vue-sonner";
 // import ActionButtons from "./components/ActionButtons.vue";
 
 function toggleImageInputPanel(): void {
