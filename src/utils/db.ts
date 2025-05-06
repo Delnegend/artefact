@@ -13,11 +13,14 @@ function getDb(): Promise<IDBDatabase> {
 
 	dbPromise = new Promise((resolve, reject) => {
 		// Determine the correct IndexedDB context (window or worker)
-		const idb = typeof window !== 'undefined' && window.indexedDB
+		// eslint-disable-next-line no-nested-ternary, @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
+		const idb = typeof window !== "undefined" && window.indexedDB
 			? window.indexedDB
-			: typeof self !== 'undefined' && self.indexedDB
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
+			: typeof self !== "undefined" && self.indexedDB
 				? self.indexedDB
 				: null;
+		// eslint-enable
 
 		if (!idb) {
 			const errorMsg = "IndexedDB is not supported in this environment.";
@@ -29,7 +32,7 @@ function getDb(): Promise<IDBDatabase> {
 
 		const request = idb.open(DB_NAME, DB_VERSION);
 
-		request.onupgradeneeded = (event) => {
+		request.onupgradeneeded = (event): void => {
 			const db = request.result;
 			const target = event.target as IDBOpenDBRequest | null;
 			const transaction = target?.transaction;
@@ -58,17 +61,18 @@ function getDb(): Promise<IDBDatabase> {
 			}
 		};
 
-		request.onsuccess = () => {
+		request.onsuccess = (): void => {
 			resolve(request.result);
 		};
 
-		request.onerror = () => {
-			console.error("Database error:", request.error);
-			reject(request.error);
+		request.onerror = (): void => {
+			const err = `Database error: ${request.error?.message}`;
+			console.error(err);
+			reject(new Error(err));
 			dbPromise = null; // Reset promise on error
 		};
 
-		request.onblocked = () => {
+		request.onblocked = (): void => {
 			console.warn("Database open blocked, please close other tabs/windows using this database.");
 			// Optionally reject or keep waiting
 			// reject(new Error("Database open blocked"));
@@ -86,13 +90,14 @@ export async function getAllFilesInDb(): Promise<ImageItemForDB[]> {
 		const store = transaction.objectStore(STORE_NAME);
 		const request = store.getAll();
 
-		request.onsuccess = () => {
+		request.onsuccess = (): void => {
 			resolve(request.result as ImageItemForDB[]);
 		};
 
-		request.onerror = () => {
-			console.error("Error getting all files:", request.error);
-			reject(request.error);
+		request.onerror = (): void => {
+			const err = "Error getting all files.";
+			console.error(err);
+			reject(new Error(err));
 		};
 	});
 }
@@ -104,13 +109,14 @@ export async function getFileInDb(jpegFileHash: string): Promise<ImageItemForDB 
 		const store = transaction.objectStore(STORE_NAME);
 		const request = store.get(jpegFileHash);
 
-		request.onsuccess = () => {
+		request.onsuccess = (): void => {
 			resolve(request.result as ImageItemForDB | undefined);
 		};
 
-		request.onerror = () => {
-			console.error(`Error getting file ${jpegFileHash}:`, request.error);
-			reject(request.error);
+		request.onerror = (): void => {
+			const err = `Error getting file ${jpegFileHash}: ${request.error?.message}`;
+			console.error(err);
+			reject(new Error(err));
 		};
 	});
 }
@@ -128,15 +134,17 @@ export async function putFilesInDb(files: ImageItemForDB[]): Promise<void> {
 			return;
 		}
 
-		files.forEach((file) => {
+		for (const file of files) {
 			const request = store.put(file);
-			request.onsuccess = () => {
+			// eslint-disable-next-line @typescript-eslint/no-loop-func
+			request.onsuccess = (): void => {
 				completed++;
 				if (!hasError && completed === files.length) {
 					// Only resolve when all puts are successful *and* transaction completes
 				}
 			};
-			request.onerror = () => {
+			// eslint-disable-next-line @typescript-eslint/no-loop-func
+			request.onerror = (): void => {
 				if (!hasError) { // Report first error only
 					hasError = true;
 					console.error("Error putting file:", request.error);
@@ -144,27 +152,28 @@ export async function putFilesInDb(files: ImageItemForDB[]): Promise<void> {
 					transaction.abort(); // Abort the transaction on any put error
 				}
 			};
-		});
+		}
 
-		transaction.oncomplete = () => {
+		transaction.oncomplete = (): void => {
 			if (!hasError) {
 				resolve();
 			}
 			// If hasError is true, the onerror handler below will reject
 		};
 
-		transaction.onerror = () => {
-			console.error("Transaction error putting files:", transaction.error);
-			reject(transaction.error);
+		transaction.onerror = (): void => {
+			const err = `Transaction error putting files: ${transaction.error?.message}`;
+			console.error(err);
+			reject(new Error(err));
 		};
 
-		transaction.onabort = () => {
-			console.warn("Transaction aborted putting files:", transaction.error);
-			reject(transaction.error || new Error("Transaction aborted"));
-		}
+		transaction.onabort = (): void => {
+			const err = "Transaction aborted putting files.";
+			console.warn(err);
+			reject(new Error(err));
+		};
 	});
 }
-
 
 export async function deleteFileInDb(jpegFileHash: string): Promise<void> {
 	const db = await getDb();
@@ -173,22 +182,24 @@ export async function deleteFileInDb(jpegFileHash: string): Promise<void> {
 		const store = transaction.objectStore(STORE_NAME);
 		const request = store.delete(jpegFileHash);
 
-		request.onsuccess = () => {
+		request.onsuccess = (): void => {
 			// Resolve on transaction complete, not just request success
 		};
 
-		request.onerror = () => {
-			console.error(`Error deleting file ${jpegFileHash}:`, request.error);
-			reject(request.error); // Reject immediately on request error
+		request.onerror = (): void => {
+			const err = `Error deleting file ${jpegFileHash}: ${request.error?.message}`;
+			console.error(err);
+			reject(new Error(err));
 		};
 
-		transaction.oncomplete = () => {
+		transaction.oncomplete = (): void => {
 			resolve();
 		};
 
-		transaction.onerror = () => {
-			console.error("Transaction error deleting file:", transaction.error);
-			reject(transaction.error);
+		transaction.onerror = (): void => {
+			const err = `Transaction error deleting file: ${transaction.error?.message}`;
+			console.error(err);
+			reject(new Error(err));
 		};
 	});
 }
