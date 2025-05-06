@@ -7,7 +7,7 @@ import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
 import { displayMode, imageInputPanelRef, useImageCompareStore } from "~/composables";
 
-const imageCompareStore = useImageCompareStore();
+const imgCompStore = useImageCompareStore();
 
 defineEmits(["toggle-image-input-panel"]);
 
@@ -28,7 +28,7 @@ let initialDistance = 0;
 let rafId: number | null = null;
 let initialScale = 1;
 
-let touchMoveHandler: ((e: TouchEvent)=> void) | null = null;
+let touchMoveHandler: ((e: TouchEvent) => void) | null = null;
 
 function updateScaleMobile(newDistance: number): void {
 	if (rafId !== null) { window.cancelAnimationFrame(rafId); }
@@ -170,7 +170,7 @@ function startDragSlidingHandle(): void {
 
 // reset scale and position when image changes
 watch(
-	() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
+	() => [imgCompStore.value.jpegBlobUrl, imgCompStore.value.outputImgBlobUrl],
 	() => {
 		scale.value = 1;
 		position.value = { x: 0, y: 0 };
@@ -180,23 +180,23 @@ watch(
 
 <template>
 	<div
-		v-if="imageCompareStore.jpegBlobUrl && imageCompareStore.outputImgBlobUrl"
+		v-if="imgCompStore.jpegBlobUrl && imgCompStore.outputImgBlobUrl"
 		ref="containerRef"
 		class="relative size-full"
 		:class="{
-			'grid grid-cols-2 gap-[2px]': imageCompareStore.compareMode === 'side-by-side',
+			'grid grid-cols-2 gap-[2px]': imgCompStore.compareMode === 'side-by-side',
 		}"
 		@wheel.prevent="handleWheel">
 		<!-- second/processed image -->
 		<div
 			class="order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
 			:class="{
-				'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay',
+				'absolute left-0 top-0': imgCompStore.compareMode === 'overlay',
 			}"
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
-				:src="imageCompareStore.outputImgBlobUrl"
+				:src="imgCompStore.outputImgBlobUrl"
 				class="size-auto max-w-none origin-center select-none"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
@@ -209,17 +209,17 @@ watch(
 		<div
 			class="-order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
 			:class="{
-				'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay',
+				'absolute left-0 top-0': imgCompStore.compareMode === 'overlay',
 			}"
 			:style="{
-				clipPath: imageCompareStore.compareMode === 'overlay'
+				clipPath: imgCompStore.compareMode === 'overlay'
 					? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)`
 					: undefined,
 			}"
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
-				:src="imageCompareStore.jpegBlobUrl"
+				:src="imgCompStore.jpegBlobUrl"
 				class="size-auto max-w-none origin-center select-none"
 				:style="{
 					transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
@@ -230,7 +230,7 @@ watch(
 
 		<!-- compare sliding handle -->
 		<div
-			v-if="imageCompareStore.compareMode === 'overlay'"
+			v-if="imgCompStore.compareMode === 'overlay'"
 			class="absolute top-0 flex h-full w-[2px] -translate-x-1/2 cursor-grab items-center justify-center bg-secondary active:cursor-grabbing"
 			:style="{ left: `${slidingHandlePositionPercent}%` }"
 			@mousedown.prevent="startDragSlidingHandle"
@@ -282,16 +282,16 @@ watch(
 				size="lg"
 				variant="secondary"
 				class="rounded-r-none p-4 shadow-sm hover:shadow-md"
-				:disabled="imageCompareStore.compareMode === 'side-by-side'"
-				@click="imageCompareStore.compareMode = 'side-by-side'">
+				:disabled="imgCompStore.compareMode === 'side-by-side'"
+				@click="imgCompStore.compareMode = 'side-by-side'">
 				<Columns2 />
 			</Button>
 			<Button
 				size="lg"
 				variant="secondary"
 				class="rounded-l-none p-4 shadow-sm hover:shadow-md"
-				:disabled="imageCompareStore.compareMode === 'overlay'"
-				@click="imageCompareStore.compareMode = 'overlay'">
+				:disabled="imgCompStore.compareMode === 'overlay'"
+				@click="imgCompStore.compareMode = 'overlay'">
 				<SquareSplitHorizontal />
 			</Button>
 		</div>

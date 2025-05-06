@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { toast } from "vue-sonner";
 
-import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
+import { imageListStoreOps, useImageListStore } from "~/composables/use-image-list-store"
 
 import ImageItem from "./ImageItem.vue";
 
-const imageDisplayListStore = useImageDisplayListStore();
+const imgList = useImageListStore();
 
 try {
-	await imageDisplayListStore.loadFromDB();
+	await imageListStoreOps.init();
 } catch (error) {
 	toast.error("Failed to load files from DB", {
 		description: `${error}`,
@@ -26,7 +26,7 @@ try {
 			key="dummy"
 			class="w-full" />
 		<ImageItem
-			v-for="[jpegFileHash, info] in imageDisplayListStore.list"
+			v-for="[jpegFileHash, info] in Object.entries(imgList)"
 			:key="jpegFileHash"
 			:jpeg-file-hash="jpegFileHash"
 			:info="info"

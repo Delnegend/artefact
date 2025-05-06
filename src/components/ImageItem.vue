@@ -2,15 +2,12 @@
 import { LoaderCircle } from "lucide-vue-next";
 import { h, ref, watchEffect } from "vue";
 import { toast } from "vue-sonner";
-
+import Button from "./ui/button/Button.vue";
 import Badge from "~/components/ui/badge/Badge.vue";
-import {
-	useImageCompareStore,
-	useProcessConfigStore,
-	useSimpleArtefactWorker,
-} from "~/composables";
-import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
+import { useImageCompareStore, useProcessConfigStore, useSimpleArtefactWorker } from "~/composables";
+import { imageListStoreOps, useImageListStore } from "~/composables/use-image-list-store"
 import { cn } from "~/utils/cn";
+import { getFileInDb } from "~/utils/db";
 import { humanReadableSize } from "~/utils/human-readable-size";
 import type { ImageItemForDisplay } from "~/utils/types";
 
@@ -20,31 +17,24 @@ const props = defineProps<{
 	class?: string;
 }>();
 
-const imageDisplayListStore = useImageDisplayListStore();
-const imageCompareStore = useImageCompareStore();
+const imgList = useImageListStore();
+const imgCompStore = useImageCompareStore();
 const processingConfig = useProcessConfigStore();
 
-const {
-	error,
-	output,
-	processing,
-	process: startProcess,
-	terminate,
-} = useSimpleArtefactWorker({
-	config: processingConfig.allConfig,
+const task = useSimpleArtefactWorker({
+	config: { ...processingConfig.value },
 	jpegFileHash: props.jpegFileHash,
 });
-const queued = ref(false);
 
 watchEffect(() => {
-	if (error.value === null || error.value === "") {
+	if (task.error.value === null || task.error.value === "") {
 		return;
 	}
-	toast.error("Error", { description: error.value });
+	toast.error("Error", { description: task.error.value });
 });
 
 watchEffect(async () => {
-	if (!output.value) {
+	if (!task.output.value) {
 		return;
 	}
 
@@ -52,18 +42,23 @@ watchEffect(async () => {
 		description: h("div", [
 			h("code", props.info.name),
 			" done in ",
-			h("code", output.value.timeTaken),
+			h("code", task.output.value.timeTaken),
 		]),
 	});
 
-	imageDisplayListStore.setOutputImgBlobUrl(
-		props.jpegFileHash,
-		await imageDisplayListStore.getOutputImgBlobUrl(props.jpegFileHash),
-	);
-	imageDisplayListStore.setOutputImgFormat(
-		props.jpegFileHash,
-		output.value.outputFormat,
-	);
+	// we need to update the image list store because worker can't access it, only the db
+
+	const latestImgFromDb = await getFileInDb(props.jpegFileHash);
+
+	imgList.value[props.jpegFileHash].outputImgBlobUrl = latestImgFromDb?.outputImgArrayBuffer
+		? URL.createObjectURL(
+			new Blob([latestImgFromDb.outputImgArrayBuffer], {
+				type: `image/${latestImgFromDb.outputImgFormat}`,
+			}),
+		)
+		: undefined;
+
+	imgList.value[props.jpegFileHash].outputImgFormat = task.output.value.outputFormat;
 });
 
 function process(): void {
@@ -74,15 +69,14 @@ function process(): void {
 		return;
 	}
 
-	if (processing.value) {
+	if (task.processing.value) {
 		toast.error("Error", {
 			description: "The image is already being processed.",
 		});
 		return;
 	}
 
-	queued.value = true;
-	startProcess();
+	task.process();
 }
 
 function download(): void {
@@ -113,14 +107,14 @@ function compare(): void {
 		return;
 	}
 
-	imageCompareStore.jpegBlobUrl = props.info.jpegBlobUrl;
-	imageCompareStore.outputImgBlobUrl = props.info.outputImgBlobUrl;
+	imgCompStore.value.jpegBlobUrl = props.info.jpegBlobUrl;
+	imgCompStore.value.outputImgBlobUrl = props.info.outputImgBlobUrl;
 }
 
 async function remove(): Promise<void> {
-	terminate();
+	task.terminate();
 	try {
-		await imageDisplayListStore.remove(props.jpegFileHash);
+		imageListStoreOps.remove(props.jpegFileHash);
 	} catch (error) {
 		toast.error("Failed to remove image from DB", {
 			description: `${error}`,
@@ -170,9 +164,9 @@ function reprocess(): void {
 			<div class="grid">
 				<Button
 					v-if="!props.info.outputImgBlobUrl"
-					:disabled="processing"
+					:disabled="task.processing.value"
 					@click="process">
-					<span v-if="!processing">Process</span>
+					<span v-if="!task.processing.value">Process</span>
 					<span
 						v-else
 						class="animate-spin">

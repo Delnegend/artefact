@@ -4,10 +4,11 @@ import { Info } from "lucide-vue-next";
 import Button from "~/components/ui/button/Button.vue";
 import Input from "~/components/ui/input/Input.vue";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { useProcessConfigStore } from "~/composables";
+import { processConfigStoreOps, useProcessConfigStore } from "~/composables";
 import { OutputImgFormat } from "~/utils/types";
 
-const processingConfig = useProcessConfigStore();
+const processConfig = useProcessConfigStore();
+const isDefault = processConfigStoreOps.isDefault();
 </script>
 
 <template>
@@ -21,8 +22,10 @@ const processingConfig = useProcessConfigStore();
 				<Button
 					v-for="format in [OutputImgFormat.PNG, OutputImgFormat.WEBP, OutputImgFormat.TIF, OutputImgFormat.BMP]"
 					:key="format"
-					:variant="processingConfig.outputFormat === format ? 'default' : 'secondary'"
-					@click="processingConfig.handleOutputFormatChange(format)">
+					:variant="processConfig.outputFormat === format ? 'default' : 'secondary'"
+					@click="() => {
+						processConfig.outputFormat = format;
+					}">
 					{{ format }}
 				</Button>
 			</div>
@@ -44,10 +47,10 @@ const processingConfig = useProcessConfigStore();
 				</Popover>
 			</div>
 			<Input
-				v-model.number="processingConfig.iterations"
+				v-model.number="processConfig.iterations"
 				step="10"
 				type="number"
-				@blur="processingConfig.ensureInterationsValid" />
+				@blur="processConfigStoreOps.ensureInterationsValid" />
 		</div>
 		<div>
 			<div class="mb-2 flex flex-row items-center gap-2">
@@ -67,10 +70,10 @@ const processingConfig = useProcessConfigStore();
 			</div>
 
 			<Input
-				v-model.number="processingConfig.weight"
+				v-model.number="processConfig.weight"
 				type="number"
 				step="0.01"
-				@blur="processingConfig.ensureWeightValid" />
+				@blur="processConfigStoreOps.ensureWeightValid" />
 		</div>
 		<div>
 			<div class="mb-2 flex flex-row items-center gap-2">
@@ -89,14 +92,14 @@ const processingConfig = useProcessConfigStore();
 				</Popover>
 			</div>
 			<Input
-				v-model.number="processingConfig.pWeight"
+				v-model.number="processConfig.pWeight"
 				type="number"
 				step="0.01"
-				@blur="processingConfig.ensurePWeightValid" />
+				@blur="processConfigStoreOps.ensurePWeightValid" />
 		</div>
 		<Button
-			:disabled="processingConfig.isDefault"
-			@click="processingConfig.resetDefaultAll">
+			:disabled="isDefault"
+			@click="processConfigStoreOps.resetDefaultAll">
 			Reset to default
 		</Button>
 	</div>

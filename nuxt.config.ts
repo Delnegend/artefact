@@ -7,8 +7,6 @@ export default defineNuxtConfig({
 	modules: [
 		"@vueuse/nuxt",
 		"@nuxtjs/tailwindcss",
-		"@nuxtjs/color-mode",
-		"@pinia/nuxt",
 		"@vite-pwa/nuxt",
 	],
 	ssr: false,

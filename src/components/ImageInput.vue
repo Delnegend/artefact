@@ -3,18 +3,16 @@ import { useFileDialog } from "@vueuse/core";
 import { ref } from "vue";
 import { toast } from "vue-sonner";
 
-import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
 import { cn } from "~/utils/cn";
 
+import { imageListStoreOps } from "~/composables/use-image-list-store"
 import { buttonBaseClassTw, buttonVariantsTw } from "./ui/button";
-
-const imageDisplayListStore = useImageDisplayListStore();
 
 async function handleIncomingFiles(files: FileList | null): Promise<void> {
 	if (!files) { return; }
 
 	try {
-		await imageDisplayListStore.addFileList(files);
+		await imageListStoreOps.addFileList(files);
 	} catch (error) {
 		toast.error("Failed to process files", {
 			description: `${error}`,
