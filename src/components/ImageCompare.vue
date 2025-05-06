@@ -5,7 +5,8 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import Button from "~/components/ui/button/Button.vue";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
-import { displayMode, imageInputPanelRef, useImageCompareStore } from "~/composables";
+import { displayMode, imageInputPanelRef } from "~/composables";
+import { useImageCompareStore } from "~/composables/use-image-compare-store";
 
 const imgCompStore = useImageCompareStore();
 
@@ -28,7 +29,7 @@ let initialDistance = 0;
 let rafId: number | null = null;
 let initialScale = 1;
 
-let touchMoveHandler: ((e: TouchEvent) => void) | null = null;
+let touchMoveHandler: ((e: TouchEvent)=> void) | null = null;
 
 function updateScaleMobile(newDistance: number): void {
 	if (rafId !== null) { window.cancelAnimationFrame(rafId); }

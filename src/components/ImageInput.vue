@@ -5,7 +5,7 @@ import { toast } from "vue-sonner";
 
 import { cn } from "~/utils/cn";
 
-import { imageListStoreOps } from "~/composables/use-image-list-store"
+import { imageListStoreOps } from "~/composables/use-image-list-store";
 import { buttonBaseClassTw, buttonVariantsTw } from "./ui/button";
 
 async function handleIncomingFiles(files: FileList | null): Promise<void> {

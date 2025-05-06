@@ -1,17 +1,18 @@
 
 import { useState } from "nuxt/app";
+import type { Ref } from "vue";
 import { deleteFileInDb, getAllFilesInDb, putFilesInDb } from "~/utils/db";
 import type { ImageItemForDisplay } from "~/utils/types";
 import { hashArrayBuffer } from "../utils/hash-array-buffer";
 
-export function useImageListStore() {
-	return useState<{ [key: string]: ImageItemForDisplay }>("image-list", () => ({}));
+export function useImageListStore(): Ref<Record<string, ImageItemForDisplay>> {
+	return useState<Record<string, ImageItemForDisplay>>("image-list", () => ({}));
 }
 
 export const imageListStoreOps = {
 	async init(): Promise<void> {
 		const imageListStore = useImageListStore();
-		imageListStore.value = (await getAllFilesInDb()).reduce((acc, image) => {
+		imageListStore.value = (await getAllFilesInDb()).reduce<Record<string, ImageItemForDisplay>>((acc, image) => {
 			acc[image.jpegFileHash] = {
 				name: image.jpegFileName,
 				dateAdded: image.dateAdded,
@@ -21,17 +22,17 @@ export const imageListStoreOps = {
 				),
 				outputImgBlobUrl: image.outputImgArrayBuffer
 					? URL.createObjectURL(
-						new Blob([image.outputImgArrayBuffer], {
-							type: `image/${image.outputImgFormat}`,
-						}),
-					)
+							new Blob([image.outputImgArrayBuffer], {
+								type: `image/${image.outputImgFormat}`,
+							}),
+						)
 					: undefined,
 				outputImgFormat: image.outputImgFormat,
 				width: image.width,
 				height: image.height,
 			};
 			return acc;
-		}, {} as { [key: string]: ImageItemForDisplay });
+		}, {});
 	},
 
 	async addFileList(fileList: FileList | null): Promise<void> {
@@ -80,7 +81,7 @@ export const imageListStoreOps = {
 			}),
 		);
 
-		putFilesInDb(fileOps.map(({ file, jpegArrayBuffer, hash, width, height }) => {
+		void putFilesInDb(fileOps.map(({ file, jpegArrayBuffer, hash, width, height }) => {
 			return {
 				jpegFileHash: hash,
 				jpegFileName: file.name,
@@ -93,9 +94,5 @@ export const imageListStoreOps = {
 		}));
 	},
 
-	async remove(jpegFileHash: string): Promise<void> {
+	remove(jpegFileHash: string): void {
 		const imageListStore = useImageListStore();
-		delete imageListStore.value[jpegFileHash];
-		await deleteFileInDb(jpegFileHash);
-	}
-} as const;

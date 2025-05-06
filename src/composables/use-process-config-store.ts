@@ -3,7 +3,7 @@ import { useState } from "nuxt/app";
 import { computed, watchEffect, type Ref } from "vue";
 import { OutputImgFormat, type ProcessingConfig } from "~/utils/types";
 
-export function useProcessConfigStore() {
+export function useProcessConfigStore(): Ref<ProcessingConfig> {
 	return useState<ProcessingConfig>("processing-config", () => ({
 		outputFormat: OutputImgFormat.PNG,
 		iterations: 50,
@@ -14,9 +14,9 @@ export function useProcessConfigStore() {
 }
 
 export const processConfigStoreOps = {
-	async init(): Promise<void> {
+	init(): void {
 		const processConfigStore = useProcessConfigStore();
-		processConfigStore.value = JSON.parse(localStorage.getItem("processing-config") || "{}");
+		processConfigStore.value = JSON.parse(localStorage.getItem("processing-config") ?? "{}") as ProcessingConfig;
 
 		watchEffect(() => {
 			localStorage.setItem(
@@ -26,7 +26,7 @@ export const processConfigStoreOps = {
 		});
 	},
 
-	async resetDefaultAll(): Promise<void> {
+	resetDefaultAll(): void {
 		const processConfigStore = useProcessConfigStore();
 		processConfigStore.value = {
 			outputFormat: OutputImgFormat.PNG,
@@ -37,7 +37,7 @@ export const processConfigStoreOps = {
 		};
 	},
 
-	async save(): Promise<void> {
+	save(): void {
 		const processConfigStore = useProcessConfigStore();
 		localStorage.setItem(
 			"processing-config",
@@ -52,7 +52,7 @@ export const processConfigStoreOps = {
 				&& processConfigStore.value.iterations === 50
 				&& processConfigStore.value.weight === 0.3
 				&& processConfigStore.value.pWeight === 0.001
-				&& processConfigStore.value.separateComponents === false;
+				&& !processConfigStore.value.separateComponents;
 		});
 	},
 
@@ -82,4 +82,4 @@ export const processConfigStoreOps = {
 			1,
 		);
 	},
-}
+};
