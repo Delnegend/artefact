@@ -8,7 +8,6 @@ export default defineNuxtConfig({
 		"@vueuse/nuxt",
 		"@nuxtjs/tailwindcss",
 		"@nuxtjs/color-mode",
-		"shadcn-nuxt",
 		"@pinia/nuxt",
 		"@vite-pwa/nuxt",
 	],
@@ -85,9 +84,6 @@ export default defineNuxtConfig({
 			tailwindcss: {},
 			autoprefixer: {},
 		},
-	},
-	shadcn: {
-		componentDir: "./src/components/ui",
 	},
 	pwa: {
 		client: {
