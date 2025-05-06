@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { LoaderCircle } from "lucide-vue-next";
-import { h, ref, watchEffect } from "vue";
+import { h, ref } from "vue";
 import { toast } from "vue-sonner";
-import Button from "./ui/button/Button.vue";
 import Badge from "~/components/ui/badge/Badge.vue";
-import { useImageCompareStore, useProcessConfigStore, useSimpleArtefactWorker } from "~/composables";
-import { imageListStoreOps, useImageListStore } from "~/composables/use-image-list-store"
+import { useImageCompareStore } from "~/composables/use-image-compare-store";
+import { imageListStoreOps, useImageListStore } from "~/composables/use-image-list-store";
+import { useProcessConfigStore } from "~/composables/use-process-config-store";
 import { cn } from "~/utils/cn";
 import { getFileInDb } from "~/utils/db";
 import { humanReadableSize } from "~/utils/human-readable-size";
+import { runArtefactWorker } from "~/utils/run-artefact-worker";
 import type { ImageItemForDisplay } from "~/utils/types";
+import Button from "./ui/button/Button.vue";
 
 const props = defineProps<{
 	jpegFileHash: string;
@@ -20,46 +22,7 @@ const props = defineProps<{
 const imgList = useImageListStore();
 const imgCompStore = useImageCompareStore();
 const processingConfig = useProcessConfigStore();
-
-const task = useSimpleArtefactWorker({
-	config: { ...processingConfig.value },
-	jpegFileHash: props.jpegFileHash,
-});
-
-watchEffect(() => {
-	if (task.error.value === null || task.error.value === "") {
-		return;
-	}
-	toast.error("Error", { description: task.error.value });
-});
-
-watchEffect(async () => {
-	if (!task.output.value) {
-		return;
-	}
-
-	toast.success("Success", {
-		description: h("div", [
-			h("code", props.info.name),
-			" done in ",
-			h("code", task.output.value.timeTaken),
-		]),
-	});
-
-	// we need to update the image list store because worker can't access it, only the db
-
-	const latestImgFromDb = await getFileInDb(props.jpegFileHash);
-
-	imgList.value[props.jpegFileHash].outputImgBlobUrl = latestImgFromDb?.outputImgArrayBuffer
-		? URL.createObjectURL(
-			new Blob([latestImgFromDb.outputImgArrayBuffer], {
-				type: `image/${latestImgFromDb.outputImgFormat}`,
-			}),
-		)
-		: undefined;
-
-	imgList.value[props.jpegFileHash].outputImgFormat = task.output.value.outputFormat;
-});
+const processing = ref(false);
 
 function process(): void {
 	if (props.info.outputImgBlobUrl) {
@@ -69,14 +32,51 @@ function process(): void {
 		return;
 	}
 
-	if (task.processing.value) {
+	if (processing.value) {
 		toast.error("Error", {
 			description: "The image is already being processed.",
 		});
 		return;
 	}
 
-	task.process();
+	processing.value = true;
+
+	void (async (): Promise<void> => {
+		const result = await runArtefactWorker({
+			config: { ...processingConfig.value },
+			jpegFileHash: props.jpegFileHash,
+		});
+
+		const resultImgFromDb = await getFileInDb(props.jpegFileHash);
+		processing.value = false;
+
+		if (result.type === "error") {
+			toast.error("Error", {
+				description: `Can't process image ${resultImgFromDb?.jpegFileName}: ${result.error}`,
+			});
+			return;
+		}
+
+		toast.success("Success", {
+			description: h("div", [
+				h("code", props.info.name),
+				" done in ",
+				h("code", result.timeTaken),
+			]),
+		});
+
+		// we need to update the image list store because worker can't access it, only the db
+
+		imgList.value[props.jpegFileHash].outputImgBlobUrl = resultImgFromDb?.outputImgArrayBuffer
+			? URL.createObjectURL(
+					new Blob([resultImgFromDb.outputImgArrayBuffer], {
+						type: `image/${resultImgFromDb.outputImgFormat}`,
+					}),
+				)
+			: undefined;
+
+		imgList.value[props.jpegFileHash].outputImgFormat = result.outputFormat;
+	})();
 }
 
 function download(): void {
@@ -111,19 +111,15 @@ function compare(): void {
 	imgCompStore.value.outputImgBlobUrl = props.info.outputImgBlobUrl;
 }
 
-async function remove(): Promise<void> {
-	task.terminate();
-	try {
-		imageListStoreOps.remove(props.jpegFileHash);
-	} catch (error) {
-		toast.error("Failed to remove image from DB", {
-			description: `${error}`,
+function remove(): void {
+	if (processing.value) {
+		toast.error("Error", {
+			description: "The image is already being processed.",
 		});
+		return;
 	}
-}
 
-function reprocess(): void {
-	toast.info("This feature is not implemented yet.");
+	imageListStoreOps.remove(props.jpegFileHash);
 }
 </script>
 
@@ -164,9 +160,9 @@ function reprocess(): void {
 			<div class="grid">
 				<Button
 					v-if="!props.info.outputImgBlobUrl"
-					:disabled="task.processing.value"
+					:disabled="processing"
 					@click="process">
-					<span v-if="!task.processing.value">Process</span>
+					<span v-if="!processing">Process</span>
 					<span
 						v-else
 						class="animate-spin">
@@ -189,23 +185,17 @@ function reprocess(): void {
 
 			<Button
 				variant="outline"
-				:disabled="!props.info.outputImgBlobUrl"
-				@click="reprocess">
-				Re-process
+				:disabled="processing"
+				@click="remove">
+				Remove
 			</Button>
 
 			<Button
+				class="col-span-2"
 				variant="secondary"
 				:disabled="!props.info.outputImgBlobUrl"
 				@click="compare">
 				Compare
-			</Button>
-
-			<Button
-				variant="outline"
-				class="text-red-500 hover:text-red-600"
-				@click="remove">
-				<div>Remove</div>
 			</Button>
 		</div>
 	</div>
