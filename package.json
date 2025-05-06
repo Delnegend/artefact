@@ -4,7 +4,7 @@
 	"description": "Intercept the JPEG image decoding process to achieve an artifact-free output.",
 	"type": "module",
 	"dependencies": {
-		"@vite-pwa/nuxt": "0.10.6",
+		"@vite-pwa/nuxt": "^1.0.0",
 		"@vueuse/core": "^13.1.0",
 		"@vueuse/nuxt": "^13.1.0",
 		"clsx": "^2.1.1",
