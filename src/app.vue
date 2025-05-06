@@ -74,8 +74,7 @@ onMounted(() => {
 				<div
 					ref="imageCompareContainerRef"
 					class="size-full">
-					<ImageCompare
-						@toggle-image-input-panel="toggleImageInputPanel" />
+					<ImageCompare @toggle-image-input-panel="toggleImageInputPanel" />
 				</div>
 			</ResizablePanel>
 		</ResizablePanelGroup>
