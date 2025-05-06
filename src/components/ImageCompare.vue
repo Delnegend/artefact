@@ -28,13 +28,17 @@ let initialDistance = 0;
 let rafId: number | null = null;
 let initialScale = 1;
 
-// eslint-disable-next-line no-unused-vars
 let touchMoveHandler: ((e: TouchEvent)=> void) | null = null;
 
 function updateScaleMobile(newDistance: number): void {
-	if (rafId !== null) { cancelAnimationFrame(rafId); }
-	rafId = requestAnimationFrame((): void => {
-		scale.value = clamp(initialScale * (newDistance / initialDistance), MIN_SCALE, MAX_SCALE);
+	if (rafId !== null) { window.cancelAnimationFrame(rafId); }
+
+	rafId = window.requestAnimationFrame((): void => {
+		scale.value = clamp(
+			initialScale * (newDistance / initialDistance),
+			MIN_SCALE,
+			MAX_SCALE,
+		);
 	});
 }
 
@@ -44,7 +48,7 @@ function cleanup(): void {
 		touchMoveHandler = null;
 	}
 	if (rafId !== null) {
-		cancelAnimationFrame(rafId);
+		window.cancelAnimationFrame(rafId);
 		rafId = null;
 	}
 }
@@ -54,7 +58,10 @@ function handleTouchStart(e: TouchEvent): void {
 
 	const touch1 = e.touches[0];
 	const touch2 = e.touches[1];
-	initialDistance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+	initialDistance = Math.hypot(
+		touch1.clientX - touch2.clientX,
+		touch1.clientY - touch2.clientY,
+	);
 	initialScale = scale.value;
 
 	function touchMoveHandler(e: TouchEvent): void {
@@ -62,7 +69,10 @@ function handleTouchStart(e: TouchEvent): void {
 
 		const touch1 = e.touches[0];
 		const touch2 = e.touches[1];
-		const newDistance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+		const newDistance = Math.hypot(
+			touch1.clientX - touch2.clientX,
+			touch1.clientY - touch2.clientY,
+		);
 		updateScaleMobile(newDistance);
 	}
 
@@ -87,7 +97,8 @@ const position = ref({ x: 0, y: 0 });
 
 function doDrag(e: MouseEvent | TouchEvent): void {
 	if (!isDragging.value) { return; }
-	requestAnimationFrame(() => {
+
+	window.requestAnimationFrame(() => {
 		const pos = "touches" in e ? e.touches[0] : e;
 		position.value = {
 			x: (pos.clientX - dragStart.value.x) / scale.value,
@@ -129,7 +140,7 @@ const slidingHandlePositionPercent = ref(50); // 0-100
 function doDragSlidingHandle(e: MouseEvent | TouchEvent): void {
 	if (!isDraggingSlidingHandle.value || !containerRef.value) { return; }
 
-	requestAnimationFrame(() => {
+	window.requestAnimationFrame(() => {
 		if (!containerRef.value) { return; }
 
 		const pos = "touches" in e ? e.touches[0] : e;
@@ -158,10 +169,13 @@ function startDragSlidingHandle(): void {
 }
 
 // reset scale and position when image changes
-watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl], () => {
-	scale.value = 1;
-	position.value = { x: 0, y: 0 };
-});
+watch(
+	() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
+	() => {
+		scale.value = 1;
+		position.value = { x: 0, y: 0 };
+	},
+);
 </script>
 
 <template>
@@ -169,13 +183,16 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 		v-if="imageCompareStore.jpegBlobUrl && imageCompareStore.outputImgBlobUrl"
 		ref="containerRef"
 		class="relative size-full"
-		:class="{ 'grid grid-cols-2 gap-[2px]': imageCompareStore.compareMode === 'side-by-side' }"
+		:class="{
+			'grid grid-cols-2 gap-[2px]': imageCompareStore.compareMode === 'side-by-side',
+		}"
 		@wheel.prevent="handleWheel">
 		<!-- second/processed image -->
 		<div
 			class="order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
-			:class="{ 'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay' }"
-
+			:class="{
+				'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay',
+			}"
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
@@ -191,9 +208,14 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 		<!-- first/jpeg image -->
 		<div
 			class="-order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
-			:class="{ 'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay' }"
-			:style="{ clipPath: imageCompareStore.compareMode === 'overlay' ? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)` : undefined }"
-
+			:class="{
+				'absolute left-0 top-0': imageCompareStore.compareMode === 'overlay',
+			}"
+			:style="{
+				clipPath: imageCompareStore.compareMode === 'overlay'
+					? `inset(0 ${100 - slidingHandlePositionPercent}% 0 0)`
+					: undefined,
+			}"
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag">
 			<img
@@ -245,7 +267,10 @@ watch(() => [imageCompareStore.jpegBlobUrl, imageCompareStore.outputImgBlobUrl],
 				variant="secondary"
 				class="aspect-square px-4 font-mono shadow-sm transition-all hover:shadow-md"
 				:disabled="scale === 1 && position.x === 0 && position.y === 0"
-				@click="{ scale = 1; position = { x: 0, y: 0 }; }">
+				@click="() => {
+					scale = 1;
+					position = { x: 0, y: 0 };
+				}">
 				x{{ Math.round(scale * 10) / 10 }}
 			</Button>
 		</div>

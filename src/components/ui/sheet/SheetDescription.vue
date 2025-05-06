@@ -7,7 +7,7 @@ import { cn } from "~/utils/cn";
 const props = defineProps<DialogDescriptionProps & { class?: HTMLAttributes["class"] }>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	const { class: _, ...delegated } = props;
 
 	return delegated;

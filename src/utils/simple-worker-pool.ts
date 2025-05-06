@@ -20,26 +20,32 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 		this.newWorkerFn = newWorkerFn;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/class-methods-use-this, class-methods-use-this
-	private async ensureWorkerReady(worker: Worker, onmessage: (_: MessageEvent)=> void): Promise<Worker> {
+	// eslint-disable-next-line class-methods-use-this, @typescript-eslint/class-methods-use-this
+	private ensureWorkerReady(worker: Worker, onmessage: (_: MessageEvent)=> void): Promise<Worker> {
 		const polling = window.setInterval(() => {
 			const input: WorkerInputWrapper<I> = { type: "ping" };
 			worker.postMessage(input);
 		}, 0);
 
+		const controller = new AbortController();
 		return new Promise((resolve) => {
-			worker.onmessage = (event): void => {
-				onmessage(event);
-				const out = event.data as WorkerOutputWrapper<O, E>;
-				if (out.type === "pong") {
-					window.clearInterval(polling);
-					resolve(worker);
-				}
-			};
+			worker.addEventListener(
+				"message",
+				(event): void => {
+					onmessage(event);
+					const out = event.data as WorkerOutputWrapper<O, E>;
+					if (out.type === "pong") {
+						window.clearInterval(polling);
+						resolve(worker);
+						controller.abort();
+					}
+				},
+				{ signal: controller.signal },
+			);
 		});
 	}
 
-	public async getWorker(onmessage: (_: MessageEvent)=> void): Promise<Worker> {
+	public getWorker(onmessage: (_: MessageEvent)=> void): Promise<Worker> {
 		const worker = this.pool.shift();
 		if (worker) {
 			return this.ensureWorkerReady(worker, onmessage);
@@ -51,21 +57,31 @@ export class SimpleWorkerPool<I, O, E = unknown> {
 		}
 
 		return new Promise((resolve) => {
-			this.queue.unshift((worker) => { resolve(worker); });
+			this.queue.unshift((worker) => {
+				resolve(worker);
+			});
 		});
 	}
 
 	public releaseExistingWorker(worker: Worker): void {
 		const next = this.queue.shift();
-		if (next) { next(worker); return; }
+		if (next) {
+			next(worker);
+			return;
+		}
 		this.pool.push(worker);
 		this.semaphore++;
 	}
 
-	public async releaseNewWorker(onmessage: (_: MessageEvent)=> void): Promise<void> {
+	public async releaseNewWorker(
+		onmessage: (_: MessageEvent)=> void,
+	): Promise<void> {
 		const worker = await this.ensureWorkerReady(this.newWorkerFn(), onmessage);
 		const next = this.queue.shift();
-		if (next) { next(worker); return; }
+		if (next) {
+			next(worker);
+			return;
+		}
 		this.pool.push(worker);
 		this.semaphore++;
 	}

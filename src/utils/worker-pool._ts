@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions, no-unused-vars */
-
 import type { Ref } from "vue";
 
 export enum WorkerMessageType {

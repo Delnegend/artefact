@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-import { db } from "~/utils/db";
-import { hashArrayBuffer } from "~/utils/hash-array-buffer";
-import type { ImageItemForDB, ImageItemForDisplay, OutputImgFormat } from "~/utils/types";
+import { db } from "../utils/db";
+import { hashArrayBuffer } from "../utils/hash-array-buffer";
+import type { ImageItemForDisplay, ImageItemForDB, OutputImgFormat } from "~/utils/types";
 
 export const useImageDisplayListStore = defineStore("image-display-list", () => {
 	type JpegFileHash = string;
@@ -14,12 +14,18 @@ export const useImageDisplayListStore = defineStore("image-display-list", () => 
 		loadFromDB: async (): Promise<void> => {
 			const tx = db.transaction("files", "readonly");
 			const store = tx.objectStore("files");
-			const files = await store.getAll() as ImageItemForDB[];
+			const files = (await store.getAll()) as ImageItemForDB[];
 
 			for (const file of files) {
-				const jpegBlobUrl = URL.createObjectURL(new Blob([file.jpegArrayBuffer], { type: "image/jpeg" }));
+				const jpegBlobUrl = URL.createObjectURL(
+					new Blob([file.jpegArrayBuffer], { type: "image/jpeg" }),
+				);
 				const outputImgBlobUrl = file.outputImgArrayBuffer
-					? URL.createObjectURL(new Blob([file.outputImgArrayBuffer], { type: `image/${file.outputImgFormat}` }))
+					? URL.createObjectURL(
+							new Blob([file.outputImgArrayBuffer], {
+								type: `image/${file.outputImgFormat}`,
+							}),
+						)
 					: undefined;
 
 				list.value.set(file.jpegFileHash, {
@@ -43,10 +49,21 @@ export const useImageDisplayListStore = defineStore("image-display-list", () => 
 					const hash = await hashArrayBuffer(jpegArrayBuffer);
 
 					const img = new Image();
-					img.src = URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" }));
-					await new Promise((resolve) => { img.onload = resolve; });
+					img.src = URL.createObjectURL(
+						new Blob([jpegArrayBuffer], { type: "image/jpeg" }),
+					);
+					await new Promise((resolve) => {
+						// oxlint-disable-next-line prefer-add-event-listener
+						img.onload = resolve;
+					});
 
-					return { file, jpegArrayBuffer, hash, width: img.width, height: img.height };
+					return {
+						file,
+						jpegArrayBuffer,
+						hash,
+						width: img.width,
+						height: img.height,
+					};
 				}),
 			);
 
@@ -54,29 +71,33 @@ export const useImageDisplayListStore = defineStore("image-display-list", () => 
 			const store = tx.objectStore("files");
 
 			await Promise.all(
-				fileOps.map(async ({ file, jpegArrayBuffer, hash, width, height }) => {
-					const now = new Date();
+				fileOps.map(
+					async ({ file, jpegArrayBuffer, hash, width, height }) => {
+						const now = new Date();
 
-					const itemToInsert: ImageItemForDB = {
-						jpegFileHash: hash,
-						jpegFileName: file.name,
-						dateAdded: now,
-						jpegFileSize: jpegArrayBuffer.byteLength,
-						jpegArrayBuffer,
-						width,
-						height,
-					};
-					await store.put(itemToInsert);
+						const itemToInsert: ImageItemForDB = {
+							jpegFileHash: hash,
+							jpegFileName: file.name,
+							dateAdded: now,
+							jpegFileSize: jpegArrayBuffer.byteLength,
+							jpegArrayBuffer,
+							width,
+							height,
+						};
+						await store.put(itemToInsert);
 
-					list.value.set(hash, {
-						name: file.name,
-						dateAdded: now,
-						size: jpegArrayBuffer.byteLength,
-						jpegBlobUrl: URL.createObjectURL(new Blob([jpegArrayBuffer], { type: "image/jpeg" })),
-						width,
-						height,
-					});
-				}),
+						list.value.set(hash, {
+							name: file.name,
+							dateAdded: now,
+							size: jpegArrayBuffer.byteLength,
+							jpegBlobUrl: URL.createObjectURL(
+								new Blob([jpegArrayBuffer], { type: "image/jpeg" }),
+							),
+							width,
+							height,
+						});
+					},
+				),
 			);
 
 			await tx.done;
@@ -87,29 +108,42 @@ export const useImageDisplayListStore = defineStore("image-display-list", () => 
 		},
 		setOutputImgBlobUrl: (jpegFileHash: JpegFileHash, outputImgBlobUrl: string | undefined): void => {
 			const imageItem = list.value.get(jpegFileHash);
-			if (!imageItem) { return; }
+			if (!imageItem) {
+				return;
+			}
 
 			imageItem.outputImgBlobUrl = outputImgBlobUrl;
 		},
 		setOutputImgFormat: (jpegFileHash: JpegFileHash, outputImgFormat?: OutputImgFormat): void => {
 			const imageItem = list.value.get(jpegFileHash);
-			if (!imageItem) { return; }
+			if (!imageItem) {
+				return;
+			}
 
 			imageItem.outputImgFormat = outputImgFormat;
 		},
 		getOutputImgBlobUrl: async (jpegFileHash: JpegFileHash): Promise<string | undefined> => {
 			const imageItem = list.value.get(jpegFileHash);
-			if (imageItem?.outputImgBlobUrl) { return imageItem.outputImgBlobUrl; }
+			if (imageItem?.outputImgBlobUrl) {
+				return imageItem.outputImgBlobUrl;
+			}
 
 			const tx = db.transaction("files", "readonly");
 			const store = tx.objectStore("files");
 
-			const imageItemForDB = await store.get(jpegFileHash) as ImageItemForDB | undefined;
+			const imageItemForDB = (await store.get(jpegFileHash)) as
+				| ImageItemForDB
+				| undefined;
 			if (imageItemForDB?.outputImgArrayBuffer === undefined) {
 				return;
 			}
 
-			return URL.createObjectURL(new Blob([imageItemForDB.outputImgArrayBuffer], { type: `image/${imageItemForDB.outputImgFormat}` }));
+			return URL.createObjectURL(
+				new Blob([imageItemForDB.outputImgArrayBuffer], {
+					type: `image/${imageItemForDB.outputImgFormat}`,
+				}),
+			);
 		},
 	};
-});
+},
+);

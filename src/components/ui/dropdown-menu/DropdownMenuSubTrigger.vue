@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import { ChevronRight } from "lucide-vue-next";
-import {
-	DropdownMenuSubTrigger,
-	type DropdownMenuSubTriggerProps,
-	useForwardProps,
-} from "radix-vue";
+import { DropdownMenuSubTrigger, type DropdownMenuSubTriggerProps, useForwardProps } from "radix-vue";
 import { computed, type HTMLAttributes } from "vue";
 
 import { cn } from "~/utils/cn";
 
-const props = defineProps<DropdownMenuSubTriggerProps & { class?: HTMLAttributes["class"] }>();
+const props = defineProps<
+	DropdownMenuSubTriggerProps & { class?: HTMLAttributes["class"] }
+>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
 	const { class: _, ...delegated } = props;
 
 	return delegated;

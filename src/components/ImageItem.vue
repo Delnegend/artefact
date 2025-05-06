@@ -4,7 +4,11 @@ import { h, ref, watchEffect } from "vue";
 import { toast } from "vue-sonner";
 
 import Badge from "~/components/ui/badge/Badge.vue";
-import { useImageCompareStore, useProcessConfigStore, useSimpleArtefactWorker } from "~/composables";
+import {
+	useImageCompareStore,
+	useProcessConfigStore,
+	useSimpleArtefactWorker,
+} from "~/composables";
 import { useImageDisplayListStore } from "~/composables/use-image-display-list-store";
 import { cn } from "~/utils/cn";
 import { humanReadableSize } from "~/utils/human-readable-size";
@@ -26,19 +30,30 @@ const {
 	processing,
 	process: startProcess,
 	terminate,
-} = useSimpleArtefactWorker({ config: processingConfig.allConfig, jpegFileHash: props.jpegFileHash });
+} = useSimpleArtefactWorker({
+	config: processingConfig.allConfig,
+	jpegFileHash: props.jpegFileHash,
+});
 const queued = ref(false);
 
 watchEffect(() => {
-	if (error.value === null || error.value === "") { return; }
+	if (error.value === null || error.value === "") {
+		return;
+	}
 	toast.error("Error", { description: error.value });
 });
 
 watchEffect(async () => {
-	if (!output.value) { return; }
+	if (!output.value) {
+		return;
+	}
 
 	toast.success("Success", {
-		description: h("div", [h("code", props.info.name), " done in ", h("code", output.value.timeTaken)]),
+		description: h("div", [
+			h("code", props.info.name),
+			" done in ",
+			h("code", output.value.timeTaken),
+		]),
 	});
 
 	imageDisplayListStore.setOutputImgBlobUrl(
@@ -80,12 +95,14 @@ function download(): void {
 
 	const a = document.createElement("a");
 	a.style.display = "none";
-	a.download = `${props.info.name.split(".").slice(0, -1)
+	a.download = `${props.info.name
+		.split(".")
+		.slice(0, -1)
 		.join(".")}.${props.info.outputImgFormat}`;
 	a.href = props.info.outputImgBlobUrl;
-	document.body.appendChild(a);
+	document.body.append(a);
 	a.click();
-	document.body.removeChild(a);
+	a.remove();
 }
 
 function compare(): void {
@@ -133,14 +150,18 @@ function reprocess(): void {
 				</div>
 
 				<div class="flex flex-col text-sm text-neutral-500">
-					<span class="-mb-1">{{ humanReadableSize(info.size) }} | {{ info.width }}x{{ info.height }}</span>
-					<span>{{ new Date(info.dateAdded).toLocaleTimeString("en-US", {
-						year: "numeric",
-						month: "short",
-						day: "numeric",
-						hour: "numeric",
-						minute: "numeric",
-					}) }}</span>
+					<span class="-mb-1">
+						{{ humanReadableSize(info.size) }} | {{ info.width }}x{{ info.height }}
+					</span>
+					<span>{{
+						new Date(info.dateAdded).toLocaleTimeString("en-US", {
+							year: "numeric",
+							month: "short",
+							day: "numeric",
+							hour: "numeric",
+							minute: "numeric"
+						})
+					}}</span>
 				</div>
 			</div>
 		</div>

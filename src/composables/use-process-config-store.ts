@@ -1,7 +1,6 @@
 import { clamp } from "@vueuse/core";
 import { defineStore } from "pinia";
 import { computed, ref, watchEffect } from "vue";
-
 import { OutputImgFormat, type ProcessingConfig } from "~/utils/types";
 
 export const useProcessConfigStore = defineStore("processing-config", () => {
@@ -20,21 +19,23 @@ export const useProcessConfigStore = defineStore("processing-config", () => {
 	try {
 		const config = localStorage.getItem("processing-config");
 		if (config) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-			const parsedConfig: ProcessingConfig = JSON.parse(config);
+			const parsedConfig = JSON.parse(config) as ProcessingConfig;
 			outputFormat.value = parsedConfig.outputFormat;
 			iterations.value = parsedConfig.iterations;
 			weight.value = parsedConfig.weight;
 			pWeight.value = parsedConfig.pWeight;
 			separateComponents.value = parsedConfig.separateComponents;
 		} else {
-			localStorage.setItem("processing-config", JSON.stringify({
-				outputFormat: outputFormat.value,
-				iterations: iterations.value,
-				weight: weight.value,
-				pWeight: pWeight.value,
-				separateComponents: separateComponents.value,
-			}));
+			localStorage.setItem(
+				"processing-config",
+				JSON.stringify({
+					outputFormat: outputFormat.value,
+					iterations: iterations.value,
+					weight: weight.value,
+					pWeight: pWeight.value,
+					separateComponents: separateComponents.value,
+				}),
+			);
 		}
 	} catch {
 		localStorage.removeItem("processing-config");
@@ -42,23 +43,24 @@ export const useProcessConfigStore = defineStore("processing-config", () => {
 
 	const isDefault = ref(true);
 	watchEffect(() => {
-		isDefault.value = (
-			outputFormat.value === __DEFAULT_OUTPUT_FORMAT
+		isDefault.value = outputFormat.value === __DEFAULT_OUTPUT_FORMAT
 			&& iterations.value === __DEFAULT_ITERATIONS
 			&& weight.value === __DEFAULT_WEIGHT
 			&& pWeight.value === __DEFAULT_P_WEIGHT
-			&& separateComponents.value === __DEFAULT_SEPARATE_COMPONENTS
-		);
+			&& separateComponents.value === __DEFAULT_SEPARATE_COMPONENTS;
 	});
 
 	watchEffect(() => {
-		localStorage.setItem("processing-config", JSON.stringify({
-			outputFormat: outputFormat.value,
-			iterations: iterations.value,
-			weight: weight.value,
-			pWeight: pWeight.value,
-			separateComponents: separateComponents.value,
-		}));
+		localStorage.setItem(
+			"processing-config",
+			JSON.stringify({
+				outputFormat: outputFormat.value,
+				iterations: iterations.value,
+				weight: weight.value,
+				pWeight: pWeight.value,
+				separateComponents: separateComponents.value,
+			}),
+		);
 	});
 
 	function resetDefaultAll(): void {
@@ -89,12 +91,14 @@ export const useProcessConfigStore = defineStore("processing-config", () => {
 		ensurePWeightValid: (): void => {
 			pWeight.value = clamp(pWeight.value, 0, 1);
 		},
-		allConfig: computed((): ProcessingConfig => ({
-			outputFormat: outputFormat.value,
-			iterations: iterations.value,
-			weight: weight.value,
-			pWeight: pWeight.value,
-			separateComponents: separateComponents.value,
-		})),
+		allConfig: computed(
+			(): ProcessingConfig => ({
+				outputFormat: outputFormat.value,
+				iterations: iterations.value,
+				weight: weight.value,
+				pWeight: pWeight.value,
+				separateComponents: separateComponents.value,
+			}),
+		),
 	};
 });

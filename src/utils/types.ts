@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 export enum OutputImgFormat {
 	PNG = "png",
 	WEBP = "webp",

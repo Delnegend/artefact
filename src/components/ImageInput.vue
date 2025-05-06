@@ -12,6 +12,7 @@ const imageDisplayListStore = useImageDisplayListStore();
 
 async function handleIncomingFiles(files: FileList | null): Promise<void> {
 	if (!files) { return; }
+
 	try {
 		await imageDisplayListStore.addFileList(files);
 	} catch (error) {
@@ -27,6 +28,7 @@ function handleOnDrop(event: DragEvent): void {
 	nothingOver.value = true;
 	const files = event.dataTransfer?.files;
 	if (!files) { return; }
+
 	for (const file of files) {
 		if (file.type !== "image/jpeg") {
 			toast.error("Only JPEG files are supported", {
@@ -40,7 +42,9 @@ function handleOnDrop(event: DragEvent): void {
 
 // Click to select
 const fileDialog = useFileDialog({ accept: "image/jpeg" });
-fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
+fileDialog.onChange(async (files) => {
+	await handleIncomingFiles(files);
+});
 </script>
 
 <template>
@@ -54,9 +58,9 @@ fileDialog.onChange(async (files) => { await handleIncomingFiles(files); });
 		<label
 			for="image-input"
 			:class="cn(buttonBaseClassTw, buttonVariantsTw.secondary, 'h-28 border w-[calc(100%-2rem)] flex flex-col m-4 px-4 py-2 text-balance text-xl border-neutral-300 border-dashed text-center focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 left-0 top-0 absolute select-none', !nothingOver ? 'bg-secondary/80' : '')"
-			@dragover.prevent="nothingOver = false;"
+			@dragover.prevent="nothingOver = false"
 			@drop.prevent="handleOnDrop"
-			@dragleave.prevent="nothingOver = true;">
+			@dragleave.prevent="nothingOver = true">
 			{{ nothingOver ? "Drag JPEG files here or click to select" : "Drop here" }}
 		</label>
 

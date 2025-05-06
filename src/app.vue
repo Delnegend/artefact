@@ -19,7 +19,7 @@ function toggleImageInputPanel(): void {
 	} else {
 		imageInputPanelRef.value.collapse();
 	}
-	setTimeout(() => {
+	window.setTimeout(() => {
 		imageInputPanel.style.transition = "";
 	}, 150);
 }
@@ -29,14 +29,15 @@ onMounted(() => {
 		displayMode.value = "vertical";
 	}
 
-	setTimeout(() => {
-		if (!imageInputPanelRef.value) { return; }
+	window.setTimeout(() => {
+		if (!imageInputPanelRef.value) {
+			return;
+		}
 		if (imageInputPanelRef.value.isCollapsed) {
 			imageInputPanelRef.value.expand();
 		}
 	}, 0);
 });
-
 </script>
 
 <template>
@@ -59,7 +60,7 @@ onMounted(() => {
 					class="grid h-full grid-rows-[auto,1fr,auto]"
 					:style="{
 						'min-width': displayMode === 'horizontal' ? '320px' : 0,
-						'min-height': displayMode === 'vertical' ? '370px' : undefined,
+						'min-height': displayMode === 'vertical' ? '370px' : undefined
 					}">
 					<ImageInput />
 					<ImageList />
@@ -73,7 +74,8 @@ onMounted(() => {
 				<div
 					ref="imageCompareContainerRef"
 					class="size-full">
-					<ImageCompare @toggle-image-input-panel="toggleImageInputPanel" />
+					<ImageCompare
+						@toggle-image-input-panel="toggleImageInputPanel" />
 				</div>
 			</ResizablePanel>
 		</ResizablePanelGroup>

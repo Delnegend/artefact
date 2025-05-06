@@ -4,17 +4,29 @@ import { onBeforeMount, watch } from "vue";
 
 import AppDrawer from "~/components/AppDrawer.vue";
 import Button from "~/components/ui/button/Button.vue";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "~/components/ui/sheet";
 import { colorScheme, displayMode } from "~/composables";
 
 onBeforeMount(() => {
-	const osColorScheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-	const configuredColorScheme = localStorage.getItem("color-scheme") as "light" | "dark" | null;
+	const osColorScheme = window.matchMedia("(prefers-color-scheme: dark)")
+		.matches
+		? "dark"
+		: "light";
+	const configuredColorScheme = window.localStorage.getItem("color-scheme") as
+		| "light"
+		| "dark"
+		| null;
 	colorScheme.value = configuredColorScheme ?? osColorScheme;
 });
 
 watch(colorScheme, (newColorScheme) => {
-	localStorage.setItem("color-scheme", newColorScheme);
+	window.localStorage.setItem("color-scheme", newColorScheme);
 	if (!document.documentElement.classList.contains("dark")) {
 		document.documentElement.classList.add("dark");
 		return;
@@ -24,13 +36,11 @@ watch(colorScheme, (newColorScheme) => {
 
 function handleDisplayModeChange(): void {
 	switch (displayMode.value) {
-		case "horizontal":
-		{
+		case "horizontal": {
 			displayMode.value = "vertical";
 			break;
 		}
-		case "vertical":
-		{
+		case "vertical": {
 			displayMode.value = "horizontal";
 			break;
 		}

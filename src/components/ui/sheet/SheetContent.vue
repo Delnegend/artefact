@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { X } from "lucide-vue-next";
-import {
-	DialogClose,
-	DialogContent,
-	type DialogContentEmits,
-	type DialogContentProps,
-	DialogOverlay,
-	DialogPortal,
-	useForwardPropsEmits,
-} from "radix-vue";
+import { DialogClose, DialogContent, type DialogContentEmits, type DialogContentProps, DialogOverlay, DialogPortal, useForwardPropsEmits } from "radix-vue";
 import { computed, type HTMLAttributes } from "vue";
 
 import { cn } from "~/utils/cn";
@@ -28,8 +20,8 @@ const props = defineProps<DialogContentProps & {
 const emits = defineEmits<DialogContentEmits>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-assignment, no-unused-vars
-	const { class: _, side, ...delegated } = props;
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const { class: _, side: _side, ...delegated } = props;
 
 	return delegated;
 });

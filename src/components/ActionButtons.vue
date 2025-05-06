@@ -3,9 +3,7 @@ import { toast } from "vue-sonner";
 
 import { cn } from "~/utils/cn";
 
-const props = defineProps<{
-	class?: string;
-}>();
+const props = defineProps<{ class?: string }>();
 
 function WIP(): void {
 	toast.info("This feature is not yet implemented");

@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Circle } from "lucide-vue-next";
-import {
-	DropdownMenuItemIndicator,
-	DropdownMenuRadioItem,
-	type DropdownMenuRadioItemEmits,
-	type DropdownMenuRadioItemProps,
-	useForwardPropsEmits,
-} from "radix-vue";
+import { DropdownMenuItemIndicator, DropdownMenuRadioItem, type DropdownMenuRadioItemEmits, type DropdownMenuRadioItemProps, useForwardPropsEmits } from "radix-vue";
 import { computed, type HTMLAttributes } from "vue";
 
 import { cn } from "~/utils/cn";
@@ -16,7 +10,6 @@ const props = defineProps<DropdownMenuRadioItemProps & { class?: HTMLAttributes[
 const emits = defineEmits<DropdownMenuRadioItemEmits>();
 
 const delegatedProps = computed(() => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, no-unused-vars
 	const { class: _, ...delegated } = props;
 
 	return delegated;

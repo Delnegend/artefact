@@ -4,10 +4,13 @@ import { SimpleWorkerPool, type WorkerInputWrapper, type WorkerOutputWrapper } f
 import type { WorkerInput, WorkerOutput } from "~/utils/types";
 
 const pool = new SimpleWorkerPool<WorkerInput, WorkerOutput>(4, () => {
-	return new Worker(new URL("~/utils/simple-artefact-worker.ts", import.meta.url), {
-		type: "module",
-		name: "simple-artefact-worker",
-	});
+	return new Worker(
+		new URL("~/utils/simple-artefact-worker.ts", import.meta.url),
+		{
+			type: "module",
+			name: "simple-artefact-worker",
+		},
+	);
 });
 
 export function useSimpleArtefactWorker(input: WorkerInput): {
@@ -39,18 +42,29 @@ export function useSimpleArtefactWorker(input: WorkerInput): {
 				processing.value = false;
 				completeFn?.();
 				const wo = event.data as WorkerOutputWrapper<WorkerOutput, string>;
-				if (wo.type === "pong") { return; }
-				if (wo.error !== undefined) { error.value = wo.error; return; }
-				if (!wo.data) { error.value = "Worker returns no data"; return; }
+				if (wo.type === "pong") {
+					return;
+				}
+				if (wo.error !== undefined) {
+					error.value = wo.error;
+					return;
+				}
+				if (!wo.data) {
+					error.value = "Worker returns no data";
+					return;
+				}
 				output.value = wo.data;
 			};
 			const worker = await pool.getWorker(onmessage);
 
-			const wi: WorkerInputWrapper<WorkerInput> = { type: "process", data: input };
+			const wi: WorkerInputWrapper<WorkerInput> = {
+				type: "process",
+				data: input,
+			};
 			worker.postMessage(wi);
 			processing.value = true;
 
-			if (await Promise.race([abortSignal, completeSignal]) === "abort") {
+			if ((await Promise.race([abortSignal, completeSignal])) === "abort") {
 				worker.terminate();
 				processing.value = false;
 				await pool.releaseNewWorker(onmessage);
