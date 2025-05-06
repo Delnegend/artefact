@@ -33,10 +33,14 @@ export interface WorkerInput {
 	config: ProcessingConfig;
 }
 
-export interface WorkerOutput {
+export type WorkerOutput = {
+	type: "process";
 	timeTaken?: string;
 	outputFormat?: OutputImgFormat;
-}
+} | {
+	type: "error";
+	error: string;
+};
 
 export interface ProcessingConfig {
 	outputFormat: OutputImgFormat;
