@@ -1,3 +1,6 @@
+@default:
+	just --choose
+
 test-base-420:
 	RUSTFLAGS="-Ctarget-cpu=native" cargo run --release --bin artefact-cli -- lena-base-420.jpg -y
 
@@ -25,21 +28,21 @@ build-wasm:
 	rm -f src/utils/artefact-wasm/.gitignore
 
 dev:
-	pnpm nuxt dev
+	bun nuxt dev
 
 generate:
 	#!/usr/bin/env bash
-	pnpm nuxt generate
+	bun nuxt generate
 	cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
 preview:
-	pnpm nuxt preview
+	bun nuxt preview
 
 postinstall:
-	pnpm nuxt prepare
+	bun nuxt prepare
 
 lint:
-	pnpm eslint --fix --cache .
+	bun eslint --fix --cache .
 
 tidy:
 	#!/usr/bin/env bash
