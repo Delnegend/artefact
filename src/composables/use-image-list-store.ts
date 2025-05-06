@@ -1,4 +1,3 @@
-
 import { useState } from "nuxt/app";
 import type { Ref } from "vue";
 import { deleteFileInDb, getAllFilesInDb, putFilesInDb } from "~/utils/db";
@@ -63,23 +62,26 @@ export const imageListStoreOps = {
 			}),
 		);
 
-		imageListStore.value = Object.fromEntries(
-			fileOps.map(({ file, jpegArrayBuffer, hash, width, height }) => {
-				return [
-					hash,
-					{
-						name: file.name,
-						dateAdded: new Date(),
-						size: jpegArrayBuffer.byteLength,
-						jpegBlobUrl: URL.createObjectURL(
-							new Blob([jpegArrayBuffer], { type: "image/jpeg" }),
-						),
-						width,
-						height,
-					},
-				];
-			}),
-		);
+		imageListStore.value = {
+			...imageListStore.value,
+			...Object.fromEntries(
+				fileOps.map(({ file, jpegArrayBuffer, hash, width, height }) => {
+					return [
+						hash,
+						{
+							name: file.name,
+							dateAdded: new Date(),
+							size: jpegArrayBuffer.byteLength,
+							jpegBlobUrl: URL.createObjectURL(
+								new Blob([jpegArrayBuffer], { type: "image/jpeg" }),
+							),
+							width,
+							height,
+						},
+					];
+				}),
+			),
+		};
 
 		void putFilesInDb(fileOps.map(({ file, jpegArrayBuffer, hash, width, height }) => {
 			return {
@@ -96,3 +98,8 @@ export const imageListStoreOps = {
 
 	remove(jpegFileHash: string): void {
 		const imageListStore = useImageListStore();
+
+		imageListStore.value = Object.fromEntries(Object.entries(imageListStore.value).filter(([key]) => key !== jpegFileHash));
+		void deleteFileInDb(jpegFileHash);
+	},
+} as const;
