@@ -59,3 +59,4 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 curl -fsSL https://bun.sh/install | bash
 echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.zshrc
 echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.zshrc
+bun i
