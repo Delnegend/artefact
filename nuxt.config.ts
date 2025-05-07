@@ -5,7 +5,6 @@ import wasm from "vite-plugin-wasm";
 
 export default defineNuxtConfig({
 	modules: [
-		"@vueuse/nuxt",
 		"@nuxtjs/tailwindcss",
 		"@vite-pwa/nuxt",
 	],

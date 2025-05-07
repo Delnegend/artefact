@@ -56,7 +56,15 @@ curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-
 cargo binstall flamegraph -y
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-curl -fsSL https://bun.sh/install | bash
-echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.zshrc
-echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.zshrc
-bun i
+curl https://get.volta.sh | bash
+export VOLTA_HOME=$HOME/.volta
+export PATH=$VOLTA_HOME/bin:$PATH
+if ! grep -q "export VOLTA_HOME" ~/.zshrc; then
+    echo 'export VOLTA_HOME=$HOME/.volta' >> ~/.zshrc
+fi
+if ! grep -q "export PATH" ~/.zshrc; then
+    echo 'export PATH=$VOLTA_HOME/bin:$PATH' >> ~/.zshrc
+fi
+volta install node@lts pnpm
+pnpm config set store-dir ~/.pnpm-store
+pnpm i

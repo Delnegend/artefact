@@ -6,9 +6,7 @@
 	"dependencies": {
 		"@vite-pwa/nuxt": "^1.0.0",
 		"@vueuse/core": "^13.1.0",
-		"@vueuse/nuxt": "^13.1.0",
 		"clsx": "^2.1.1",
-		"is-stream": "^4.0.1",
 		"lucide-vue-next": "^0.507.0",
 		"nuxt": "^3.17.2",
 		"radix-vue": "^1.9.17",
@@ -20,7 +18,6 @@
 	},
 	"devDependencies": {
 		"@nuxtjs/tailwindcss": "^6.14.0",
-		"@types/eslint": "^9.6.1",
 		"autoprefixer": "^10.4.21",
 		"eslint": "^9.26.0",
 		"eslint-plugin-hagemanto": "^5.2.5",

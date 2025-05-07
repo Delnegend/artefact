@@ -28,21 +28,21 @@ build-wasm:
 	rm -f src/utils/artefact-wasm/.gitignore
 
 dev:
-	bun nuxt dev
+	pnpm nuxt dev
 
 generate:
 	#!/usr/bin/env bash
-	bun nuxt generate
+	pnpm nuxt generate
 	cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
 preview:
-	bun nuxt preview
+	pnpm nuxt preview
 
 postinstall:
-	bun nuxt prepare
+	pnpm nuxt prepare
 
 lint:
-	bun eslint --fix --cache .
+	pnpm eslint --fix --cache .
 
 tidy:
 	#!/usr/bin/env bash
