@@ -51,9 +51,9 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Install dependencies
-        run: bun i
+        run: pnpm i
       - name: Generate static site
-        run: bun nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+        run: pnpm nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
