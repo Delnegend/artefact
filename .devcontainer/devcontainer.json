@@ -1,5 +1,4 @@
 {
-	"$schema": "https://github.com/devcontainers/spec/raw/refs/heads/main/schemas/devContainer.schema.json",
 	"name": "Existing Dockerfile",
 	"build": {
 		"dockerfile": "Dockerfile"
