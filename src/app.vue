@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
+import { Toaster } from "vue-sonner";
 import AppHeader from "./components/AppHeader.vue";
 import ImageCompare from "./components/ImageCompare.vue";
 import ImageInput from "./components/ImageInput.vue";
 import ImageList from "./components/ImageList.vue";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./components/ui/resizable";
 import { displayMode, imageInputPanelRef } from "./composables";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./components/ui/resizable";
-import { Toaster } from "vue-sonner";
 // import ActionButtons from "./components/ActionButtons.vue";
 
 function toggleImageInputPanel(): void {
