@@ -1,9 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
+	content: ["src/**/*.{ts,vue}"],
 	darkMode: ["class"],
 	safelist: ["dark"],
 	prefix: "",
-
 	theme: {
 		container: {
 			center: true,
