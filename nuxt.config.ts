@@ -5,7 +5,6 @@ import wasm from "vite-plugin-wasm";
 
 export default defineNuxtConfig({
 	modules: [
-		"@nuxtjs/tailwindcss",
 		"@vite-pwa/nuxt",
 	],
 	ssr: false,
@@ -76,12 +75,7 @@ export default defineNuxtConfig({
 			}),
 		],
 	},
-	postcss: {
-		plugins: {
-			tailwindcss: {},
-			autoprefixer: {},
-		},
-	},
+
 	pwa: {
 		client: {
 			installPrompt: true,
