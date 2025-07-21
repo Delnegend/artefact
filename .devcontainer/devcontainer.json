@@ -8,7 +8,9 @@
 			"extensions": [
 				"rust-lang.rust-analyzer",
 				"Vue.volar",
-				"bradlc.vscode-tailwindcss"
+				"bradlc.vscode-tailwindcss",
+				"esbenp.prettier-vscode",
+				"YoavBls.pretty-ts-errors"
 			]
 		}
 	},
