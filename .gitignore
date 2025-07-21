@@ -25,3 +25,4 @@ perf.*
 sw.*
 
 jpeg2png
+frontend/src/dev-dist/

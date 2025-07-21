@@ -28,41 +28,34 @@ build-wasm:
 	rm -f src/utils/artefact-wasm/.gitignore
 
 dev:
-	pnpm nuxt dev
+	cd frontend && pnpm nuxt dev  --no-fork
 
 generate:
 	#!/usr/bin/env bash
+	cd frontend
 	pnpm nuxt generate
 	cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
-preview:
-	pnpm nuxt preview
+lint-webapp:
+	#!/usr/bin/env bash
+	cd frontend && \
+		pnpm oxlint --import-plugin -D correctness -D perf \
+		--ignore-pattern src/dev-dist/**/*.* \
+		--ignore-pattern src/utils/artefact-wasm/**/*.* && \
+		pnpm prettier -l -w "**/*.{js,ts,vue,json,css}"
 
-postinstall:
-	pnpm nuxt prepare
-
-lint:
-	pnpm eslint --fix --cache .
-
-tidy:
+lint-rust:
 	#!/usr/bin/env bash
 	cargo fmt
 	cargo clippy
 
-_ensure_deps:
-	#!/usr/bin/env bash
-	if ! command -v zip &> /dev/null; then
-		echo "zip is not installed"
-		exit 1
-	fi
-	if ! command -v tar &> /dev/null; then
-		echo "tar is not installed"
-		exit 1
-	fi
-
-test: _ensure_deps
+# Build release binaries for different platforms to release on GitHub
+build-cross-platform:
 	#!/usr/bin/env python3
 	import os, shutil, subprocess
+
+	if not shutil.which('tar') or not shutil.which('zip'):
+		raise Exception("tar and zip must be installed and in PATH")
 
 	def run(cmd):
 		print(cmd)

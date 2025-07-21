@@ -1,0 +1,42 @@
+{
+	"name": "artefact",
+	"version": "1.0.0",
+	"description": "Optimized JPEG decoder for quality.",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Delnegend/artefact.git"
+	},
+	"author": "Delnegend",
+	"license": "MIT, Apache 2.0",
+	"bugs": {
+		"url": "https://github.com/Delnegend/artefact/issues"
+	},
+	"homepage": "https://github.com/Delnegend/artefact#readme",
+	"scripts": {
+		"postinstall": "nuxt prepare"
+	},
+	"dependencies": {
+		"@vite-pwa/nuxt": "^1.0.4",
+		"@vueuse/core": "^13.5.0",
+		"clsx": "^2.1.1",
+		"lucide-vue-next": "^0.517.0",
+		"nuxt": "^3.17.7",
+		"radix-vue": "^1.9.17",
+		"tailwind-merge": "^2.6.0",
+		"tailwindcss-animate": "^1.0.7",
+		"vue": "latest",
+		"vue-router": "latest",
+		"vue-sonner": "^2.0.2"
+	},
+	"devDependencies": {
+		"@trivago/prettier-plugin-sort-imports": "^5.2.2",
+		"autoprefixer": "^10.4.21",
+		"oxlint": "^1.7.0",
+		"postcss": "^8.5.6",
+		"prettier-plugin-tailwindcss": "^0.6.14",
+		"tailwindcss": "^3.4.17",
+		"vite-plugin-pwa": "^1.0.1",
+		"vite-plugin-wasm": "^3.5.0"
+	}
+}

@@ -132,10 +132,11 @@ Options:
 - [vscode](https://code.visualstudio.com/) + [`devcontainer`](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
 ### Directories
-- [`artefact-lib`](./artefact-lib/) - the implementation and pipeline
-- [`artefact-cli`](./artefact-cli/) - command-line interface wrapper
-- [`artefact-wasm`](./artefact-wasm/) - the [`wasm-pack`](https://github.com/rustwasm/wasm-pack) wrapper designed to build WebAssembly (WASM) modules compatible with modern browsers
-- [`zune-jpeg`](./zune-jpeg/) - a minimized fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables.
+- [`backend/artefact-lib`](./artefact-lib/) - the implementation and pipeline
+- [`backend/artefact-cli`](./artefact-cli/) - command-line interface wrapper
+- [`backend/artefact-wasm`](./artefact-wasm/) - the [`wasm-pack`](https://github.com/rustwasm/wasm-pack) wrapper designed to build WebAssembly (WASM) modules compatible with modern browsers
+- [`backend/zune-jpeg`](./zune-jpeg/) - a minimized fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables.
+- [`frontend/`](./frontend/) - the web application, built with [Nuxt.js](https://nuxt.com/)
 
 ## License
 Licensed under either of

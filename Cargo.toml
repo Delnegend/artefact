@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["artefact-cli", "artefact-lib", "artefact-wasm", "zune-jpeg"]
+members = ["backend/artefact-cli", "backend/artefact-lib", "backend/artefact-wasm", "backend/zune-jpeg"]
 
 [profile.release]
 lto = true

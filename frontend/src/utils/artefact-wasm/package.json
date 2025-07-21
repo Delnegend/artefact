@@ -1,0 +1,15 @@
+{
+	"name": "artefact-wasm",
+	"type": "module",
+	"version": "0.1.0",
+	"files": [
+		"artefact_wasm_bg.wasm",
+		"artefact_wasm.js",
+		"artefact_wasm.d.ts"
+	],
+	"main": "artefact_wasm.js",
+	"types": "artefact_wasm.d.ts",
+	"sideEffects": [
+		"./snippets/*"
+	]
+}
