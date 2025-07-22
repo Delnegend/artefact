@@ -35,8 +35,9 @@ else
     sudo tar -xf /tmp/just.tar.gz -C /usr/local/bin just
 fi
 rm -f /tmp/just.tar.gz
-# add j=just alias
 echo 'alias j=just' >> ~/.zshrc
+just --completions zsh > ~/.just.zsh
+echo '[[ -f ~/.just.zsh ]] && source ~/.just.zsh' >> ~/.zshrc
 
 # fzf
 ver="0.61.3"
