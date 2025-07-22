@@ -34,7 +34,7 @@ generate:
 	#!/usr/bin/env bash
 	cd frontend
 	pnpm nuxt generate
-	cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+	cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
 lint:
 	#!/usr/bin/env bash

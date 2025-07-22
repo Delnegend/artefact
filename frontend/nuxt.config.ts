@@ -81,8 +81,20 @@ export default defineNuxtConfig({
 					],
 					display: 'standalone'
 				},
+				workbox: {
+					globPatterns: ['**/*.{js,css,html,svg,png,svg,ico}'],
+					cleanupOutdatedCaches: true,
+					clientsClaim: true
+				},
+				injectManifest: {
+					globPatterns: ['**/*.{js,css,html,svg,png,svg,ico}']
+				},
 				devOptions: {
-					enabled: true
+					enabled: true,
+					navigateFallback: 'index.html',
+					suppressWarnings: true,
+					/* when using generateSW the PWA plugin will switch to classic */
+					type: 'module'
 				}
 			})
 		]
