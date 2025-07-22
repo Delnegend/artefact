@@ -1,0 +1,9 @@
+{
+	"semi": false,
+	"singleQuote": true,
+	"tabWidth": 4,
+	"useTabs": true,
+	"tailwindStylesheet": "./frontend/src/assets/css/main.css",
+	"trailingComma": "none",
+	"tailwindFunctions": ["cva", "cn"]
+}
