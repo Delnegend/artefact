@@ -28,34 +28,38 @@ concurrency:
 jobs:
     build:
         runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: frontend
         steps:
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
                   version: 10
+
             - name: Setup Node
               uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: 'pnpm'
-                  cache-dependency-path: ../pnpm-lock.yaml
+                  cache-dependency-path: ./frontend
+
             - name: Setup Pages
               uses: actions/configure-pages@v4
+
             - name: Install dependencies
+              working-directory: ./frontend
               run: pnpm i
+
             - name: Generate static site
-              run: pnpm nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+              run: cd frontend && pnpm nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
               with:
-                  path: .output/public
+                  path: ./frontend/.output/public
 
     deploy:
         environment:
