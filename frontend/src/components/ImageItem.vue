@@ -69,17 +69,17 @@ function process(): void {
 		})
 
 		// we need to update the image list store because worker can't access it, only the db
+		const targetImg = imgList.value[props.jpegFileHash]
+		if (!targetImg) return
+		targetImg.outputImgBlobUrl = resultImgFromDb?.outputImgArrayBuffer
+			? URL.createObjectURL(
+					new Blob([resultImgFromDb.outputImgArrayBuffer], {
+						type: `image/${resultImgFromDb.outputImgFormat}`
+					})
+				)
+			: undefined
 
-		imgList.value[props.jpegFileHash].outputImgBlobUrl =
-			resultImgFromDb?.outputImgArrayBuffer
-				? URL.createObjectURL(
-						new Blob([resultImgFromDb.outputImgArrayBuffer], {
-							type: `image/${resultImgFromDb.outputImgFormat}`
-						})
-					)
-				: undefined
-
-		imgList.value[props.jpegFileHash].outputImgFormat = result.outputFormat
+		targetImg.outputImgFormat = result.outputFormat
 	})()
 }
 
@@ -93,10 +93,9 @@ function download(): void {
 
 	const a = document.createElement('a')
 	a.style.display = 'none'
-	a.download = `${props.info.name
-		.split('.')
-		.slice(0, -1)
-		.join('.')}.${props.info.outputImgFormat}`
+	a.download = `${props.info.name.split('.').slice(0, -1).join('.')}.${
+		props.info.outputImgFormat
+	}`
 	a.href = props.info.outputImgBlobUrl
 	document.body.append(a)
 	a.click()
@@ -129,7 +128,7 @@ function remove(): void {
 
 <template>
 	<div :class="cn('px-4 flex flex-col gap-3', props.class)">
-		<div class="grid grid-cols-[auto,1fr] items-center gap-4">
+		<div class="grid grid-cols-[auto_1fr] items-center gap-4">
 			<img
 				:src="info.jpegBlobUrl"
 				class="aspect-square size-16 rounded-md object-cover"
@@ -142,7 +141,7 @@ function remove(): void {
 					class="line-clamp-1 overflow-hidden text-ellipsis bg-clip-text font-medium text-transparent"
 					:style="{
 						backgroundImage:
-							'linear-gradient(90deg, hsl(var(--primary)) 70%, transparent 100%)'
+							'linear-gradient(90deg, var(--primary) 70%, transparent 100%)'
 					}"
 				>
 					{{ info.name }}
@@ -187,7 +186,7 @@ function remove(): void {
 				>
 					Download
 					<Badge
-						class="absolute -bottom-3 scale-90 bg-primary-foreground/90 backdrop-blur-sm"
+						class="absolute -bottom-3 scale-90 bg-primary-foreground/90 backdrop-blur-xs"
 						variant="outline"
 					>
 						{{ props.info.outputImgFormat }}

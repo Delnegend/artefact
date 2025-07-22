@@ -71,12 +71,12 @@ function cleanup(): void {
 }
 
 function handleTouchStart(e: TouchEvent): void {
-	if (e.touches.length !== 2) {
-		return
-	}
+	// if (e.touches.length !== 2)
+	// 	return
 
 	const touch1 = e.touches[0]
 	const touch2 = e.touches[1]
+	if (!touch1 || !touch2) return
 	initialDistance = Math.hypot(
 		touch1.clientX - touch2.clientX,
 		touch1.clientY - touch2.clientY
@@ -84,12 +84,9 @@ function handleTouchStart(e: TouchEvent): void {
 	initialScale = scale.value
 
 	function touchMoveHandler(e: TouchEvent): void {
-		if (e.touches.length !== 2) {
-			return
-		}
-
 		const touch1 = e.touches[0]
 		const touch2 = e.touches[1]
+		if (!touch1 || !touch2) return
 		const newDistance = Math.hypot(
 			touch1.clientX - touch2.clientX,
 			touch1.clientY - touch2.clientY
@@ -125,6 +122,7 @@ function doDrag(e: MouseEvent | TouchEvent): void {
 
 	window.requestAnimationFrame(() => {
 		const pos = 'touches' in e ? e.touches[0] : e
+		if (!pos) return
 		position.value = {
 			x: (pos.clientX - dragStart.value.x) / scale.value,
 			y: (pos.clientY - dragStart.value.y) / scale.value
@@ -145,6 +143,7 @@ function startDrag(e: MouseEvent | TouchEvent): void {
 	isDragging.value = true
 
 	const pos = 'touches' in e ? e.touches[0] : e
+	if (!pos) return
 	dragStart.value = {
 		x: pos.clientX - position.value.x * scale.value,
 		y: pos.clientY - position.value.y * scale.value
@@ -163,16 +162,13 @@ const isDraggingSlidingHandle = ref(false)
 const slidingHandlePositionPercent = ref(50) // 0-100
 
 function doDragSlidingHandle(e: MouseEvent | TouchEvent): void {
-	if (!isDraggingSlidingHandle.value || !containerRef.value) {
-		return
-	}
+	if (!isDraggingSlidingHandle.value || !containerRef.value) return
 
 	window.requestAnimationFrame(() => {
-		if (!containerRef.value) {
-			return
-		}
+		if (!containerRef.value) return
 
 		const pos = 'touches' in e ? e.touches[0] : e
+		if (!pos) return
 		const rect = containerRef.value.getBoundingClientRect()
 		const percentage = ((pos.clientX - rect.left) / rect.width) * 100
 		slidingHandlePositionPercent.value = clamp(percentage, 0, 100)
@@ -274,14 +270,14 @@ watch(
 		>
 			<ChevronsLeftRight
 				:size="50"
-				color="hsl(var(--primary))"
+				color="var(--primary)"
 				class="overflow-visible rounded-full bg-primary-foreground p-2 shadow-lg"
 			/>
 		</div>
 
 		<!-- control buttons, bottom left -->
 		<div
-			class="absolute bottom-4 left-5 flex rounded-md bg-secondary/60 backdrop-blur"
+			class="absolute bottom-4 left-5 flex rounded-md bg-secondary/60 backdrop-blur-sm"
 		>
 			<DropdownMenu>
 				<DropdownMenuTrigger>
@@ -305,7 +301,7 @@ watch(
 			<Button
 				size="lg"
 				variant="secondary"
-				class="aspect-square px-4 font-mono shadow-sm transition-all hover:shadow-md"
+				class="aspect-square px-4 font-mono shadow-xs transition-all hover:shadow-md"
 				:disabled="scale === 1 && position.x === 0 && position.y === 0"
 				@click="
 					() => {
@@ -320,12 +316,12 @@ watch(
 
 		<!-- control buttons, bottom right -->
 		<div
-			class="absolute bottom-4 right-5 z-10 flex gap-px rounded-md bg-primary-foreground/60 backdrop-blur"
+			class="absolute bottom-4 right-5 z-10 flex gap-px rounded-md bg-primary-foreground/60 backdrop-blur-sm"
 		>
 			<Button
 				size="lg"
 				variant="secondary"
-				class="rounded-r-none p-4 shadow-sm hover:shadow-md"
+				class="rounded-r-none p-4 shadow-xs hover:shadow-md"
 				:disabled="imgCompStore.compareMode === 'side-by-side'"
 				@click="imgCompStore.compareMode = 'side-by-side'"
 			>
@@ -334,7 +330,7 @@ watch(
 			<Button
 				size="lg"
 				variant="secondary"
-				class="rounded-l-none p-4 shadow-sm hover:shadow-md"
+				class="rounded-l-none p-4 shadow-xs hover:shadow-md"
 				:disabled="imgCompStore.compareMode === 'overlay'"
 				@click="imgCompStore.compareMode = 'overlay'"
 			>
@@ -344,7 +340,7 @@ watch(
 
 		<!-- collapse image input btn -->
 		<Button
-			class="absolute left-5 top-4 aspect-square p-0 backdrop-blur"
+			class="absolute left-5 top-4 aspect-square p-0 backdrop-blur-sm"
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')"

@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from '@tailwindcss/vite'
 import { defineNuxtConfig } from 'nuxt/config'
 import { VitePWA } from 'vite-plugin-pwa'
 import wasm from 'vite-plugin-wasm'
@@ -46,6 +47,7 @@ export default defineNuxtConfig({
 			rollupOptions: { output: { format: 'es' } }
 		},
 		plugins: [
+			tailwindcss(),
 			wasm(),
 			VitePWA({
 				registerType: 'autoUpdate',
@@ -84,12 +86,6 @@ export default defineNuxtConfig({
 				}
 			})
 		]
-	},
-	postcss: {
-		plugins: {
-			tailwindcss: {},
-			autoprefixer: {}
-		}
 	},
 	pwa: {
 		client: {

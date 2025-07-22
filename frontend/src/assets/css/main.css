@@ -1,213 +1,326 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* dm-sans-regular - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 400;
-	src: url('/dm-sans/regular.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+@source '../../**/*.{vue,ts,js,jsx,tsx}';
 
-/* dm-sans-italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 400;
-	src: url('/dm-sans/italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
 
-/* dm-sans-500 - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 500;
-	src: url('/dm-sans/500.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
 
-/* dm-sans-500italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 500;
-	src: url('/dm-sans/500italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+@theme {
+	/* Colors from tailwind.config.js */
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
 
-/* dm-sans-600 - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 600;
-	src: url('/dm-sans/600.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
 
-/* dm-sans-600italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 600;
-	src: url('/dm-sans/600italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
 
-/* dm-sans-700 - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 700;
-	src: url('/dm-sans/700.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
 
-/* dm-sans-700italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 700;
-	src: url('/dm-sans/700italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
 
-/* dm-sans-800 - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 800;
-	src: url('/dm-sans/800.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
 
-/* dm-sans-800italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 800;
-	src: url('/dm-sans/800italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
 
-/* dm-sans-900 - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: normal;
-	font-weight: 900;
-	src: url('/dm-sans/900.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
 
-/* dm-sans-900italic - latin */
-@font-face {
-	font-display: swap;
-	/* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-	font-family: 'DM Sans';
-	font-style: italic;
-	font-weight: 900;
-	src: url('/dm-sans/900italic.woff2') format('woff2');
-	/* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
-
-* {
-	font-family: 'DM Sans', sans-serif;
+	/* BorderRadius from tailwind.config.js */
+	--border-radius-xl: calc(var(--radius) + 4px);
+	--border-radius-lg: var(--radius);
+	--border-radius-md: calc(var(--radius) - 2px);
+	--border-radius-sm: calc(var(--radius) - 4px);
 }
 
 @layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+
+	/* dm-sans-regular - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 400;
+		src: url('../dm-sans/regular.woff2') format('woff2');
+	}
+
+	/* dm-sans-italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 400;
+		src: url('../dm-sans/italic.woff2') format('woff2');
+	}
+
+	/* dm-sans-500 - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 500;
+		src: url('../dm-sans/500.woff2') format('woff2');
+	}
+
+	/* dm-sans-500italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 500;
+		src: url('../dm-sans/500italic.woff2') format('woff2');
+	}
+
+	/* dm-sans-600 - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 600;
+		src: url('../dm-sans/600.woff2') format('woff2');
+	}
+
+	/* dm-sans-600italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 600;
+		src: url('../dm-sans/600italic.woff2') format('woff2');
+	}
+
+	/* dm-sans-700 - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 700;
+		src: url('../dm-sans/700.woff2') format('woff2');
+	}
+
+	/* dm-sans-700italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 700;
+		src: url('../dm-sans/700italic.woff2') format('woff2');
+	}
+
+	/* dm-sans-800 - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 800;
+		src: url('../dm-sans/800.woff2') format('woff2');
+	}
+
+	/* dm-sans-800italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 800;
+		src: url('../dm-sans/800italic.woff2') format('woff2');
+	}
+
+	/* dm-sans-900 - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: normal;
+		font-weight: 900;
+		src: url('../dm-sans/900.woff2') format('woff2');
+	}
+
+	/* dm-sans-900italic - latin */
+	@font-face {
+		font-display: swap;
+
+		font-family: 'DM Sans';
+		font-style: italic;
+		font-weight: 900;
+		src: url('../dm-sans/900italic.woff2') format('woff2');
+	}
+
+	* {
+		font-family: 'DM Sans', sans-serif;
+	}
+
 	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
+		--background: hsl(0 0% 100%);
+		--foreground: hsl(222.2 84% 4.9%);
 
-		--muted: 210 40% 96.1%;
-		--muted-foreground: 215.4 16.3% 46.9%;
+		--muted: hsl(210 40% 96.1%);
+		--muted-foreground: hsl(215.4 16.3% 46.9%);
 
-		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
+		--popover: hsl(0 0% 100%);
+		--popover-foreground: hsl(222.2 84% 4.9%);
 
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
+		--card: hsl(0 0% 100%);
+		--card-foreground: hsl(222.2 84% 4.9%);
 
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
+		--border: hsl(214.3 31.8% 91.4%);
+		--input: hsl(214.3 31.8% 91.4%);
 
-		--primary: 222.2 47.4% 11.2%;
-		--primary-foreground: 210 40% 98%;
+		--primary: hsl(222.2 47.4% 11.2%);
+		--primary-foreground: hsl(210 40% 98%);
 
-		--secondary: 210 40% 96.1%;
-		--secondary-foreground: 222.2 47.4% 11.2%;
+		--secondary: hsl(210 40% 96.1%);
+		--secondary-foreground: hsl(222.2 47.4% 11.2%);
 
-		--accent: 210 40% 96.1%;
-		--accent-foreground: 222.2 47.4% 11.2%;
+		--accent: hsl(210 40% 96.1%);
+		--accent-foreground: hsl(222.2 47.4% 11.2%);
 
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
+		--destructive: hsl(0 84.2% 60.2%);
+		--destructive-foreground: hsl(210 40% 98%);
 
-		--ring: 222.2 84% 4.9%;
+		--ring: hsl(222.2 84% 4.9%);
 
 		--radius: 0.5rem;
 	}
 
 	.dark {
-		--background: 222.2 84% 4.9%;
-		--foreground: 210 40% 98%;
+		--background: hsl(222.2 84% 4.9%);
+		--foreground: hsl(210 40% 98%);
 
-		--muted: 217.2 32.6% 17.5%;
-		--muted-foreground: 215 20.2% 65.1%;
+		--muted: hsl(217.2 32.6% 17.5%);
+		--muted-foreground: hsl(215 20.2% 65.1%);
 
-		--popover: 222.2 84% 4.9%;
-		--popover-foreground: 210 40% 98%;
+		--popover: hsl(222.2 84% 4.9%);
+		--popover-foreground: hsl(210 40% 98%);
 
-		--card: 222.2 84% 4.9%;
-		--card-foreground: 210 40% 98%;
+		--card: hsl(222.2 84% 4.9%);
+		--card-foreground: hsl(210 40% 98%);
 
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
+		--border: hsl(217.2 32.6% 17.5%);
+		--input: hsl(217.2 32.6% 17.5%);
 
-		--primary: 210 40% 98%;
-		--primary-foreground: 222.2 47.4% 11.2%;
+		--primary: hsl(210 40% 98%);
+		--primary-foreground: hsl(222.2 47.4% 11.2%);
 
-		--secondary: 217.2 32.6% 17.5%;
-		--secondary-foreground: 210 40% 98%;
+		--secondary: hsl(217.2 32.6% 17.5%);
+		--secondary-foreground: hsl(210 40% 98%);
 
-		--accent: 217.2 32.6% 17.5%;
-		--accent-foreground: 210 40% 98%;
+		--accent: hsl(217.2 32.6% 17.5%);
+		--accent-foreground: hsl(210 40% 98%);
 
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 210 40% 98%;
+		--destructive: hsl(0 62.8% 30.6%);
+		--destructive-foreground: hsl(210 40% 98%);
 
-		--ring: 212.7 26.8% 83.9%;
+		--ring: hsl(212.7 26.8% 83.9%);
 	}
 
 	* {
-		@apply border-border;
+		/* @apply border-border; */
+		border-color: var(--border);
 	}
 
 	body {
-		@apply overscroll-none bg-background text-foreground transition-colors;
+		overscroll-behavior: none;
+		background-color: var(--background);
+		color: var(--foreground);
+		transition-property:
+			color, background-color, border-color, outline-color,
+			text-decoration-color, fill, stroke, --tw-gradient-from,
+			--tw-gradient-via, --tw-gradient-to;
+		transition-timing-function: var(
+			--tw-ease,
+			var(--default-transition-timing-function)
+				/* cubic-bezier(0.4, 0, 0.2, 1) */
+		);
+		transition-duration: var(
+			--tw-duration,
+			var(--default-transition-duration) /* 150ms */
+		);
+	}
+
+	/* Keyframes from tailwind.config.js */
+	@keyframes accordion-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-accordion-content-height);
+		}
+	}
+
+	@keyframes accordion-up {
+		from {
+			height: var(--radix-accordion-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
+
+	@keyframes collapsible-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-collapsible-content-height);
+		}
+	}
+
+	@keyframes collapsible-up {
+		from {
+			height: var(--radix-collapsible-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
+}
+
+@layer components {
+	/* Animations from tailwind.config.js */
+	.animate-accordion-down {
+		animation: accordion-down 0.2s ease-out;
+	}
+
+	.animate-accordion-up {
+		animation: accordion-up 0.2s ease-out;
+	}
+
+	.animate-collapsible-down {
+		animation: collapsible-down 0.2s ease-in-out;
+	}
+
+	.animate-collapsible-up {
+		animation: collapsible-up 0.2s ease-in-out;
 	}
 }

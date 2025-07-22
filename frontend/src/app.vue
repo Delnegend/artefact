@@ -8,55 +8,41 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup
 } from './components/ui/resizable'
+import { Toaster } from './components/ui/sonner'
 import { displayMode, imageInputPanelRef } from './composables'
 import { onMounted } from 'vue'
-import { Toaster } from 'vue-sonner'
-
-// import ActionButtons from "./components/ActionButtons.vue";
 
 function toggleImageInputPanel(): void {
-	if (!imageInputPanelRef.value) {
-		return
-	}
+	if (!imageInputPanelRef.value) return
+
 	const imageInputPanel =
 		document.querySelector<HTMLDivElement>('.image-input-panel')
-	if (!imageInputPanel) {
-		return
-	}
+	if (!imageInputPanel) return
 
 	imageInputPanel.style.transition = 'flex 150ms cubic-bezier(0.4, 0, 0.2, 1)'
-	if (imageInputPanelRef.value.isCollapsed) {
-		imageInputPanelRef.value.expand()
-	} else {
-		imageInputPanelRef.value.collapse()
-	}
-	window.setTimeout(() => {
-		imageInputPanel.style.transition = ''
-	}, 150)
+	if (imageInputPanelRef.value.isCollapsed) imageInputPanelRef.value.expand()
+	else imageInputPanelRef.value.collapse()
+
+	window.setTimeout(() => (imageInputPanel.style.transition = ''), 150)
 }
 
 onMounted(() => {
-	if (window.innerWidth < window.innerHeight) {
-		displayMode.value = 'vertical'
-	}
+	if (window.innerWidth < window.innerHeight) displayMode.value = 'vertical'
 
 	window.setTimeout(() => {
-		if (!imageInputPanelRef.value) {
-			return
-		}
-		if (imageInputPanelRef.value.isCollapsed) {
+		if (!imageInputPanelRef.value) return
+
+		if (imageInputPanelRef.value.isCollapsed)
 			imageInputPanelRef.value.expand()
-		}
 	}, 0)
 })
 </script>
 
 <template>
 	<div class="h-dvh max-h-dvh w-full">
-		<AppHeader />
 		<Toaster />
+		<AppHeader />
 		<NuxtPwaManifest />
-
 		<ResizablePanelGroup
 			:direction="displayMode"
 			class="h-full max-h-[calc(100vh-4rem)]"
@@ -70,7 +56,7 @@ onMounted(() => {
 				class="image-input-panel"
 			>
 				<div
-					class="grid h-full grid-rows-[auto,1fr,auto]"
+					class="grid h-full grid-rows-[auto_1fr_auto]"
 					:style="{
 						'min-width': displayMode === 'horizontal' ? '320px' : 0,
 						'min-height':

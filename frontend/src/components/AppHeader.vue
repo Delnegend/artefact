@@ -50,7 +50,7 @@ function handleDisplayModeChange(): void {
 
 <template>
 	<header
-		class="grid h-16 w-full grid-cols-[1fr,auto,1fr] items-center border-b px-4"
+		class="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center border-b px-4"
 	>
 		<div
 			class="flex gap-3 [&>button]:aspect-square [&>button]:size-10 [&>button]:p-0"
