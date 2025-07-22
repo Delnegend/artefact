@@ -138,6 +138,11 @@ Options:
 - [`backend/zune-jpeg`](./zune-jpeg/) - a minimized fork of [`zune-jpeg`](https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg) exposes the underlying DCT coefficients and quantization tables.
 - [`frontend/`](./frontend/) - the web application, built with [Nuxt.js](https://nuxt.com/)
 
+### Why are there 2 Prettier configs in `frontend/package.json` and `.prettierrc`?
+- The first one is for the `prettier` CLI.
+- The second one is for the vscode extension.
+- Both are the same, except for the plugins.
+
 ## License
 Licensed under either of
 
