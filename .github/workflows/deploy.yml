@@ -54,7 +54,7 @@ jobs:
               run: pnpm i
 
             - name: Generate static site
-              run: cd frontend && pnpm nuxt generate && cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+              run: cd frontend && pnpm nuxt generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
