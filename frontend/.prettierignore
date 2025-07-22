@@ -4,3 +4,4 @@ dist/
 node_modules/
 src/dev-dist/
 **/*.d.ts
+utils/artefact-wasm/
