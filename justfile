@@ -21,11 +21,11 @@ build-linux-64:
 
 build-wasm:
 	#!/usr/bin/env bash
-	rm -rf src/utils/artefact-wasm
-	cd artefact-wasm
-	wasm-pack build --target web --out-dir ../src/utils/artefact-wasm
+	rm -rf frontend/src/utils/artefact-wasm
+	cd backend/artefact-wasm
+	wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm
 	cd ..
-	rm -f src/utils/artefact-wasm/.gitignore
+	rm -f frontend/src/utils/artefact-wasm/.gitignore
 
 dev:
 	cd frontend && pnpm nuxt dev  --no-fork
@@ -36,7 +36,7 @@ generate:
 	pnpm nuxt generate
 	cp .nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
-lint-webapp:
+lint:
 	#!/usr/bin/env bash
 	cd frontend && \
 		pnpm oxlint --import-plugin -D correctness -D perf \
@@ -62,7 +62,7 @@ build-cross-platform:
 		subprocess.run(cmd, shell=True, check=True)
 
 	version = None
-	with open('artefact-cli/Cargo.toml') as f:
+	with open('backend/artefact-cli/Cargo.toml') as f:
 		for line in f:
 			if 'version' in line:
 				version = line.split('"')[1]
