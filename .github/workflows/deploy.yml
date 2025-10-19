@@ -44,7 +44,7 @@ jobs:
               run: bun i
 
             - name: Generate static site
-              run: cd frontend && bun run generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+              run: cd frontend && bun run nuxt generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
