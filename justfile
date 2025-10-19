@@ -28,21 +28,21 @@ build-wasm:
 	rm -f frontend/src/utils/artefact-wasm/.gitignore
 
 dev:
-	cd frontend && pnpm nuxt dev  --no-fork
+	cd frontend && bun run nuxt dev  --no-fork
 
 generate:
 	#!/usr/bin/env bash
 	cd frontend
-	pnpm nuxt generate
+	bun run nuxt generate
 	cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
 lint:
 	#!/usr/bin/env bash
 	cd frontend && \
-		pnpm oxlint --import-plugin -D correctness -D perf \
+		bun run oxlint --import-plugin -D correctness -D perf \
 		--ignore-pattern src/dev-dist/**/*.* \
 		--ignore-pattern src/utils/artefact-wasm/**/*.* && \
-		pnpm prettier -l -w "**/*.{js,ts,vue,json,css}"
+		bun run prettier -l -w "**/*.{js,ts,vue,json,css}"
 
 lint-rust:
 	#!/usr/bin/env bash
