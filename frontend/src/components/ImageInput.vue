@@ -47,7 +47,7 @@ fileDialog.onChange(async (files) => {
 	<div class="relative">
 		<input
 			id="image-input"
-			class="absolute left-0 top-0 m-4 h-28 w-[calc(100%-2rem)] rounded-md bg-transparent"
+			class="absolute top-0 left-0 m-4 h-28 w-[calc(100%-2rem)] rounded-md bg-transparent"
 			aria-label="image-input"
 			@click.prevent="fileDialog.open()"
 		/>
@@ -58,7 +58,7 @@ fileDialog.onChange(async (files) => {
 				cn(
 					buttonBaseClassTw,
 					buttonVariantsTw.secondary,
-					'h-28 border w-[calc(100%-2rem)] flex flex-col m-4 px-4 py-2 text-balance text-xl border-neutral-300 border-dashed text-center focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 left-0 top-0 absolute select-none',
+					'focus:ring-primary-500 focus:ring-opacity-50 absolute top-0 left-0 m-4 flex h-28 w-[calc(100%-2rem)] flex-col border border-dashed border-neutral-300 px-4 py-2 text-center text-xl text-balance select-none focus:ring-2 focus:outline-hidden',
 					!nothingOver ? 'bg-secondary/80' : ''
 				)
 			"

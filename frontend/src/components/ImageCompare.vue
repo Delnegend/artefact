@@ -218,7 +218,7 @@ watch(
 		<div
 			class="order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
 			:class="{
-				'absolute left-0 top-0': imgCompStore.compareMode === 'overlay'
+				'absolute top-0 left-0': imgCompStore.compareMode === 'overlay'
 			}"
 			@mousedown.prevent="startDrag"
 			@touchstart="startDrag"
@@ -238,7 +238,7 @@ watch(
 		<div
 			class="-order-1 flex size-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
 			:class="{
-				'absolute left-0 top-0': imgCompStore.compareMode === 'overlay'
+				'absolute top-0 left-0': imgCompStore.compareMode === 'overlay'
 			}"
 			:style="{
 				clipPath:
@@ -316,7 +316,7 @@ watch(
 
 		<!-- control buttons, bottom right -->
 		<div
-			class="absolute bottom-4 right-5 z-10 flex gap-px rounded-md bg-primary-foreground/60 backdrop-blur-sm"
+			class="absolute right-5 bottom-4 z-10 flex gap-px rounded-md bg-primary-foreground/60 backdrop-blur-sm"
 		>
 			<Button
 				size="lg"
@@ -340,7 +340,7 @@ watch(
 
 		<!-- collapse image input btn -->
 		<Button
-			class="absolute left-5 top-4 aspect-square p-0 backdrop-blur-sm"
+			class="absolute top-4 left-5 aspect-square p-0 backdrop-blur-sm"
 			variant="secondary"
 			size="lg"
 			@click="$emit('toggle-image-input-panel')"
@@ -374,7 +374,7 @@ watch(
 
 	<div
 		v-else
-		class="flex size-full items-center justify-center text-balance text-center"
+		class="flex size-full items-center justify-center text-center text-balance"
 	>
 		<p class="text-lg text-gray-500">
 			Hit the compare button on any image.

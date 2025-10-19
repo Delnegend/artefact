@@ -54,7 +54,7 @@ const isDefault = processConfigStoreOps.isDefault()
 						<Info class="size-5 opacity-75" />
 					</PopoverTrigger>
 					<PopoverContent>
-						<p class="text-balance text-sm text-primary/60">
+						<p class="text-sm text-balance text-primary/60">
 							The number of optimization steps and are represented
 							as an integer. Higher values yield better results
 							but require more time. The iterations for the chroma
@@ -78,7 +78,7 @@ const isDefault = processConfigStoreOps.isDefault()
 						<Info class="size-5 opacity-75" />
 					</PopoverTrigger>
 					<PopoverContent>
-						<p class="text-balance text-sm text-primary/60">
+						<p class="text-sm text-balance text-primary/60">
 							A floating point number for Total Generalized
 							Variation weight. Higher values result in smoother
 							transitions with less staircasing. A value of 1.0
@@ -106,7 +106,7 @@ const isDefault = processConfigStoreOps.isDefault()
 						<Info class="size-5 opacity-75" />
 					</PopoverTrigger>
 					<PopoverContent>
-						<p class="text-balance text-sm text-primary/60">
+						<p class="text-sm text-balance text-primary/60">
 							A floating-point number for DCT coefficient distance
 							weight. Higher values make the result more similar
 							to the source JPEG. A value of 1.0 means

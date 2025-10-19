@@ -127,7 +127,7 @@ function remove(): void {
 </script>
 
 <template>
-	<div :class="cn('px-4 flex flex-col gap-3', props.class)">
+	<div :class="cn('flex flex-col gap-3 px-4', props.class)">
 		<div class="grid grid-cols-[auto_1fr] items-center gap-4">
 			<img
 				:src="info.jpegBlobUrl"
@@ -138,7 +138,7 @@ function remove(): void {
 				class="flex size-full flex-col justify-between overflow-hidden"
 			>
 				<div
-					class="line-clamp-1 overflow-hidden text-ellipsis bg-clip-text font-medium text-transparent"
+					class="line-clamp-1 overflow-hidden bg-clip-text font-medium text-ellipsis text-transparent"
 					:style="{
 						backgroundImage:
 							'linear-gradient(90deg, var(--primary) 70%, transparent 100%)'

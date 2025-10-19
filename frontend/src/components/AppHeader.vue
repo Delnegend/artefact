@@ -84,7 +84,7 @@ function handleDisplayModeChange(): void {
 				artefact
 			</div>
 			<div
-				class="absolute -bottom-6 -right-6 z-10 whitespace-nowrap rounded-full bg-primary px-2 py-1 text-sm font-black italic text-red-500 drop-shadow-md"
+				class="absolute -right-6 -bottom-6 z-10 rounded-full bg-primary px-2 py-1 text-sm font-black whitespace-nowrap text-red-500 italic drop-shadow-md"
 			>
 				beta
 			</div>
