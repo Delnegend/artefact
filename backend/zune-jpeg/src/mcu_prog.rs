@@ -415,7 +415,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     pub(crate) fn reset_params(&mut self) {
@@ -468,5 +468,5 @@ where
             }
         }
     }
-    return Err(DecodeErrors::ExhaustedData);
+    Err(DecodeErrors::ExhaustedData)
 }

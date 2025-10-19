@@ -1,5 +1,5 @@
 use crate::jpeg::{Coefficient, Jpeg, JpegSource};
-use zune_jpeg::{zune_core::bytestream::ZCursor, JpegDecoder};
+use zune_jpeg::{JpegDecoder, zune_core::bytestream::ZCursor};
 
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Self, String> {
@@ -13,10 +13,7 @@ impl Jpeg {
         img.decode()
             .map_err(|e| format!("Failed to decode JPEG: {e}"))?;
 
-        let (real_px_w, real_px_h) = img
-            .dimensions()
-            .map(|(w, h)| (w as u32, h as u32))
-            .expect("Failed to get dimensions");
+        let (real_px_w, real_px_h) = img.dimensions().expect("Failed to get dimensions");
 
         let nchannel = img.components.len();
 
@@ -24,13 +21,12 @@ impl Jpeg {
 
         for comp in img.components {
             coefs.push(Coefficient {
-                rounded_px_w: u32::from(comp.rounded_px_w),
-                rounded_px_h: u32::from(comp.rounded_px_h),
+                rounded_px_w: comp.rounded_px_w.into(),
+                rounded_px_h: comp.rounded_px_h.into(),
                 rounded_px_count: comp.rounded_px_count as u32,
-                block_w: u32::from(comp.rounded_px_w) / 8,
-                block_h: u32::from(comp.rounded_px_h) / 8,
-                block_count: (u32::from(comp.rounded_px_w) / 8)
-                    * (u32::from(comp.rounded_px_h) / 8),
+                block_w: (comp.rounded_px_w / 8).into(),
+                block_h: (comp.rounded_px_h / 8).into(),
+                block_count: u32::from(comp.rounded_px_w / 8) * u32::from(comp.rounded_px_h / 8),
                 horizontal_samp_factor: comp.horizontal_samp_factor,
                 vertical_samp_factor: comp.vertical_samp_factor,
 
@@ -50,10 +46,10 @@ impl Jpeg {
             });
         }
 
-        Ok(Jpeg {
+        Ok(Self {
             nchannel: nchannel as u32,
-            real_px_w,
-            real_px_h,
+            real_px_w: real_px_w.into(),
+            real_px_h: real_px_h.into(),
             coefs,
         })
     }

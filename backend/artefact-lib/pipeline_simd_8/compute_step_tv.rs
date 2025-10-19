@@ -1,7 +1,7 @@
 #[cfg(feature = "simd_std")]
 use std::{
     ops::Div,
-    simd::{cmp::SimdPartialEq, StdFloat},
+    simd::{StdFloat, cmp::SimdPartialEq},
 };
 
 #[cfg(not(feature = "simd_std"))]

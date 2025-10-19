@@ -50,7 +50,7 @@ pub fn compute(
     // Main iteration loop
     for _ in 0..iterations {
         // FISTA update
-        let next_term = (1.0 + mul_add!(4.0_f32, term.powi(2), 1.0).sqrt()) / 2.0;
+        let next_term = f32::midpoint(1.0, mul_add!(4.0_f32, term.powi(2), 1.0).sqrt());
         let factor = (term - 1.0) / next_term;
 
         auxs.par_iter_mut().for_each(|aux| {

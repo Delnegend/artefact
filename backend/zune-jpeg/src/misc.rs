@@ -16,11 +16,11 @@ use zune_core::bytestream::ZByteReaderTrait;
 use zune_core::colorspace::ColorSpace;
 use zune_core::log::trace;
 
+use crate::JpegDecoder;
 use crate::components::{ComponentID, SampleRatios};
 use crate::errors::DecodeErrors;
 use crate::huffman::HuffmanTable;
 use crate::sample_factor::SampleFactor;
-use crate::JpegDecoder;
 
 /// Start of baseline DCT Huffman coding
 pub const START_OF_FRAME_BASE: u16 = 0xffc0;
@@ -91,10 +91,11 @@ where
 /// Markers that identify different Start of Image markers
 /// They identify the type of encoding and whether the file use lossy(DCT) or
 /// lossless compression and whether we use Huffman or arithmetic coding schemes
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Default)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum SOFMarkers {
     /// Baseline DCT markers
+    #[default]
     BaselineDct,
     /// SOF_1 Extended sequential DCT,Huffman coding
     ExtendedSequentialHuffman,
@@ -108,12 +109,6 @@ pub enum SOFMarkers {
     ProgressiveDctArithmetic,
     /// Lossless ( sequential), arithmetic coding
     LosslessArithmetic,
-}
-
-impl Default for SOFMarkers {
-    fn default() -> Self {
-        Self::BaselineDct
-    }
 }
 
 impl SOFMarkers {
@@ -218,8 +213,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     let rounded_px_w = (real_px_w + nearest_multiple_w) & !nearest_multiple_w;
     let rounded_px_h = (real_px_h + nearest_multiple_h) & !nearest_multiple_h;
 
-    assert!(rounded_px_w % 8 == 0);
-    assert!(rounded_px_h % 8 == 0);
+    assert!(rounded_px_w.is_multiple_of(8));
+    assert!(rounded_px_h.is_multiple_of(8));
 
     // compute interleaved image info
     img.mcu_width_wtf = img.max_horizontal_samp.usize() * 8;
@@ -277,11 +272,11 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
             .components
             .iter()
             .find(|c| c.component_id == ComponentID::Y)
+            && (y_component.horizontal_samp.u8() == 2 || y_component.vertical_samp.u8() == 2)
         {
-            if y_component.horizontal_samp.u8() == 2 || y_component.vertical_samp.u8() == 2 {
-                handle_that_annoying_bug = true;
-            }
+            handle_that_annoying_bug = true;
         }
+
         if handle_that_annoying_bug {
             for comp in &mut img.components {
                 if (comp.component_id != ComponentID::Y)

@@ -93,7 +93,7 @@ impl Components {
             _ => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown component id found,{pos}, expected value between 1 and 4"
-                )))
+                )));
             }
         };
 
@@ -103,7 +103,7 @@ impl Components {
             x => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown horizontal sample found: {x}, expected either 1 or 2"
-                )))
+                )));
             }
         };
         let vertical_samp = match a[1] & 0x0f {
@@ -112,7 +112,7 @@ impl Components {
             x => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown vertical sample found: {x}, expected either 1 or 2"
-                )))
+                )));
             }
         };
         let quant_table_number = a[2];
@@ -125,10 +125,7 @@ impl Components {
 
         trace!(
             "Component ID:{:?} \tHS:{} VS:{} QT:{}",
-            id,
-            horizontal_sample,
-            vertical_sample,
-            quantization_table_number
+            id, horizontal_sample, vertical_sample, quantization_table_number
         );
 
         Ok(Components {

@@ -70,13 +70,6 @@ impl From<Coefficient> for SIMDAdaptiveCoef {
                 let mut tmp = vec![0.0; c.rounded_px_count as usize];
 
                 for i in 0..(c.block_count as usize) {
-                    // for j in 0..8 {
-                    //     let result = dct_coefs[i * 8 + j] * quant_table[j];
-
-                    //     let idx = i * 64 + j * 8;
-                    //     result.write_to(&mut tmp[idx..idx + 8]);
-                    // }
-
                     let result = dct_coefs[i] * quant_table;
                     result.write_to(&mut tmp[i * 64..(i + 1) * 64]);
 

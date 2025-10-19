@@ -69,7 +69,7 @@ fn compute_step_tv2_inner(
         }
 
         // symmetrize
-        g_xy_syms[c] = (g_xy + g_yx) / 2.0;
+        g_xy_syms[c] = f32::midpoint(g_xy, g_yx);
     }
 
     // norm

@@ -59,7 +59,7 @@ impl Jpeg {
         let mut decoder = MozDecoder::new().map_err(|e| e.to_string())?;
         decoder.set_source(jpeg_source).map_err(|e| e.to_string())?;
         decoder.read_header().map_err(|e| e.to_string())?;
-        Ok(Self {
+        Ok(Jpeg {
             nchannel: decoder.cinfo.num_components as u32,
             real_px_w: decoder.cinfo.image_width,
             real_px_h: decoder.cinfo.image_height,
@@ -68,7 +68,7 @@ impl Jpeg {
     }
 }
 impl MozDecoder {
-    fn new() -> Result<Self, MozDecoderErr> {
+    fn new() -> Result<MozDecoder, MozDecoderErr> {
         // init new error struct
         let mut jerr = Box::new(MaybeUninit::<jpeg_error_mgr>::uninit());
         let error = unsafe {
@@ -91,7 +91,7 @@ impl MozDecoder {
         };
         unsafe { jpeg_create_decompress(cinfo.as_mut_ptr()) };
         let cinfo = unsafe { cinfo.assume_init() };
-        Ok(Self {
+        Ok(MozDecoder {
             cinfo,
             jerr,
             is_source_set: false,

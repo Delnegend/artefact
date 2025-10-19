@@ -61,46 +61,46 @@ impl std::error::Error for DecodeErrors {}
 
 impl From<&'static str> for DecodeErrors {
     fn from(data: &'static str) -> Self {
-        return Self::FormatStatic(data);
+        Self::FormatStatic(data)
     }
 }
 
 impl From<ZByteIoError> for DecodeErrors {
     fn from(data: ZByteIoError) -> Self {
-        return Self::IoErrors(data);
+        Self::IoErrors(data)
     }
 }
 impl Debug for DecodeErrors {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match &self
-        {
-            Self::Format(ref a) => write!(f, "{a:?}"),
+        match self {
+            Self::Format(a) => write!(f, "{a:?}"),
             Self::FormatStatic(a) => write!(f, "{:?}", &a),
 
-            Self::HuffmanDecode(ref reason) =>
-            {
+            Self::HuffmanDecode(reason) => {
                 write!(f, "Error decoding huffman values: {reason}")
             }
             Self::ZeroError => write!(f, "Image width or height is set to zero, cannot continue"),
-            Self::DqtError(ref reason) => write!(f, "Error parsing DQT segment. Reason:{reason}"),
-            Self::SosError(ref reason) => write!(f, "Error parsing SOS Segment. Reason:{reason}"),
-            Self::SofError(ref reason) => write!(f, "Error parsing SOF segment. Reason:{reason}"),
-            Self::IllegalMagicBytes(bytes) =>
-            {
+            Self::DqtError(reason) => write!(f, "Error parsing DQT segment. Reason:{reason}"),
+            Self::SosError(reason) => write!(f, "Error parsing SOS Segment. Reason:{reason}"),
+            Self::SofError(reason) => write!(f, "Error parsing SOF segment. Reason:{reason}"),
+            Self::IllegalMagicBytes(bytes) => {
                 write!(f, "Error parsing image. Illegal start bytes:{bytes:X}")
             }
-            Self::MCUError(ref reason) => write!(f, "Error in decoding MCU. Reason {reason}"),
-            Self::Unsupported(ref image_type) =>
-                {
-                    write!(f, "{image_type:?}")
-                }
+            Self::MCUError(reason) => write!(f, "Error in decoding MCU. Reason {reason}"),
+            Self::Unsupported(image_type) => {
+                write!(f, "{image_type:?}")
+            }
             Self::ExhaustedData => write!(f, "Exhausted data in the image"),
-            Self::LargeDimensions(ref dimensions) => write!(
+            Self::LargeDimensions(dimensions) => write!(
                 f,
-                "Too large dimensions {dimensions},library supports up to {}", crate::decoder::MAX_DIMENSIONS
+                "Too large dimensions {dimensions},library supports up to {}",
+                crate::decoder::MAX_DIMENSIONS
             ),
-            Self::TooSmallOutput(expected, found) => write!(f, "Too small output, expected buffer with at least {expected} bytes but got one with {found} bytes"),
-            Self::IoErrors(error)=>write!(f,"I/O errors {error:?}"),
+            Self::TooSmallOutput(expected, found) => write!(
+                f,
+                "Too small output, expected buffer with at least {expected} bytes but got one with {found} bytes"
+            ),
+            Self::IoErrors(error) => write!(f, "I/O errors {error:?}"),
 
             Self::HeadersNotRead => write!(f, "Headers not read yet"),
         }
@@ -132,19 +132,34 @@ impl Debug for UnsupportedSchemes {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match &self {
             Self::ExtendedSequentialHuffman => {
-                write!(f, "The library cannot yet decode images encoded using Extended Sequential Huffman  encoding scheme yet.")
+                write!(
+                    f,
+                    "The library cannot yet decode images encoded using Extended Sequential Huffman  encoding scheme yet."
+                )
             }
             Self::LosslessHuffman => {
-                write!(f, "The library cannot yet decode images encoded with Lossless Huffman encoding scheme")
+                write!(
+                    f,
+                    "The library cannot yet decode images encoded with Lossless Huffman encoding scheme"
+                )
             }
             Self::ExtendedSequentialDctArithmetic => {
-                write!(f,"The library cannot yet decode Images Encoded with Extended Sequential DCT Arithmetic scheme")
+                write!(
+                    f,
+                    "The library cannot yet decode Images Encoded with Extended Sequential DCT Arithmetic scheme"
+                )
             }
             Self::ProgressiveDctArithmetic => {
-                write!(f,"The library cannot yet decode images encoded with Progressive DCT Arithmetic scheme")
+                write!(
+                    f,
+                    "The library cannot yet decode images encoded with Progressive DCT Arithmetic scheme"
+                )
             }
             Self::LosslessArithmetic => {
-                write!(f,"The library cannot yet decode images encoded with Lossless Arithmetic encoding scheme")
+                write!(
+                    f,
+                    "The library cannot yet decode images encoded with Lossless Arithmetic encoding scheme"
+                )
             }
         }
     }

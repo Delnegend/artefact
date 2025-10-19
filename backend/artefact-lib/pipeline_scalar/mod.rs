@@ -24,7 +24,10 @@ pub fn compute(
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
 ) -> Vec<Vec<f32>> {
-    let coefs: Vec<ScalarCoef> = coefs.into_par_iter().map(|c| c.into()).collect();
+    let coefs: Vec<ScalarCoef> = coefs
+        .into_par_iter()
+        .map(std::convert::Into::into)
+        .collect();
 
     // Initialize working buffers for each channel
     let mut auxs = (0..nchannel)
@@ -45,7 +48,7 @@ pub fn compute(
     // Main iteration loop
     for _ in 0..iterations {
         // FISTA update
-        let next_term = (1.0 + mul_add!(4.0_f32, term.powi(2), 1.0).sqrt()) / 2.0;
+        let next_term = f32::midpoint(1.0, mul_add!(4.0_f32, term.powi(2), 1.0).sqrt());
         let factor = (term - 1.0) / next_term;
 
         auxs.par_iter_mut().for_each(|aux| {

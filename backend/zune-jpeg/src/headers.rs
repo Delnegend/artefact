@@ -131,7 +131,11 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
         let precision_value = 64 * (precision + 1);
 
         if (precision_value + 1) as u16 > qt_length {
-            return Err(DecodeErrors::DqtError(format!("Invalid QT table bytes left :{}. Too small to construct a valid qt table which should be {} long", qt_length, precision_value + 1)));
+            return Err(DecodeErrors::DqtError(format!(
+                "Invalid QT table bytes left :{}. Too small to construct a valid qt table which should be {} long",
+                qt_length,
+                precision_value + 1
+            )));
         }
 
         let dct_table = match precision {
@@ -171,7 +175,7 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
         img.qt_tables[table_position] = Some(dct_table);
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Section:`B.2.2 Frame header syntax`
@@ -210,11 +214,19 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
     trace!("Image height :{}", img_height);
 
     if usize::from(img_width) > img.options.max_width() {
-        return Err(DecodeErrors::Format(format!("Image width {} greater than width limit {}. If use `set_limits` if you want to support huge images", img_width, img.options.max_width())));
+        return Err(DecodeErrors::Format(format!(
+            "Image width {} greater than width limit {}. If use `set_limits` if you want to support huge images",
+            img_width,
+            img.options.max_width()
+        )));
     }
 
     if usize::from(img_height) > img.options.max_height() {
-        return Err(DecodeErrors::Format(format!("Image height {} greater than height limit {}. If use `set_limits` if you want to support huge images", img_height, img.options.max_height())));
+        return Err(DecodeErrors::Format(format!(
+            "Image height {} greater than height limit {}. If use `set_limits` if you want to support huge images",
+            img_height,
+            img.options.max_height()
+        )));
     }
 
     // Check image width or height is zero
@@ -399,10 +411,7 @@ pub(crate) fn parse_sos<T: ZByteReaderTrait>(
 
     trace!(
         "Ss={}, Se={} Ah={} Al={}",
-        image.spec_start,
-        image.spec_end,
-        image.succ_high,
-        image.succ_low
+        image.spec_start, image.spec_end, image.succ_high, image.succ_low
     );
 
     Ok(())
@@ -438,7 +447,7 @@ pub(crate) fn parse_app14<T: ZByteReaderTrait>(
             _ => {
                 return Err(DecodeErrors::Format(format!(
                     "Unknown Adobe colorspace {transform}"
-                )))
+                )));
             }
         }
         // length   = 2

@@ -7,7 +7,7 @@ pub struct PixelDifference {
 /// Working buffers for each component
 #[derive(Debug)]
 pub struct Aux {
-    /// DCT coefficients for step_prob
+    /// DCT coefficients for `step_prob`
     pub cos: Vec<f32>,
 
     /// Gradient (derivative) of the objective function

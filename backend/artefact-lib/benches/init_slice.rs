@@ -18,9 +18,10 @@ fn manual_init(target: [f32; 64]) -> f32x8 {
 
 pub fn init_slice_benches(c: &mut Criterion) {
     let mut target = [0.0; 64];
+    let mut rng = rand::rng();
 
     for i in 0..64 {
-        target[i] = rand::thread_rng().gen();
+        target[i] = rng.random();
     }
 
     let mut group = c.benchmark_group("init_slice");

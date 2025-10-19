@@ -1,20 +1,12 @@
 #![feature(portable_simd)]
 #![warn(clippy::perf, clippy::pedantic, clippy::nursery, clippy::unwrap_used)]
 #![allow(
-    clippy::use_self,
-    clippy::missing_const_for_fn,
-    clippy::redundant_closure_for_method_calls,
-    clippy::doc_markdown,
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
     clippy::cast_sign_loss,
-    clippy::unused_self,
     clippy::too_many_lines,
     clippy::too_many_arguments,
-    clippy::trivially_copy_pass_by_ref,
-    clippy::inefficient_to_string,
     clippy::similar_names,
-    clippy::missing_errors_doc,
     clippy::cast_precision_loss,
     clippy::branches_sharing_code
 )]
@@ -46,10 +38,10 @@ pub enum ValueCollection<T> {
 }
 
 impl<T: Copy> ValueCollection<T> {
-    fn to_slice(&self) -> [T; 3] {
+    const fn to_slice(&self) -> [T; 3] {
         match self {
-            ValueCollection::ForAll(v) => [*v, *v, *v],
-            ValueCollection::ForEach(v) => *v,
+            Self::ForAll(v) => [*v, *v, *v],
+            Self::ForEach(v) => *v,
         }
     }
 }
@@ -81,7 +73,7 @@ impl Default for Artefact {
 macro_rules! define_methods {
     ($($name:ident: $t:ty),+) => {
         $(
-            #[must_use] pub fn $name(mut self, $name: $t) -> Self {
+            #[must_use] pub const fn $name(mut self, $name: $t) -> Self {
                 self.$name = $name;
                 self
             }
@@ -104,6 +96,12 @@ impl Artefact {
         separate_components: bool
     );
 
+    /// Process the JPEG and return an RGB image buffer.
+    /// If `benchmark` is set, returns an error with the message "BENCHMARK".
+    /// Otherwise, returns the processed image or an error message.
+    /// # Errors
+    /// Returns an error if the source is not set or if reading the JPEG fails.
+    /// Also returns an error with the message "BENCHMARK" if benchmarking is enabled.
     pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
         let jpeg = Jpeg::from(self.source.ok_or("Source is not set")?)
             .map_err(|e| format!("Failed to read JPEG: {e}"))?;
@@ -159,8 +157,8 @@ impl Artefact {
         }
 
         // Fixup luma range for first channel
-        for i in 0..max_rounded_px_count {
-            output[0][i] += 128.0;
+        for item in output[0].iter_mut().take(max_rounded_px_count) {
+            *item += 128.0;
         }
 
         // YCbCr -> RGB

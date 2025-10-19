@@ -1,4 +1,6 @@
-use criterion::{black_box, Criterion};
+use std::hint::black_box;
+
+use criterion::Criterion;
 use rand::Rng;
 
 fn safe_cast(input: Vec<u16>) -> Vec<f32> {
@@ -19,8 +21,8 @@ fn unsafe_cast(input: Vec<u16>) -> Vec<f32> {
 }
 
 pub fn casting_benches(c: &mut Criterion) {
-    let mut rng = rand::thread_rng();
-    let input: Vec<u16> = (0..512 * 512).map(|_| rng.gen()).collect();
+    let mut rng = rand::rng();
+    let input: Vec<u16> = (0..512 * 512).map(|_| rng.random()).collect();
 
     let mut group = c.benchmark_group("casting");
 

@@ -54,7 +54,7 @@ use core::cmp::min;
 use zune_core::bytestream::{ZByteReaderTrait, ZReader};
 
 use crate::errors::DecodeErrors;
-use crate::huffman::{HuffmanTable, HUFF_LOOKAHEAD};
+use crate::huffman::{HUFF_LOOKAHEAD, HuffmanTable};
 use crate::marker::Marker;
 use crate::misc::UN_ZIGZAG;
 
@@ -264,7 +264,7 @@ impl BitStream {
             // Construct an MSB buffer whose top bits are the bitstream we are currently holding.
             self.aligned_buffer = self.buffer << (64 - self.bits_left);
         }
-        return Ok(true);
+        Ok(true)
     }
     /// Decode the DC coefficient in a MCU block.
     ///
@@ -303,7 +303,7 @@ impl BitStream {
         // Update DC prediction
         *dc_prediction = dc_prediction.wrapping_add(symbol);
 
-        return Ok(true);
+        Ok(true)
     }
 
     /// Decode a Minimum Code Unit(MCU) as quickly as possible
@@ -387,7 +387,7 @@ impl BitStream {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     /// Peek `look_ahead` bits ahead without discarding them from the buffer
@@ -431,7 +431,7 @@ impl BitStream {
     {
         self.decode_dc(reader, dc_table, dc_prediction)?;
         *block = (*dc_prediction as i16).wrapping_mul(1_i16 << self.successive_low);
-        return Ok(());
+        Ok(())
     }
     #[inline]
     pub(crate) fn decode_prog_dc_refine<T>(
@@ -459,7 +459,7 @@ impl BitStream {
         let k = (self.aligned_buffer >> 63) as u8;
         // discard a bit
         self.drop_bits(1);
-        return k;
+        k
     }
     pub(crate) fn decode_mcu_ac_first<T>(
         &mut self,
@@ -518,7 +518,7 @@ impl BitStream {
                 break 'block;
             }
         }
-        return Ok(true);
+        Ok(true)
     }
     #[allow(clippy::too_many_lines, clippy::op_ref)]
     pub(crate) fn decode_mcu_ac_refine<T>(
@@ -651,7 +651,7 @@ impl BitStream {
             // count a block completed in EOB run
             self.eob_run -= 1;
         }
-        return Ok(true);
+        Ok(true)
     }
 
     pub fn update_progressive_params(&mut self, ah: u8, al: u8, spec_start: u8, spec_end: u8) {
@@ -685,7 +685,7 @@ fn huff_extend(x: i32, s: i32) -> i32 {
 const fn has_zero(v: u32) -> bool {
     // Retrieved from Stanford bithacks
     // @ https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
-    return !((((v & 0x7F7F_7F7F) + 0x7F7F_7F7F) | v) | 0x7F7F_7F7F) != 0;
+    !((((v & 0x7F7F_7F7F) + 0x7F7F_7F7F) | v) | 0x7F7F_7F7F) != 0
 }
 
 const fn has_byte(b: u32, val: u8) -> bool {

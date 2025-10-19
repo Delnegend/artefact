@@ -1,4 +1,6 @@
-use criterion::{black_box, Criterion};
+use std::hint::black_box;
+
+use criterion::Criterion;
 use rand::Rng;
 use wide::f32x8;
 
@@ -162,8 +164,8 @@ pub fn unboxing_batch(
 }
 
 pub fn boxing_benches(c: &mut Criterion) {
-    let mut rng = rand::thread_rng();
-    let input: Vec<f32> = (0..512 * 512).map(|_| rng.gen()).collect();
+    let mut rng = rand::rng();
+    let input: Vec<f32> = (0..512 * 512).map(|_| rng.random()).collect();
     let mut output = vec![0.0; 512 * 512];
 
     let mut group = c.benchmark_group("boxing");

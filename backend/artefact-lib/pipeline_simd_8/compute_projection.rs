@@ -1,4 +1,4 @@
-use super::{f32x8, SIMD8Coef};
+use super::{SIMD8Coef, f32x8};
 use crate::utils::{
     aux::Aux,
     boxing::{boxing, unboxing},

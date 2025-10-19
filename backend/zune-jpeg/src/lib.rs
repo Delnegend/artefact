@@ -89,10 +89,8 @@
     clippy::panic
 )]
 #![allow(
-    clippy::needless_return,
     clippy::similar_names,
     clippy::inline_always,
-    clippy::similar_names,
     clippy::doc_markdown,
     clippy::manual_div_ceil,
     clippy::module_name_repetitions,

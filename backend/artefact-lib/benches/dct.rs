@@ -172,10 +172,10 @@ pub fn idct8x8s(a: &mut [f32; 64]) {
 
 pub fn dct_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("dct");
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let mut arr_a = [0.0; 64];
-    arr_a.iter_mut().for_each(|x| *x = rng.gen());
+    arr_a.iter_mut().for_each(|x| *x = rng.random());
 
     let mut arr_b = arr_a.clone();
 

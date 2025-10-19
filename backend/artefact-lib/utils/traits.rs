@@ -73,17 +73,17 @@ pub trait FromSlice {
 
 impl FromSlice for wide::f32x8 {
     fn from_slc(slc: &[f32]) -> Self {
-        wide::f32x8::from(slc)
+        Self::from(slc)
     }
     fn from_short_slc(slc: &[f32]) -> Self {
         let mut tmp = [0.0; 8];
         tmp[..slc.len()].copy_from_slice(slc);
-        wide::f32x8::from(tmp)
+        Self::from(tmp)
     }
     fn from_range_slc(slc: &[f32], range: RangeInclusive<usize>) -> Self {
         let mut tmp = [0.0; 8];
         tmp[range].copy_from_slice(slc);
-        wide::f32x8::from(tmp)
+        Self::from(tmp)
     }
 }
 
@@ -141,7 +141,7 @@ pub trait SafeDiv {
 impl SafeDiv for wide::f32x8 {
     fn safe_div(&self, divisor: Self) -> Self {
         match divisor.as_array_ref() {
-            divisor if divisor.contains(&0.0) => wide::f32x8::from(
+            divisor if divisor.contains(&0.0) => Self::from(
                 divisor
                     .iter()
                     .enumerate()
@@ -185,13 +185,13 @@ pub trait AddSlice {
 
 impl AddSlice for wide::f32x8 {
     fn add_slice(&self, slice: &[f32]) -> Self {
-        *self + wide::f32x8::from_slc(slice)
+        *self + Self::from_slc(slice)
     }
     fn add_short_slice(&self, slice: &[f32]) -> Self {
-        *self + wide::f32x8::from_short_slc(slice)
+        *self + Self::from_short_slc(slice)
     }
     fn add_range_slice(&self, slice: &[f32], range: RangeInclusive<usize>) -> Self {
-        *self + wide::f32x8::from_range_slc(slice, range)
+        *self + Self::from_range_slc(slice, range)
     }
 }
 

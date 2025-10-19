@@ -1,4 +1,4 @@
-//! Source: http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
+//! Source: `<http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html>`
 //! fft2d.zip (2006/12/28) file shrtdct.c
 //!
 //! Copyright Takuya OOURA, 1996-2001
@@ -24,7 +24,7 @@ pub const C8_2I: f32 = 0.191_341_716_182_544_885_86;
 pub const C8_3R: f32 = 0.415_734_806_151_272_618_54;
 pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
 pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
-pub const W8_4R: f32 = 0.707_106_781_186_547_524_40;
+pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2; // 0.707_106_781_186_547_524_40
 
 /// Inverse Discrete Cosine Transform (IDCT) for 8x8 blocks
 pub fn idct8x8s(a: &mut [f32; 64]) {

@@ -13,13 +13,13 @@ use zune_core::bytestream::ZByteReaderTrait;
 use zune_core::colorspace::ColorSpace;
 use zune_core::log::{error, trace, warn};
 
+use crate::JpegDecoder;
 use crate::bitstream::BitStream;
 use crate::components::SampleRatios;
 use crate::decoder::MAX_COMPONENTS;
 use crate::errors::DecodeErrors;
 use crate::marker::Marker;
 use crate::sample_factor::SampleFactor;
-use crate::JpegDecoder;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
     /// Check for existence of DC and AC Huffman Tables

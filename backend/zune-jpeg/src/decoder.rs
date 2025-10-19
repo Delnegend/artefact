@@ -21,11 +21,11 @@ use zune_core::options::DecoderOptions;
 use crate::components::{Components, SampleRatios};
 use crate::errors::{DecodeErrors, UnsupportedSchemes};
 use crate::headers::{
-    parse_app1, parse_app14, parse_app2, parse_dqt, parse_huffman, parse_sos, parse_start_of_frame,
+    parse_app1, parse_app2, parse_app14, parse_dqt, parse_huffman, parse_sos, parse_start_of_frame,
 };
 use crate::huffman::HuffmanTable;
 use crate::marker::Marker;
-use crate::misc::{setup_component_params, SOFMarkers};
+use crate::misc::{SOFMarkers, setup_component_params};
 use crate::sample_factor::SampleFactor;
 
 /// Maximum components
@@ -237,7 +237,7 @@ where
             return None;
         }
 
-        return Some(self.info.clone());
+        Some(self.info.clone())
     }
 
     /// Return the number of bytes required to hold a decoded image frame
@@ -249,7 +249,7 @@ where
     ///
     #[must_use]
     pub fn output_buffer_size(&self) -> Option<usize> {
-        return if self.headers_decoded {
+        if self.headers_decoded {
             Some(
                 usize::from(self.width())
                     .checked_mul(usize::from(self.height()))?
@@ -257,7 +257,7 @@ where
             )
         } else {
             None
-        };
+        }
     }
 
     /// Get an immutable reference to the decoder options
@@ -295,11 +295,7 @@ where
     /// - None : Indicates the headers weren't decoded
     #[must_use]
     pub fn input_colorspace(&self) -> Option<ColorSpace> {
-        return if self.headers_decoded {
-            Some(self.input_colorspace)
-        } else {
-            None
-        };
+        self.headers_decoded.then_some(self.input_colorspace)
     }
     /// Set decoder options
     ///
@@ -619,7 +615,7 @@ where
     ///    2. The image headers haven't been decoded
     #[must_use]
     pub fn exif(&self) -> Option<&Vec<u8>> {
-        return self.exif_data.as_ref();
+        self.exif_data.as_ref()
     }
     /// Get the output colorspace the image pixels will be decoded into
     ///
@@ -643,11 +639,8 @@ where
     ///- `None
     #[must_use]
     pub fn output_colorspace(&self) -> Option<ColorSpace> {
-        return if self.headers_decoded {
-            Some(self.options.jpeg_get_out_colorspace())
-        } else {
-            None
-        };
+        self.headers_decoded
+            .then_some(self.options.jpeg_get_out_colorspace())
     }
 
     /// Create a new decoder with the specified options to be used for decoding
@@ -688,7 +681,7 @@ where
             comp.setup_upsample_scanline();
         }
 
-        return Ok(());
+        Ok(())
     }
     #[must_use]
     /// Get the width of the image as a u16
@@ -713,12 +706,12 @@ where
     /// - `Some(width,height)`: Image dimensions
     /// -  None : The image headers haven't been decoded
     #[must_use]
-    pub const fn dimensions(&self) -> Option<(usize, usize)> {
-        return if self.headers_decoded {
-            Some((self.info.width as usize, self.info.height as usize))
+    pub const fn dimensions(&self) -> Option<(u16, u16)> {
+        if self.headers_decoded {
+            Some((self.info.width, self.info.height))
         } else {
             None
-        };
+        }
     }
 }
 

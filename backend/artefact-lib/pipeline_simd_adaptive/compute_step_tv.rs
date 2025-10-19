@@ -1,6 +1,6 @@
 use std::{
     ops::Div,
-    simd::{cmp::SimdPartialEq, f32x16, f32x32, f32x64, f32x8, StdFloat},
+    simd::{StdFloat, cmp::SimdPartialEq, f32x8, f32x16, f32x32, f32x64},
 };
 
 use paste::paste;
