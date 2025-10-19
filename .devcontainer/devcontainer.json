@@ -10,8 +10,27 @@
 				"Vue.volar",
 				"bradlc.vscode-tailwindcss",
 				"esbenp.prettier-vscode",
-				"YoavBls.pretty-ts-errors"
-			]
+				"YoavBls.pretty-ts-errors",
+				"tamasfe.even-better-toml",
+				"fill-labs.dependi"
+			],
+			"settings": {
+				"prettier.configPath": ".prettierrc",
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"[vue]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[typescript]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[json]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[css]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"prettier.enableDebugLogs": true
+			}
 		}
 	},
 	"runArgs": [
@@ -20,5 +39,5 @@
 		"-v",
 		"cargo-cache:/usr/local/cargo"
 	],
-	"postCreateCommand": "zsh .devcontainer/postinstall.sh"
+	"postCreateCommand": "bash .devcontainer/postinstall.sh"
 }
