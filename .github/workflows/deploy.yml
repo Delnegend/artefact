@@ -34,27 +34,17 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 10
-
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: 'pnpm'
-                  cache-dependency-path: ./frontend
+            - uses: oven-sh/setup-bun@v2
 
             - name: Setup Pages
               uses: actions/configure-pages@v4
 
             - name: Install dependencies
               working-directory: ./frontend
-              run: pnpm i
+              run: bun i
 
             - name: Generate static site
-              run: cd frontend && pnpm nuxt generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+              run: cd frontend && bun run generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
