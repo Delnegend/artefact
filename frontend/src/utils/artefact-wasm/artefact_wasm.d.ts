@@ -1,12 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
-export function compute(buffer: Uint8Array, output_format: OutputFormat, weight: number, pweight: number, iterations: number, separate_components: boolean): Uint8Array;
+
 export enum OutputFormat {
   Png = 0,
   Webp = 1,
   Tiff = 2,
   Bmp = 3,
 }
+
+export function compute(buffer: Uint8Array, output_format: OutputFormat, weight: number, pweight: number, iterations: number, separate_components: boolean): Uint8Array;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -16,12 +18,13 @@ export interface InitOutput {
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_export_3: WebAssembly.Table;
+  readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
+
 /**
 * Instantiates the given `module`, which can either be bytes or
 * a precompiled `WebAssembly.Module`.
