@@ -21,7 +21,7 @@ printf "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\nrustflags = [\"-C
 # just
 ver="1.45.0"
 curl -L -o /tmp/just.tar.gz https://github.com/casey/just/releases/download/$ver/just-$ver-x86_64-unknown-linux-musl.tar.gz
-if [ ! "$(sha256sum /tmp/just.tar.gz | awk '{print $1}')" != "dc3f958aaf8c6506dd90426e9b03f86dd15e74a6467ee0e54929f750af3d9e49" ]; then
+if [ "$(sha256sum /tmp/just.tar.gz | awk '{print $1}')" != "dc3f958aaf8c6506dd90426e9b03f86dd15e74a6467ee0e54929f750af3d9e49" ]; then
     echo "just tarball checksum failed"
 else
     sudo rm -rf /usr/local/bin/just
