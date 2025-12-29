@@ -7,86 +7,142 @@ test-base-420:
 flame:
 	CARGO_PROFILE_RELEASE_DEBUG=true RUSTFLAGS="-Ctarget-cpu=native" cargo flamegraph --bin artefact-cli --release -- lena-base-420.jpg -y
 
-build-win-32:
-	RUSTFLAGS="-Ctarget-cpu=native" cargo build --bin artefact-cli --release --target i686-pc-windows-gnu
-
-build-win-64:
-	RUSTFLAGS="-Ctarget-cpu=native" cargo build --bin artefact-cli --release --target x86_64-pc-windows-gnu
-
-build-linux-32:
-	RUSTFLAGS="-Ctarget-cpu=native" cargo build --bin artefact-cli --release --target i686-unknown-linux-gnu
-
-build-linux-64:
-	RUSTFLAGS="-Ctarget-cpu=native" cargo build --bin artefact-cli --release --target x86_64-unknown-linux-gnu
-
-build-wasm:
-	#!/usr/bin/env bash
-	rm -rf frontend/src/utils/artefact-wasm
-	cd backend/artefact-wasm
-	wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm
-	cd ..
-	rm -f frontend/src/utils/artefact-wasm/.gitignore
-
 dev:
 	cd frontend && bun x nuxt dev  --no-fork
 
-build-web: build-wasm
+lint kind="all":
 	#!/usr/bin/env bash
-	cd frontend
-	bun x nuxt generate
-	cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
 
-lint:
-	#!/usr/bin/env bash
-	cd frontend && \
+	if [[ "{{kind}}" = "all" || "{{kind}}" = "js" ]]; then
+		cd frontend
 		bun x oxlint --import-plugin -D correctness -D perf \
-		--ignore-pattern src/dev-dist/**/*.* \
-		--ignore-pattern src/utils/artefact-wasm/**/*.* && \
+			--ignore-pattern src/dev-dist/**/*.* \
+			--ignore-pattern src/utils/artefact-wasm/**/*.*
 		bun x prettier -l -w "**/*.{js,ts,vue,json,css}"
+		cd -
+	fi
 
-lint-rust:
+	if [[ "{{kind}}" = "all" || "{{kind}}" = "rust" ]]; then
+		cargo fmt
+		cargo clippy
+	fi
+
+install-deps target="all" arch="":
 	#!/usr/bin/env bash
-	cargo fmt
-	cargo clippy
 
-# Build release binaries for different platforms to release on GitHub
-build-cross-platform:
-	#!/usr/bin/env python3
-	import os, shutil, subprocess
+	if [[ "{{target}}" = "all" ]]; then
+		for t in win linux; do
+			for a in 32 64; do
+				just install-deps $t $a
+			done
+		done
+		exit 0
+	fi
 
-	if not shutil.which('tar') or not shutil.which('zip'):
-		raise Exception("tar and zip must be installed and in PATH")
+	if [[ "{{target}}" = "wasm" || "{{target}}" = "web" ]]; then
+		echo "No dependencies needed for target: {{target}}"
+		exit 0
+	fi
 
-	def run(cmd):
-		print(cmd)
-		subprocess.run(cmd, shell=True, check=True)
+	if [[ "{{target}}" != "win" && "{{target}}" != "linux" ]]; then
+		echo "Unsupported target: {{target}}"
+		exit 1
+	fi
+	if [[ "{{arch}}" != "32" && "{{arch}}" != "64" ]]; then
+		echo "Unsupported architecture: {{arch}}"
+		exit 1
+	fi
 
-	version = None
-	with open('backend/artefact-cli/Cargo.toml') as f:
-		for line in f:
-			if 'version' in line:
-				version = line.split('"')[1]
-				break
+	if [[ "{{target}}" = "win" && "{{arch}}" = "32" ]]; then
+		rustup target add i686-pc-windows-gnu
+		sudo apt-get install gcc-mingw-w64-i686 -y
+	elif [[ "{{target}}" = "win" && "{{arch}}" = "64" ]]; then
+		rustup target add x86_64-pc-windows-gnu
+		sudo apt-get install gcc-mingw-w64-x86-64 -y
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "32" ]]; then
+		rustup target add i686-unknown-linux-musl
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "64" ]]; then
+		rustup target add x86_64-unknown-linux-musl
+	fi
 
-	def build(target, arch):
-		run(f'rustup target add {target}')
-		run(f'cargo build --bin artefact-cli --release --target {target}')
-		if "windows" in target:
-			exe = 'artefact-cli.exe'
-		else:
-			exe = 'artefact-cli'
-		if not os.path.exists(f'target/{target}/release/{exe}'):
-			raise Exception(f'Build failed for {target}')
+build target="linux" arch="64":
+	#!/usr/bin/env bash
 
-		ext = '.zip' if "windows" in target else '.tar.gz'
-		pkg = 'zip -j' if ext == '.zip' else 'tar -czvf'
-		ver = f'-{version}' if version is not None else ''
-		run(f'{pkg} dist-cli/artefact-cli{ver}-{arch}{ext} target/{target}/release/{exe}')
+	if [[ "{{target}}" = "wasm" ]]; then
+		rm -rf frontend/src/utils/artefact-wasm
+		cd backend/artefact-wasm
+		wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm
+		cd ..
+		rm -f frontend/src/utils/artefact-wasm/.gitignore
+		exit 0
+	fi
 
-	shutil.rmtree('dist-cli', ignore_errors=True)
-	os.makedirs('dist-cli', exist_ok=True)
+	if [[ "{{target}}" = "web" ]]; then
+		cd frontend
+		bun x nuxt generate
+		cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+		exit 0
+	fi
 
-	build('i686-pc-windows-gnu', 'win-32')
-	build('x86_64-pc-windows-gnu', 'win-64')
-	build('i686-unknown-linux-gnu', 'linux-32')
-	build('x86_64-unknown-linux-gnu', 'linux-64')
+	if [[ "{{target}}" != "win" && "{{target}}" != "linux" ]]; then
+		echo "Unsupported target: {{target}}"
+		exit 1
+	fi
+	if [[ "{{arch}}" != "32" && "{{arch}}" != "64" ]]; then
+		echo "Unsupported architecture: {{arch}}"
+		exit 1
+	fi
+
+	export RUSTFLAGS="-Ctarget-cpu=native"
+	if [[ "{{target}}" = "win" && "{{arch}}" = "32" ]]; then
+		echo "Building for Windows 32-bit"
+		cargo build --bin artefact-cli --release --target i686-pc-windows-gnu
+	elif [[ "{{target}}" = "win" && "{{arch}}" = "64" ]]; then
+		echo "Building for Windows 64-bit"
+		cargo build --bin artefact-cli --release --target x86_64-pc-windows-gnu
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "32" ]]; then
+		echo "Building for Linux 32-bit"
+		cargo build --bin artefact-cli --release --target i686-unknown-linux-musl
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "64" ]]; then
+		echo "Building for Linux 64-bit"
+		cargo build --bin artefact-cli --release --target x86_64-unknown-linux-musl
+	fi
+
+release target="linux" arch="64":
+	#!/usr/bin/env bash
+
+	if [[ "{{target}}" = "all" ]]; then
+		for t in win linux; do
+			for a in 32 64; do
+				just release $t $a
+			done
+		done
+		exit 0
+	fi
+
+	if [[ "{{target}}" != "win" && "{{target}}" != "linux" ]]; then
+		echo "Unsupported target: {{target}}"
+		exit 1
+	fi
+	if [[ "{{arch}}" != "32" && "{{arch}}" != "64" ]]; then
+		echo "Unsupported architecture: {{arch}}"
+		exit 1
+	fi
+
+	just build {{target}} {{arch}}
+	version=$(grep '^version =' backend/artefact-cli/Cargo.toml | head -n1 | cut -d'"' -f2)
+	if [[ -z "$version" ]]; then
+		echo "Could not determine version from Cargo.toml"
+		exit 1
+	fi
+	mkdir -p releases
+
+	if [[ "{{target}}" = "win" && "{{arch}}" = "32" ]]; then
+		zip -j releases/artefact-cli-${version}-win-32.zip target/i686-pc-windows-gnu/release/artefact-cli.exe
+	elif [[ "{{target}}" = "win" && "{{arch}}" = "64" ]]; then
+		zip -j releases/artefact-cli-${version}-win-64.zip target/x86_64-pc-windows-gnu/release/artefact-cli.exe
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "32" ]]; then
+		tar -czvf releases/artefact-cli-${version}-linux-32.tar.gz -C target/i686-unknown-linux-musl/release artefact-cli
+	elif [[ "{{target}}" = "linux" && "{{arch}}" = "64" ]]; then
+		tar -czvf releases/artefact-cli-${version}-linux-64.tar.gz -C target/x86_64-unknown-linux-musl/release artefact-cli
+	fi
