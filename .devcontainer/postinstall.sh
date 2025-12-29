@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
-echo 'export CARGO_HOME="/usr/local/cargo"' >> ~/.bashrc
-echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> ~/.bashrc
+. "$HOME/.cargo/env"
 
 # mold
 ver="2.40.4"
