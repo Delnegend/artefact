@@ -8,9 +8,9 @@ node_modules/
 .pnpm-store/
 .output/
 src/dev-dist
+releases/
 
 dist
-dist-cli/
 *.c
 *.d
 *.h
