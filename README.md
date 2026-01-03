@@ -30,19 +30,13 @@ There are two ways to use artefact:
 
 ### 1. The performance way
 
-Either download the latest binary from the [releases page](https://github.com/Delnegend/artefact/releases/latest) or [build from source](#cli-build-guide).
-
-To see all available CLI options run:
+Either download the latest binary from the [releases page](https://github.com/Delnegend/artefact/releases/latest) or [build from source](#cli-build-guide), then run:
 
 ```
-artefact-cli --help
+artefact-cli <input.jpg>
 ```
 
-TL;DR:
-
-```
-artefact-cli input.jpg
-```
+This will create a file named `input.png` in the same directory as the input file. Run `artefact-cli --help` for more options.
 
 ### 2. The convenience way
 
