@@ -1,15 +1,11 @@
 @default:
 	just --choose
 
-test-base-420:
-	RUSTFLAGS="-Ctarget-cpu=native" cargo run --release --bin artefact-cli -- lena-base-420.jpg -y
-
-flame:
-	CARGO_PROFILE_RELEASE_DEBUG=true RUSTFLAGS="-Ctarget-cpu=native" cargo flamegraph --bin artefact-cli --release -- lena-base-420.jpg -y
-
 dev:
 	cd frontend && bun x nuxt dev  --no-fork
 
+# lint code for: rust (backend), js (frontend)
+# default: all
 lint kind="all":
 	#!/usr/bin/env bash
 
@@ -27,6 +23,7 @@ lint kind="all":
 		cargo clippy
 	fi
 
+# install dependencies for targets: win/linux + 32/64-bit
 install-deps target="all" arch="":
 	#!/usr/bin/env bash
 
@@ -65,7 +62,9 @@ install-deps target="all" arch="":
 		rustup target add x86_64-unknown-linux-musl
 	fi
 
-build target="linux" arch="64":
+# build targets: win/linux + 32/64-bit, wasm, web
+# default: all (builds all targets except web and wasm)
+build target="all" arch="":
 	#!/usr/bin/env bash
 
 	if [[ "{{target}}" = "wasm" ]]; then
@@ -108,7 +107,8 @@ build target="linux" arch="64":
 		cargo build --bin artefact-cli --release --target x86_64-unknown-linux-musl
 	fi
 
-release target="linux" arch="64":
+# create release archives for targets: win/linux + 32/64-bit
+release target="all" arch="":
 	#!/usr/bin/env bash
 
 	if [[ "{{target}}" = "all" ]]; then
@@ -146,3 +146,82 @@ release target="linux" arch="64":
 	elif [[ "{{target}}" = "linux" && "{{arch}}" = "64" ]]; then
 		tar -czvf releases/artefact-cli-${version}-linux-64.tar.gz -C target/x86_64-unknown-linux-musl/release artefact-cli
 	fi
+
+# update dependencies for: rust/js
+# default: all
+update where="all":
+	#!/usr/bin/env bash
+
+	if [[ "{{where}}" = "all" || "{{where}}" = "js" ]]; then
+		cd frontend
+		bun update
+		cd -
+	fi
+
+	if [[ "{{where}}" = "all" || "{{where}}" = "rust" ]]; then
+		cargo update
+	fi
+
+alias encode := encode-sample-image
+
+# generate sample images with different chroma subsampling from a base image
+encode-sample-image input="assets/sample.png":
+	#!/usr/bin/env bash
+
+	INPUT="{{input}}"
+
+	declare -A MODES=(
+		["j444"]="yuvj444p"
+		["j422"]="yuvj422p"
+		["j420"]="yuvj420p"
+		["420"]="yuv420p"
+		["422"]="yuv422p"
+		["444"]="yuv444p"
+	)
+
+	# Loop through each mode and convert
+	for suffix in "${!MODES[@]}"; do
+		pix_fmt=${MODES[$suffix]}
+		filename="${input%.*}"
+		output="assets/sample.${suffix}.input.jpg"
+
+		echo "Converting $INPUT to $output using $pix_fmt..."
+
+		ffmpeg -i "$INPUT" -pix_fmt "$pix_fmt" "$output" -y
+	done
+
+alias decode := decode-sample-image
+
+
+decode-sample-image chroma="420":
+	#!/usr/bin/env bash
+
+	CHROMA="{{chroma}}"
+
+	valid_chromas=("j444" "j422" "j420" "420" "422" "444")
+	if [[ ! " ${valid_chromas[@]} " =~ "$CHROMA" ]]; then
+		echo "Invalid chroma subsampling: ${CHROMA}"
+		echo "Valid options are: ${valid_chromas[*]}"
+		exit 1
+	fi
+
+	INPUT="assets/sample.${CHROMA}.input.jpg"
+	OUTPUT="assets/sample.${CHROMA}.decoded.png"
+
+	echo "Decoding $INPUT to $OUTPUT..."
+
+	cargo run --bin artefact-cli -- "$INPUT" -o "$OUTPUT" -y
+
+flame chroma="420":
+	#!/usr/bin/env bash
+
+	CHROMA="{{chroma}}"
+
+	valid_chromas=("j444" "j422" "j420" "420" "422" "444")
+	if [[ ! " ${valid_chromas[@]} " =~ "$CHROMA" ]]; then
+		echo "Invalid chroma subsampling: ${CHROMA}"
+		echo "Valid options are: ${valid_chromas[*]}"
+		exit 1
+	fi
+
+	CARGO_PROFILE_RELEASE_DEBUG=true RUSTFLAGS="-Ctarget-cpu=native" cargo flamegraph --bin artefact-cli --release -- assets/sample.${CHROMA}.input.jpg -y
