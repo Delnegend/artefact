@@ -19,6 +19,7 @@ dist
 *.png
 !assets/*.png
 !src/public/*.png
+assets/sample*
 perf.*
 *.svg
 .eslintcache
