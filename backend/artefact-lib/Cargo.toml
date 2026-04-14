@@ -21,7 +21,7 @@ paste = "1.0.15"
 [dev-dependencies]
 criterion = "0.7.0"
 rand_core = "0.9.3"
-rand = "0.9.2"
+rand = "0.9.3"
 wide = "0.7.33"
 
 [lib]
