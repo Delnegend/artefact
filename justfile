@@ -4,9 +4,9 @@
 dev:
 	cd frontend && bun x nuxt dev  --no-fork
 
-# lint code for: rust (backend), js (frontend)
+# check code for: rust (backend), js (frontend)
 # default: all
-lint kind="all":
+check kind="all":
 	#!/usr/bin/env bash
 
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "js" ]]; then

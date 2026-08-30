@@ -161,9 +161,9 @@ SIMD / solver flags are toggled in `backend/artefact-lib/Cargo.toml` features (`
 ### Checks
 
 ```bash
-just lint          # cargo fmt + cargo clippy + oxlint + prettier (all)
-just lint rust     # Rust only
-just lint js       # frontend only (oxlint + prettier)
+just check          # cargo fmt + cargo clippy + oxlint + prettier (all)
+just check rust     # Rust only
+just check js       # frontend only (oxlint + prettier)
 ```
 
 Sample images with chroma subsampling:
@@ -210,7 +210,7 @@ PRs welcome. For large changes, please open an issue first.
 ```bash
 git clone https://github.com/Delnegend/artefact.git
 # devcontainer recommended, else install prerequisites above
-just lint   # must pass before PR
+just check   # must pass before PR
 ```
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion shall be dual-licensed as below without additional terms (per Apache-2.0 §5).
