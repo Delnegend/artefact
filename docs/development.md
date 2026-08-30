@@ -16,11 +16,10 @@ The project contains 2 main components/directories:
 These will be automatically installed if you choose to run this project inside a devcontainer:
 
 -   [the Rust toolchain (with `rustup`)](https://rust-lang.org/learn/get-started/).
--   [`just`](https://github.com/casey/just), and set `alias j=just` for convenience.
+-   [`just`](https://github.com/casey/just).
 -   [`bun`](https://bun.sh/) for building and running the frontend.
 -   [`wasm-pack`](https://github.com/rustwasm/wasm-pack) to build the WASM library version of artefact.
--   mingw toolchains (`gcc-mingw-w64-*`) and musl targets, required for cross-compiling to Windows and static Linux binaries.
--   `zip`, `tar` for packaging release archives.
+-   `zip`, `tar` only if manually archiving (releases for linux x64 musl, windows x64, macOS arm64 are built on GitHub Actions via `.github/workflows/release.yml`).
 
 <!-- -   `cargo-flamegraph`, `perf` are optional, used for performance profiling. -->
 
@@ -33,7 +32,7 @@ The [justfile](../justfile) includes a recipe to generate subsampled JPEG test i
 If you have `ffmpeg` and `just` installed on your host, place a test image named `sample.png` in the `assets/` directory and run:
 
 ```bash
-j encode
+just encode
 ```
 
 The generated images will be written to the `assets/` directory.
@@ -49,36 +48,34 @@ sudo apt update && sudo apt install -y ffmpeg
 After installation, place `sample.png` in `assets/` and run:
 
 ```bash
-j encode
+just encode
 ```
 
 ## Running against a sample image
 
 ```bash
-j decode <chroma-subsampling>
+just decode <chroma-subsampling>
 ```
 
 Where `<chroma-subsampling>` is one of: `420`, `422`, `444`, `j420`, `j422`, `j444`.
 
-## Cross-compiling the CLI
+## Cross-compiling / Releases
 
-Before cross-compiling the CLI for Windows or static Linux binaries, install the required dependencies using the `install-deps` recipe:
+Cross-compiled CLI binaries (linux `x86_64-unknown-linux-musl`, windows `x86_64-pc-windows-gnu`, macOS `aarch64-apple-darwin` for Apple Silicon) are built on GitHub Actions via `.github/workflows/release.yml`.
 
-```bash
-j install-deps <target> <arch>
-```
+Trigger via `workflow_dispatch` with inputs `release_version` (e.g. `0.1.0`) and `create_release` (`true` to push to `Releases`), or automatically on merged `pull_request` to `next`/`main` with `dependencies` label or `chore/update-deps` branch (auto-bumps patch).
 
-Where `<target>` is one of: `win`, `linux`, and `<arch>` is one of: `32`, `64`
-
-After that, simply use the `build` recipe to build the CLI for the desired target and architecture.
-
-Simply run:
+Locally, just build natively:
 
 ```bash
-j build <target> <arch>
+just build
+# or
+cargo build --bin artefact-cli --release
+# manual cross (if toolchain installed):
+# cargo build --bin artefact-cli --release --target x86_64-unknown-linux-musl
+# cargo build --bin artefact-cli --release --target x86_64-pc-windows-gnu
+# cargo build --bin artefact-cli --release --target aarch64-apple-darwin
 ```
-
-Where `<target>` is one of: `win`, `linux`, and `<arch>` is one of: `32`, `64`
 
 ## SIMD implementation
 
@@ -103,13 +100,13 @@ features = [
 Build the WASM library if it has not already been built or if there are changes.
 
 ```bash
-j build wasm
+just build wasm
 ```
 
 Then build the frontend.
 
 ```bash
-j build web
+just build web
 ```
 
 ## Other recipes

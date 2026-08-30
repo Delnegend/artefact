@@ -55,9 +55,10 @@ cd artefact
 
 # native CLI (release, uses mold + clang if in devcontainer)
 cargo build --bin artefact-cli --release
-# or cross-compile via just (see Development)
-just build linux 64
-just build win 64
+# or: just build
+
+# cross-compiled (linux x64 musl, windows x64, macOS arm64)
+# built on GitHub Actions via .github/workflows/release.yml — see Development
 ```
 
 Web (no install):
@@ -112,8 +113,7 @@ Toolchain is baked into the image (Rust `nightly` + `rust-analyzer`, `mold` 2.40
 
 - [Rust](https://www.rust-lang.org) via `rustup` (`nightly`, `minimal` profile)
 - [`just`](https://github.com/casey/just), [`bun`](https://bun.sh), [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
-- Linux cross deps if needed: `gcc-mingw-w64-*` and `musl` targets (`just install-deps`)
-- `zip`/`tar` for release archives. `ffmpeg` only for sample image generation (not in devcontainer by default).
+- `zip`/`tar` only if manually archiving — releases (linux x64 musl, windows x64, macOS arm64) are built on GitHub Actions via `.github/workflows/release.yml`. `ffmpeg` only for sample image generation (not in devcontainer by default).
 
 See [docs/development.md](docs/development.md) for full prerequisites and sample-image helpers.
 
@@ -148,12 +148,13 @@ just build wasm
 just build web
 # or: cd frontend && bun x nuxt generate
 
-# native CLI (native cpu, LTO)
-just build linux 64   # -> target/x86_64-unknown-linux-musl/release/artefact-cli
-just build win 64     # -> target/x86_64-pc-windows-gnu/release/artefact-cli.exe
+# native CLI (release, LTO)
+just build            # -> target/release/artefact-cli
+# or: cargo build --bin artefact-cli --release
 
-# packages
-just release linux 64 # -> releases/artefact-cli-<version>-linux-64.tar.gz
+# cross-compiled releases (linux x64 musl, windows x64, macOS arm64)
+# built on GitHub Actions via .github/workflows/release.yml
+# trigger: workflow_dispatch (release_version + create_release) or merged PR
 ```
 
 SIMD / solver flags are toggled in `backend/artefact-lib/Cargo.toml` features (`simd`, `simd_std`, `simd_adaptive`, `native`, `moz`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation).
