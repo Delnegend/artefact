@@ -127,7 +127,7 @@ See [docs/development.md](docs/development.md) for full prerequisites and sample
 │   ├── artefact-wasm/    # wasm-pack cdylib for frontend
 │   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
 ├── frontend/             # Nuxt 4 + Vue + Vite + Tailwind — src/utils/artefact-wasm is generated
-├── assets/               # demo images, rust.svg / wasm.svg
+├── assets/               # demo images (01.png-04.png)
 └── docs/development.md   # directory structure, SIMD flags, cross-compile, WASM/web builds
 ```
 
