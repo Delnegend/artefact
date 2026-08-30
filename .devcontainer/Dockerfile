@@ -9,7 +9,7 @@ ENV SHELL=/bin/bash
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates curl git just fzf \
-    clang sudo unzip zip xz-utils linux-perf pkg-config && \
+    clang sudo unzip zip xz-utils linux-perf pkg-config musl-tools && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1000 artefact && \
@@ -23,12 +23,14 @@ SHELL ["/bin/bash", "-c"]
 USER artefact
 
 ENV CARGO_HOME=/usr/local/cargo
+ENV CARGO_BUILD_TARGET=x86_64-unknown-linux-musl
 ENV PATH="/usr/local/cargo/bin:/home/artefact/.bun/bin:${PATH}"
 
-# Rust toolchain (nightly, minimal) + rust-analyzer — pre-installed so container
-# works even if postCreateCommand is skipped (e.g. Zed)
+# Rust toolchain (nightly, minimal) + analyzer/fmt/clippy + musl target — pre-installed so container
+# works even if postCreateCommand is skipped (e.g. Zed); primary dev target is linux x64 musl
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly --profile minimal --no-modify-path && \
-    /usr/local/cargo/bin/rustup component add rust-analyzer
+    /usr/local/cargo/bin/rustup component add rust-analyzer rustfmt clippy && \
+    /usr/local/cargo/bin/rustup target add x86_64-unknown-linux-musl
 
 # mold — pinned to keep linker fast/reproducible; also configure cargo to use it
 RUN curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz" && \
