@@ -1,8 +1,17 @@
 {
-	"name": "Existing Dockerfile",
+	"name": "artefact",
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
+	"containerUser": "artefact",
+	"remoteUser": "artefact",
+	"runArgs": [
+		"--hostname=artefact",
+		"--cap-add",
+		"PERFMON",
+		"-v",
+		"cargo-cache:/usr/local/cargo"
+	],
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -15,8 +24,8 @@
 				"fill-labs.dependi"
 			],
 			"settings": {
-				"prettier.configPath": ".prettierrc",
 				"terminal.integrated.defaultProfile.linux": "bash",
+				"prettier.configPath": ".prettierrc",
 				"[vue]": {
 					"editor.defaultFormatter": "esbenp.prettier-vscode"
 				},
@@ -28,16 +37,9 @@
 				},
 				"[css]": {
 					"editor.defaultFormatter": "esbenp.prettier-vscode"
-				},
-				"prettier.enableDebugLogs": true
+				}
 			}
 		}
 	},
-	"runArgs": [
-		"--cap-add",
-		"PERFMON",
-		"-v",
-		"cargo-cache:/usr/local/cargo"
-	],
 	"postCreateCommand": "bash .devcontainer/postinstall.sh"
 }
