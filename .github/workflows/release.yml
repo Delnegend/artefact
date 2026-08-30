@@ -1,0 +1,204 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version (e.g. 0.1.0)
+        required: true
+        type: string
+        default: 0.1.0
+      create_release:
+        description: Push to GitHub Releases
+        required: true
+        type: boolean
+        default: false
+  pull_request:
+    types: [closed]
+    branches:
+      - next
+      - main
+
+env:
+  BINARY_NAME: artefact-cli
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       (contains(github.event.pull_request.labels.*.name, 'dependencies') || github.event.pull_request.head.ref == 'chore/update-deps'))
+    outputs:
+      release_version: ${{ steps.version.outputs.version }}
+      create_release: ${{ steps.version.outputs.create_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.release_version }}" >> "$GITHUB_OUTPUT"
+            echo "create_release=${{ inputs.create_release }}" >> "$GITHUB_OUTPUT"
+          else
+            LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
+            PLAIN_VERSION="${LATEST_TAG#v}"
+            IFS='.' read -r major minor patch <<< "$PLAIN_VERSION"
+            major="${major:-0}"
+            minor="${minor:-1}"
+            patch="${patch:-0}"
+            if [ "$LATEST_TAG" = "v0.0.0" ]; then
+              NEXT_VERSION="0.1.0"
+            else
+              NEXT_PATCH=$((patch + 1))
+              NEXT_VERSION="${major}.${minor}.${NEXT_PATCH}"
+            fi
+            echo "Latest tag: $LATEST_TAG, computed next patch version: $NEXT_VERSION"
+            echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "create_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux/x64-musl
+            artifact: linux-x64-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            platform: windows/x64
+            artifact: windows-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: darwin/arm64
+            artifact: darwin-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install musl-tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq musl-tools
+
+      - name: Build
+        run: cargo build --bin artefact-cli --release --target ${{ matrix.target }}
+
+      - name: Compress binaries
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.release_version }}"
+          BASE="${{ env.BINARY_NAME }}-${VERSION}-${{ matrix.artifact }}"
+          mkdir -p "$BASE"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp "target/${{ matrix.target }}/release/artefact-cli.exe" "$BASE/"
+            7z a -tzip "${BASE}.zip" "$BASE"
+          else
+            cp "target/${{ matrix.target }}/release/artefact-cli" "$BASE/"
+            tar -czf "${BASE}.tar.gz" "$BASE"
+          fi
+          rm -rf "$BASE"
+          ls -lh "${BASE}".*
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.artifact }}
+          path: ${{ env.BINARY_NAME }}-*
+
+  release:
+    name: Release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.create_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes from commits since the last tag
+        id: notes
+        run: |
+          PREV="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -n "$PREV" ]; then
+            RANGE="$PREV..HEAD"
+            COMPARE="https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...v${VERSION}"
+          else
+            RANGE="$(git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
+            COMPARE=""
+          fi
+          echo "Generating notes for range $RANGE"
+          TMP="$(mktemp -d)"
+          git log --pretty=format:"%s" "$RANGE" > "$TMP/all"
+          {
+            echo "## What's Changed"
+            echo
+            for spec in "feat **Features**" "fix **Bug Fixes**" "docs **Documentation**" "ci **CI & Workflows**" "test **Tests**" "refactor **Refactoring**" "perf **Performance**" "chore **Chores**" "build **Build**"; do
+              type="${spec%% *}"
+              grep -E "^${type}(\([^)]*\))?: " "$TMP/all" > "$TMP/items" || continue
+              echo "${spec#* }"
+              sed -E "s/^${type}(\([^)]*\))?: +/  - /" "$TMP/items"
+              echo
+            done
+            grep -Ev "^[a-z]+(\([^)]*\))?: " "$TMP/all" > "$TMP/other" || true
+            if [ -s "$TMP/other" ]; then
+              echo "**Other**"
+              sed 's/^/  - /' "$TMP/other"
+              echo
+            fi
+            echo "**Downloads**"
+            echo "- **Linux x64 musl**: \`.tar.gz\` (extract with \`tar -xzf\`)"
+            echo "- **Windows x64**: \`.zip\` (contains \`artefact-cli.exe\`)"
+            echo "- **macOS Apple Silicon**: \`.tar.gz\` (\`aarch64-apple-darwin\`, extract with \`tar -xzf\`)"
+            if [ -n "$COMPARE" ]; then
+              echo
+              echo "**Full Changelog**: $COMPARE"
+            fi
+          } > notes.md
+          echo "=== draft release notes ==="
+          cat notes.md
+          echo "notes=$PWD/notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.release_version }}
+          name: v${{ needs.prepare.outputs.release_version }}
+          body_path: ${{ steps.notes.outputs.notes }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*
