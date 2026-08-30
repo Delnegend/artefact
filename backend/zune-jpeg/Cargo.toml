@@ -33,8 +33,7 @@ default = ["x86", "neon", "std"]
 
 
 [dependencies]
-zune-core = { version = "0.5.0-rc2" }
-
+zune-core = { workspace = true }
 
 [dev-dependencies]
-zune-ppm = { version = "0.5.0-rc0" }
+zune-ppm = { workspace = true }

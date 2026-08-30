@@ -4,25 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-image = { version = "0.25.8", default-features = false, features = [
-    "png",
-    "webp",
-    "bmp",
-    "tiff",
-] }
-zune-jpeg = { path = "../zune-jpeg" }
-mozjpeg-sys = { version = "2.2.3", optional = true }
-wide = { version = "0.7.33", optional = true }
-rayon = "1.11.0"
-thiserror = { version = "2.0.17", optional = true }
-libc = { version = "0.2.176", optional = true }
-paste = "1.0.15"
+image = { workspace = true }
+zune-jpeg = { workspace = true }
+mozjpeg-sys = { workspace = true, optional = true }
+wide = { workspace = true, optional = true }
+rayon = { workspace = true }
+thiserror = { workspace = true, optional = true }
+libc = { workspace = true, optional = true }
+paste = { workspace = true }
 
 [dev-dependencies]
-criterion = "0.7.0"
-rand_core = "0.9.3"
-rand = "0.9.2"
-wide = "0.7.33"
+criterion = { workspace = true }
+rand = { workspace = true }
+rand_core = { workspace = true }
+wide = { workspace = true }
 
 [lib]
 name = "artefact_lib"

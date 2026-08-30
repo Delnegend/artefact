@@ -4,11 +4,8 @@ version = "1.0.4"
 edition = "2024"
 
 [dependencies]
-clap = { version = "4.5.23", features = ["derive"] }
-
-[dependencies.artefact-lib]
-path = "../artefact-lib"
-# features = ["native", "simd", "simd_std", "simd_adaptive"]
+artefact-lib = { workspace = true }
+clap = { workspace = true }
 
 [[bin]]
 name = "artefact-cli"

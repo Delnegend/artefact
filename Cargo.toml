@@ -2,6 +2,25 @@
 resolver = "2"
 members = ["backend/artefact-cli", "backend/artefact-lib", "backend/artefact-wasm", "backend/zune-jpeg"]
 
+[workspace.dependencies]
+artefact-lib = { path = "backend/artefact-lib" }
+clap = { version = "4.5.23", features = ["derive"] }
+console_error_panic_hook = { version = "0.1.7" }
+criterion = { version = "0.7.0" }
+image = { version = "0.25.8", default-features = false, features = ["png", "webp", "bmp", "tiff"] }
+libc = { version = "0.2.176" }
+mozjpeg-sys = { version = "2.2.3" }
+paste = { version = "1.0.15" }
+rand = { version = "0.9.2" }
+rand_core = { version = "0.9.3" }
+rayon = { version = "1.11.0" }
+thiserror = { version = "2.0.17" }
+wasm-bindgen = { version = "0.2.104" }
+wide = { version = "0.7.33" }
+zune-core = { version = "0.5.0-rc2" }
+zune-jpeg = { path = "backend/zune-jpeg" }
+zune-ppm = { version = "0.5.0-rc0" }
+
 [profile.release]
 lto = true
 codegen-units = 1
