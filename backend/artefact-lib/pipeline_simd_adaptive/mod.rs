@@ -8,7 +8,7 @@ mod compute_step_tv2;
 
 use crate::{
     jpeg::Coefficient,
-    utils::{aux::Aux, macros::mul_add},
+    utils::{auxiliary::Aux, macros::mul_add},
 };
 use adaptive_width::get_adaptive_widths;
 use coef::SIMDAdaptiveCoef;

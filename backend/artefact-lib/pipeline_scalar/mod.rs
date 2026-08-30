@@ -10,7 +10,7 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIter
 use crate::{
     jpeg::Coefficient,
     pipeline_scalar::coef::ScalarCoef,
-    utils::{aux::Aux, macros::mul_add},
+    utils::{auxiliary::Aux, macros::mul_add},
 };
 
 #[allow(unused)]

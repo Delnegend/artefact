@@ -1,6 +1,6 @@
 use super::{SIMD8Coef, f32x8};
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     boxing::{boxing, unboxing},
     dct::{dct8x8s, idct8x8s},
     traits::{Clamp, FromSlice, WriteTo},

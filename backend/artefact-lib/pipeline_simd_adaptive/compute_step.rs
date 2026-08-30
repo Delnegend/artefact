@@ -10,7 +10,7 @@ use super::{
 use crate::{
     pipeline_simd_8::f32x8,
     utils::{
-        aux::Aux,
+        auxiliary::Aux,
         macros::mul_add,
         traits::{FromSlice, WriteTo},
     },

@@ -4,7 +4,7 @@ use zune_jpeg::sample_factor::SampleFactor;
 
 use super::coef::SIMDAdaptiveCoef;
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     boxing::{boxing, unboxing},
     dct::{dct8x8s, idct8x8s},
     traits::WriteTo,

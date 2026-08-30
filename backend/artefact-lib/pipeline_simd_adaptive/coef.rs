@@ -5,7 +5,7 @@ use zune_jpeg::sample_factor::SampleFactor;
 use crate::{
     jpeg::Coefficient,
     utils::{
-        aux::AuxTraits,
+        auxiliary::AuxTraits,
         boxing::unboxing,
         dct::idct8x8s,
         traits::{FromSlice, WriteTo},

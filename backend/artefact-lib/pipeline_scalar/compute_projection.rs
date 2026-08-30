@@ -1,6 +1,6 @@
 use super::ScalarCoef;
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     boxing::{boxing, unboxing},
     dct::{dct8x8s, idct8x8s},
 };

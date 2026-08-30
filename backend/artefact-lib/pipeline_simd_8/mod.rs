@@ -15,7 +15,7 @@ use rayon::prelude::*;
 use crate::{
     jpeg::Coefficient,
     pipeline_simd_8::{coef::SIMD8Coef, compute_step::compute_step},
-    utils::{aux::Aux, macros::mul_add},
+    utils::{auxiliary::Aux, macros::mul_add},
 };
 
 #[allow(unused)]

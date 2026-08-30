@@ -4,7 +4,7 @@ use super::f32x8;
 use crate::{
     jpeg::Coefficient,
     utils::{
-        aux::AuxTraits,
+        auxiliary::AuxTraits,
         boxing::unboxing,
         dct::idct8x8s,
         traits::{FromSlice, WriteTo},

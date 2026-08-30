@@ -7,7 +7,7 @@ use paste::paste;
 
 use super::adaptive_width::AdaptiveWidth;
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
 

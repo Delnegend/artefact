@@ -1,4 +1,4 @@
-pub mod aux;
+pub mod auxiliary;
 pub mod boxing;
 pub mod dct;
 pub mod macros;

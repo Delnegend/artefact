@@ -1,6 +1,6 @@
 use crate::{
     jpeg::Coefficient,
-    utils::{aux::AuxTraits, boxing::unboxing, dct::idct8x8s},
+    utils::{auxiliary::AuxTraits, boxing::unboxing, dct::idct8x8s},
 };
 use zune_jpeg::sample_factor::SampleFactor;
 

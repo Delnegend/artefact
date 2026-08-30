@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use super::f32x8;
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     traits::{FromSlice, SafeDiv, WriteTo},
 };
 

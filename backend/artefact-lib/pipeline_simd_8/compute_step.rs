@@ -7,7 +7,7 @@ use super::{
     compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2, f32x8,
 };
 use crate::utils::{
-    aux::Aux,
+    auxiliary::Aux,
     macros::mul_add,
     traits::{FromSlice, WriteTo},
 };
