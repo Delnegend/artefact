@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Full matrix on PR — weekly cadence (Dependabot 14d), so cost is acceptable
+# Mirrors release.yml build steps but without packaging/release
+
+jobs:
+  check:
+    name: Check (just check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: extractions/setup-just@v3
+
+      - name: Install frontend dependencies
+        run: bun install
+        working-directory: ./frontend
+
+      - name: Run checks
+        run: just check
+
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux/x64-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            platform: windows/x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: darwin/arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install musl-tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq musl-tools
+
+      - name: Build
+        run: cargo build --bin artefact-cli --release --target ${{ matrix.target }}

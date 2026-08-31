@@ -1,0 +1,120 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number to test auto-merge (leave empty to auto-detect open dependabot PRs)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'dependencies')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Enable auto-merge for patch and minor
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --rebase "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dispatch-release:
+    needs: automerge
+    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'dependencies')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Wait for PR to be merged and dispatch Release
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          echo "Auto-merge enabled for $PR_URL (update-type: ${{ steps.meta.outputs.update-type }}), waiting for merge..."
+          for i in $(seq 1 60); do
+            STATE=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+            echo "[$i/60] PR state: $STATE"
+            if [ "$STATE" = "MERGED" ]; then
+              echo "PR merged, dispatching Release workflow..."
+              break
+            fi
+            if [ "$STATE" = "CLOSED" ]; then
+              echo "PR closed without merge, skipping dispatch"
+              exit 0
+            fi
+            sleep 10
+          done
+          STATE=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json state --jq '.state')
+          if [ "$STATE" != "MERGED" ]; then
+            echo "PR not merged within timeout, skipping Release dispatch (state=$STATE)"
+            exit 0
+          fi
+          # Compute next patch version from latest tag
+          git init -q /tmp/repo && cd /tmp/repo
+          git remote add origin "https://github.com/${{ github.repository }}.git"
+          git fetch --tags -q origin
+          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
+          PLAIN_VERSION="${LATEST_TAG#v}"
+          IFS='.' read -r major minor patch <<< "$PLAIN_VERSION"
+          major="${major:-0}"
+          minor="${minor:-1}"
+          patch="${patch:-0}"
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            NEXT_VERSION="0.1.0"
+          else
+            NEXT_PATCH=$((patch + 1))
+            NEXT_VERSION="${major}.${minor}.${NEXT_PATCH}"
+          fi
+          echo "Latest tag: $LATEST_TAG -> next: $NEXT_VERSION"
+          gh workflow run release.yml --ref main -f release_version="$NEXT_VERSION" -f create_release=true --repo "${{ github.repository }}"
+          echo "Dispatched"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  manual-test:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Manual auto-merge test
+        run: |
+          if [ -n "${{ inputs.pr-number }}" ]; then
+            PR="${{ inputs.pr-number }}"
+            echo "Testing PR #$PR"
+            gh pr view "$PR" --repo "${{ github.repository }}" --json number,title,author,labels,headRefName | jq .
+            gh pr merge --auto --rebase "$PR" --repo "${{ github.repository }}" && echo "Enabled auto-merge for #$PR" || echo "Failed (maybe not dependabot, not patch/minor, or CI not green)"
+          else
+            echo "Auto-detecting open dependabot PRs..."
+            gh pr list --repo "${{ github.repository }}" --state open --author "dependabot[bot]" --json number,title,headRefName,labels | jq .
+            COUNT=$(gh pr list --repo "${{ github.repository }}" --state open --author "dependabot[bot]" --json number --jq length)
+            if [ "$COUNT" -eq 0 ]; then
+              echo "No open dependabot PRs found."
+              echo "Create a test PR (gh pr create) or wait for Dependabot schedule (weekly Mon 02:00, cooldown 14d, grouped)."
+              echo "You can also test with: gh workflow run dependabot-auto-merge.yml -f pr-number=<num>"
+              exit 0
+            fi
+            for pr in $(gh pr list --repo "${{ github.repository }}" --state open --author "dependabot[bot]" --json number --jq '.[].number'); do
+              echo "Enabling auto-merge for PR #$pr"
+              gh pr merge --auto --rebase "$pr" --repo "${{ github.repository }}" && echo "Enabled for #$pr" || echo "Failed for #$pr (maybe major or CI red)"
+            done
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
