@@ -129,3 +129,9 @@ flame chroma="420":
 	fi
 
 	CARGO_PROFILE_RELEASE_DEBUG=true RUSTFLAGS="-Ctarget-cpu=native" cargo flamegraph --bin artefact-cli --release -- assets/sample.${CHROMA}.input.jpg -y
+
+# generate synthetic sample.png via ffmpeg (see scripts/generate-sample.sh)
+generate-sample output="assets/sample.png":
+	./scripts/generate-sample.sh "{{output}}"
+
+alias sample := generate-sample
