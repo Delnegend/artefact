@@ -125,7 +125,7 @@ impl Components {
 
         trace!(
             "Component ID:{:?} \tHS:{} VS:{} QT:{}",
-            id, horizontal_sample, vertical_sample, quantization_table_number
+            id, horizontal_samp, vertical_samp, quant_table_number
         );
 
         Ok(Components {
