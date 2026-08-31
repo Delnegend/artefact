@@ -20,7 +20,7 @@
 		"@vite-pwa/nuxt": "^1.1.0",
 		"@vueuse/core": "^14.1.0",
 		"clsx": "^2.1.1",
-		"lucide-vue-next": "^0.562.0",
+		"lucide-vue-next": "^1.0.0",
 		"nuxt": "^4.2.2",
 		"radix-vue": "^1.9.17",
 		"tailwind-merge": "^3.4.0",
@@ -31,11 +31,11 @@
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.1.18",
-		"@trivago/prettier-plugin-sort-imports": "^5.2.2",
+		"@trivago/prettier-plugin-sort-imports": "^6.0.2",
 		"oxlint": "^1.36.0",
-		"prettier-plugin-tailwindcss": "^0.7.2",
+		"prettier-plugin-tailwindcss": "^0.8.1",
 		"tailwindcss": "^4.1.18",
-		"typescript": "^5.9.3",
+		"typescript": "^7.0.2",
 		"vite-plugin-pwa": "^1.2.0",
 		"vite-plugin-wasm": "^3.5.0"
 	},
