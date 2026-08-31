@@ -74,7 +74,7 @@ impl Debug for DecodeErrors {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Format(a) => write!(f, "{a:?}"),
-            Self::FormatStatic(a) => write!(f, "{:?}", &a),
+            Self::FormatStatic(a) => write!(f, "{:?}", a),
 
             Self::HuffmanDecode(reason) => {
                 write!(f, "Error decoding huffman values: {reason}")

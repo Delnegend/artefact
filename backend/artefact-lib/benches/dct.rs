@@ -4,7 +4,7 @@
 #![allow(clippy::excessive_precision)]
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 use wide::f32x8;
 
 pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
@@ -14,7 +14,7 @@ pub const C8_2I: f32 = 0.191_341_716_182_544_885_86;
 pub const C8_3R: f32 = 0.415_734_806_151_272_618_54;
 pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
 pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
-pub const W8_4R: f32 = 0.707_106_781_186_547_524_40;
+pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
 pub fn idct8x8s_simd(a: &mut [f32; 64]) {
     {
@@ -177,7 +177,7 @@ pub fn dct_benches(c: &mut Criterion) {
     let mut arr_a = [0.0; 64];
     arr_a.iter_mut().for_each(|x| *x = rng.random());
 
-    let mut arr_b = arr_a.clone();
+    let mut arr_b = arr_a;
 
     group.bench_function("idct8x8s", |b| b.iter(|| idct8x8s(&mut arr_a)));
 

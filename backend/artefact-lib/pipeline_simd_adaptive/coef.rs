@@ -38,8 +38,10 @@ impl From<Coefficient> for SIMDAdaptiveCoef {
     fn from(c: Coefficient) -> Self {
         let dct_coefs = c
             .dct_coefs
-            .chunks_exact(64)
-            .map(f32x64::from_slc)
+            .as_chunks::<64>()
+            .0
+            .iter()
+            .map(|c| f32x64::from_slc(c))
             .collect::<Vec<f32x64>>();
 
         let quant_table = f32x64::from_array(c.quant_table);
