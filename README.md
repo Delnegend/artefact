@@ -9,7 +9,7 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-MIT%2FApache--2.0-yellow?style=flat)](LICENSE-MIT)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Browser-lightgrey?style=flat)](#quick-start)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Browser-lightgrey?style=flat)](#quick-start)
 
 Reconstructs lost JPEG detail for smoother, more pleasing images — Rust rewrite of [jpeg2png](https://github.com/victorvde/jpeg2png), ~3× faster, runs natively via CLI or directly in the browser via WASM.
 
