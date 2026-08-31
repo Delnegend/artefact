@@ -4,7 +4,7 @@
 #![allow(clippy::excessive_precision)]
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 use wide::f32x8;
 
 pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
@@ -14,7 +14,7 @@ pub const C8_2I: f32 = 0.191_341_716_182_544_885_86;
 pub const C8_3R: f32 = 0.415_734_806_151_272_618_54;
 pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
 pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
-pub const W8_4R: f32 = 0.707_106_781_186_547_524_40;
+pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
 pub fn idct8x8s_simd(a: &mut [f32; 64]) {
     {
@@ -47,14 +47,14 @@ pub fn idct8x8s_simd(a: &mut [f32; 64]) {
         x2i = x0i - xi;
         x0r += xr;
         x0i += xi;
-        a[0 * 8..0 * 8 + 8].copy_from_slice((x0r + x1r).as_array_ref());
-        a[7 * 8..7 * 8 + 8].copy_from_slice((x0r - x1r).as_array_ref());
-        a[2 * 8..2 * 8 + 8].copy_from_slice((x0i + x1i).as_array_ref());
-        a[5 * 8..5 * 8 + 8].copy_from_slice((x0i - x1i).as_array_ref());
-        a[4 * 8..4 * 8 + 8].copy_from_slice((x2r - x3i).as_array_ref());
-        a[3 * 8..3 * 8 + 8].copy_from_slice((x2r + x3i).as_array_ref());
-        a[6 * 8..6 * 8 + 8].copy_from_slice((x2i - x3r).as_array_ref());
-        a[1 * 8..1 * 8 + 8].copy_from_slice((x2i + x3r).as_array_ref());
+        a[0 * 8..0 * 8 + 8].copy_from_slice((x0r + x1r).as_array());
+        a[7 * 8..7 * 8 + 8].copy_from_slice((x0r - x1r).as_array());
+        a[2 * 8..2 * 8 + 8].copy_from_slice((x0i + x1i).as_array());
+        a[5 * 8..5 * 8 + 8].copy_from_slice((x0i - x1i).as_array());
+        a[4 * 8..4 * 8 + 8].copy_from_slice((x2r - x3i).as_array());
+        a[3 * 8..3 * 8 + 8].copy_from_slice((x2r + x3i).as_array());
+        a[6 * 8..6 * 8 + 8].copy_from_slice((x2i - x3r).as_array());
+        a[1 * 8..1 * 8 + 8].copy_from_slice((x2i + x3r).as_array());
     }
 
     {
@@ -177,7 +177,7 @@ pub fn dct_benches(c: &mut Criterion) {
     let mut arr_a = [0.0; 64];
     arr_a.iter_mut().for_each(|x| *x = rng.random());
 
-    let mut arr_b = arr_a.clone();
+    let mut arr_b = arr_a;
 
     group.bench_function("idct8x8s", |b| b.iter(|| idct8x8s(&mut arr_a)));
 
