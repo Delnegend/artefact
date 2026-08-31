@@ -26,11 +26,11 @@ pub trait WriteTo {
 
 impl WriteTo for wide::f32x8 {
     fn write_to(&self, target: &mut [f32]) {
-        target.copy_from_slice(self.as_array());
+        target.copy_from_slice(self.as_array_ref());
     }
 
     fn write_partial_to(&self, target: &mut [f32], range: RangeInclusive<usize>) {
-        target.copy_from_slice(&self.as_array()[range]);
+        target.copy_from_slice(&self.as_array_ref()[range]);
     }
 }
 
@@ -140,14 +140,14 @@ pub trait SafeDiv {
 
 impl SafeDiv for wide::f32x8 {
     fn safe_div(&self, divisor: Self) -> Self {
-        match divisor.as_array() {
+        match divisor.as_array_ref() {
             divisor if divisor.contains(&0.0) => Self::from(
                 divisor
                     .iter()
                     .enumerate()
                     .map(|(i, g_norm)| match g_norm {
                         0.0 => 0.0,
-                        _ => self.as_array()[i] / g_norm,
+                        _ => self.as_array_ref()[i] / g_norm,
                     })
                     .collect::<Vec<f32>>()
                     .as_slice(),

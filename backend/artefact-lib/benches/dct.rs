@@ -47,14 +47,14 @@ pub fn idct8x8s_simd(a: &mut [f32; 64]) {
         x2i = x0i - xi;
         x0r += xr;
         x0i += xi;
-        a[0 * 8..0 * 8 + 8].copy_from_slice((x0r + x1r).as_array());
-        a[7 * 8..7 * 8 + 8].copy_from_slice((x0r - x1r).as_array());
-        a[2 * 8..2 * 8 + 8].copy_from_slice((x0i + x1i).as_array());
-        a[5 * 8..5 * 8 + 8].copy_from_slice((x0i - x1i).as_array());
-        a[4 * 8..4 * 8 + 8].copy_from_slice((x2r - x3i).as_array());
-        a[3 * 8..3 * 8 + 8].copy_from_slice((x2r + x3i).as_array());
-        a[6 * 8..6 * 8 + 8].copy_from_slice((x2i - x3r).as_array());
-        a[1 * 8..1 * 8 + 8].copy_from_slice((x2i + x3r).as_array());
+        a[0 * 8..0 * 8 + 8].copy_from_slice((x0r + x1r).as_array_ref());
+        a[7 * 8..7 * 8 + 8].copy_from_slice((x0r - x1r).as_array_ref());
+        a[2 * 8..2 * 8 + 8].copy_from_slice((x0i + x1i).as_array_ref());
+        a[5 * 8..5 * 8 + 8].copy_from_slice((x0i - x1i).as_array_ref());
+        a[4 * 8..4 * 8 + 8].copy_from_slice((x2r - x3i).as_array_ref());
+        a[3 * 8..3 * 8 + 8].copy_from_slice((x2r + x3i).as_array_ref());
+        a[6 * 8..6 * 8 + 8].copy_from_slice((x2i - x3r).as_array_ref());
+        a[1 * 8..1 * 8 + 8].copy_from_slice((x2i + x3r).as_array_ref());
     }
 
     {
