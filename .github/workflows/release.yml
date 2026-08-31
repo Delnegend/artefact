@@ -21,10 +21,15 @@ on:
 env:
   BINARY_NAME: artefact-cli
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     name: Prepare
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
@@ -87,6 +92,8 @@ jobs:
     name: Build (${{ matrix.platform }})
     needs: prepare
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
