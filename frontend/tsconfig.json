@@ -5,7 +5,7 @@
 		"./target",
 		"./node_modules",
 		"./artefact-cli",
-		"./artefact-lib",
+		"./artefact-core",
 		"./artefact-wasm"
 	],
 	"compilerOptions": {

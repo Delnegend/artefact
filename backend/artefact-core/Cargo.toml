@@ -1,5 +1,5 @@
 [package]
-name = "artefact-lib"
+name = "artefact-core"
 version = "0.1.0"
 edition = "2024"
 
@@ -20,7 +20,7 @@ rand_core = { workspace = true }
 wide = { workspace = true }
 
 [lib]
-name = "artefact_lib"
+name = "artefact_core"
 path = "lib.rs"
 
 [features]

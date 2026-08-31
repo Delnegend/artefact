@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["backend/artefact-cli", "backend/artefact-lib", "backend/artefact-wasm", "backend/zune-jpeg"]
+members = ["backend/artefact-cli", "backend/artefact-core", "backend/artefact-wasm", "backend/zune-jpeg"]
 
 [workspace.dependencies]
-artefact-lib = { path = "backend/artefact-lib" }
+artefact-core = { path = "backend/artefact-core" }
 clap = { version = "4.5.23", features = ["derive"] }
 console_error_panic_hook = { version = "0.1.7" }
 criterion = { version = "0.7.0" }

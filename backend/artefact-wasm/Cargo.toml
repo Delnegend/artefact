@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-artefact-lib = { workspace = true, features = ["native", "simd", "simd_std", "simd_adaptive"] }
+artefact-core = { workspace = true, features = ["native", "simd", "simd_std", "simd_adaptive"] }
 console_error_panic_hook = { workspace = true }
 wasm-bindgen = { workspace = true }
 

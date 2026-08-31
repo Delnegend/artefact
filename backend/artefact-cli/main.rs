@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use artefact_lib::{Artefact, JpegSource, ValueCollection};
+use artefact_core::{Artefact, JpegSource, ValueCollection};
 use clap::Parser;
 
 #[derive(Parser, Debug)]

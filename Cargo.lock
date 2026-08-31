@@ -77,12 +77,12 @@ dependencies = [
 name = "artefact-cli"
 version = "1.0.4"
 dependencies = [
- "artefact-lib",
+ "artefact-core",
  "clap",
 ]
 
 [[package]]
-name = "artefact-lib"
+name = "artefact-core"
 version = "0.1.0"
 dependencies = [
  "criterion",
@@ -102,7 +102,7 @@ dependencies = [
 name = "artefact-wasm"
 version = "0.1.0"
 dependencies = [
- "artefact-lib",
+ "artefact-core",
  "console_error_panic_hook",
  "wasm-bindgen",
 ]

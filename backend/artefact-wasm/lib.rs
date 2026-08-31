@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use artefact_lib::{Artefact, JpegSource, ValueCollection, image::ImageFormat};
+use artefact_core::{Artefact, JpegSource, ValueCollection, image::ImageFormat};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
