@@ -29,7 +29,7 @@ JPEG compression discards data and regular decoders "fill in" the gaps with nois
 
 ## Features
 
-- **Rust core** — port of `jpeg2png` from C++ to Rust (`backend/artefact-lib`)
+- **Rust core** — port of `jpeg2png` from C++ to Rust (`backend/artefact-core`)
 - **~3× faster** — `rayon` parallelism + optional SIMD (`wide` / `std::simd`, `simd_adaptive` for x8/x16/x32/x64 dispatch)
 - **WASM-ready** — `backend/artefact-wasm` via `wasm-pack`, runs 100% client-side at [artefact.delnegend.com](https://artefact.delnegend.com) (no upload)
 - **CLI + Web** — same solver for native binary (`artefact-cli`) and browser (`frontend` Nuxt + `vite-plugin-wasm`)
@@ -122,7 +122,7 @@ See [docs/development.md](docs/development.md) for full prerequisites and sample
 ```
 .
 ├── backend/
-│   ├── artefact-lib/     # core solver — scalar / simd_8 / simd_adaptive pipelines
+│   ├── artefact-core/    # core solver — scalar / simd_8 / simd_adaptive pipelines
 │   ├── artefact-cli/     # native binary (clap)
 │   ├── artefact-wasm/    # wasm-pack cdylib for frontend
 │   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
@@ -157,7 +157,7 @@ just build            # -> target/release/artefact-cli
 # trigger: workflow_dispatch (release_version + create_release) or merged PR
 ```
 
-SIMD / solver flags are toggled in `backend/artefact-lib/Cargo.toml` features (`simd`, `simd_std`, `simd_adaptive`, `native`, `moz`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation).
+SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`, `simd_std`, `simd_adaptive`, `native`, `moz`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation).
 
 ### Checks
 
@@ -179,14 +179,14 @@ just flame 420           # flamegraph for profiling
 
 ```mermaid
 graph TD
-    Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-lib<br/>solver<br/>scalar / simd_8 / simd_adaptive<br/>rayon]
+    Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>scalar / simd_8 / simd_adaptive<br/>rayon]
     L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp/gif]
     L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib]
     W --> F[frontend<br/>Nuxt 4 / Vue / Vite<br/>vite-plugin-wasm + PWA<br/>artefact.delnegend.com]
     F -. upload .-> W
 ```
 
-`artefact-lib` is feature-gated: default scalar, `simd` enables `wide`, `simd_adaptive` adds runtime dispatch, `native` uses LLVM `mul_add` (`-Ctarget-cpu=native`), `moz` swaps `zune-jpeg` for `mozjpeg-sys`.
+`artefact-core` is feature-gated: default scalar, `simd` enables `wide`, `simd_adaptive` adds runtime dispatch, `native` uses LLVM `mul_add` (`-Ctarget-cpu=native`), `moz` swaps `zune-jpeg` for `mozjpeg-sys`.
 
 ## CLI reference
 
@@ -202,7 +202,7 @@ graph TD
 | `--benchmark` | `-b` | `false` | Run solver but don't write output |
 | `--overwrite` | `-y` | `false` | Overwrite existing output |
 
-Defined in `backend/artefact-cli/main.rs:6` and `backend/artefact-lib/lib.rs:50`.
+Defined in `backend/artefact-cli/main.rs:6` and `backend/artefact-core/lib.rs:50`.
 
 ## Contributing
 

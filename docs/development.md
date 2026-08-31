@@ -6,9 +6,9 @@ The project contains 2 main components/directories:
 
 -   [frontend/](./frontend/): the web UI built with Nuxt.js
 -   [backend/](./backend/):
-    -   [artefact-lib/](./backend/artefact-lib/): the core library that does the image processing
-    -   [artefact-cli/](./backend/artefact-cli/): the command-line interface that uses artefact-lib
-    -   [artefact-wasm/](./backend/artefact-wasm/): the WebAssembly bindings for artefact-lib, to be used in the web UI
+    -   [artefact-core/](./backend/artefact-core/): the core library that does the image processing
+    -   [artefact-cli/](./backend/artefact-cli/): the command-line interface that uses artefact-core
+    -   [artefact-wasm/](./backend/artefact-wasm/): the WebAssembly bindings for artefact-core, to be used in the web UI
     -   [zune-jpeg/](./backend/zune-jpeg/): a fork of zune-jpeg with some fixes, improvements, and DCT coefficients exposed
 
 ## Prerequisites
@@ -79,13 +79,13 @@ cargo build --bin artefact-cli --release
 
 ## SIMD implementation
 
-To toggle specific SIMD features when building the CLI, modify [artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and add the desired features to the `[dependencies.artefact-lib]` features list.
+To toggle specific SIMD features when building the CLI, modify [artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and add the desired features to the `[dependencies.artefact-core]` features list.
 
 Example:
 
 ```toml
-[dependencies.artefact-lib]
-path = "../artefact-lib"
+[dependencies.artefact-core]
+path = "../artefact-core"
 features = [
 "simd", # enable SIMD
 "simd_std", # using `std::simd` instead of `wide`
