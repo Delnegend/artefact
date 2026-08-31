@@ -25,45 +25,30 @@ These will be automatically installed if you choose to run this project inside a
 
 ## Sample images
 
-The [justfile](../justfile) includes a recipe to generate subsampled JPEG test images using `ffmpeg`. Because `ffmpeg` is relatively large and typically only needed once, it is not listed as a prerequisite or installed in the devcontainer.
-
-### Option 1: Using `ffmpeg` on the host
-
-If you have `ffmpeg` and `just` installed on your host, place a test image named `sample.png` in the `assets/` directory and run:
+Generate subsampled test inputs from `assets/sample.png` (requires `ffmpeg`, not in devcontainer):
 
 ```bash
-just encode
+sudo apt-get update && sudo apt-get install ffmpeg
+just encode  # → assets/sample.{j444,j422,j420,444,422,420}.input.jpg (6 files)
 ```
 
-The generated images will be written to the `assets/` directory.
+Place `assets/sample.png` first; outputs go to `assets/`.
 
-### Option 2: Using `ffmpeg` inside the devcontainer
+## Test a sample
 
-If you want to contain everything inside the devcontainer, you can install `ffmpeg` there.
+Decode a generated sample:
 
 ```bash
-sudo apt update && sudo apt install -y ffmpeg
+just decode 420  # reads assets/sample.420.input.jpg → assets/sample.420.decoded.png
 ```
 
-After installation, place `sample.png` in `assets/` and run:
-
-```bash
-just encode
-```
-
-## Running against a sample image
-
-```bash
-just decode <chroma-subsampling>
-```
-
-Where `<chroma-subsampling>` is one of: `420`, `422`, `444`, `j420`, `j422`, `j444`.
+`420` may be `420`/`422`/`444`/`j420`/`j422`/`j444`; see `just --choose`.
 
 ## Cross-compiling / Releases
 
-Cross-compiled CLI binaries (linux `x86_64-unknown-linux-musl`, windows `x86_64-pc-windows-gnu`, macOS `aarch64-apple-darwin` for Apple Silicon) are built on GitHub Actions via `.github/workflows/release.yml`.
+Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64 musl`, `windows x64`, `macOS arm64`.
 
-Trigger via `workflow_dispatch` with inputs `release_version` (e.g. `0.1.0`) and `create_release` (`true` to push to `Releases`), or automatically on merged `pull_request` to `next`/`main` with `dependencies` label or `chore/update-deps` branch (auto-bumps patch).
+Trigger: `workflow_dispatch` (`release_version`, `create_release`) or auto on `PR → main` with `dependencies` label (patch bump).
 
 Locally, just build natively:
 
