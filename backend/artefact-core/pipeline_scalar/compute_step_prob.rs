@@ -23,7 +23,7 @@ pub fn compute_step_prob(
             // Process each coefficient in current block
             for (j, cosb) in cosbs.iter_mut().enumerate() {
                 // Calculate difference from original DCT coefficients
-                *cosb -= coef.dct_coefs[i * 64 + j] * coef.quant_table[j];
+                *cosb = coef.dct_coefs[i * 64 + j].mul_add(-coef.quant_table[j], *cosb);
 
                 // Calculate derivative for gradient
                 *cosb /= (coef.quant_table[j]).powi(2);
@@ -50,7 +50,10 @@ pub fn compute_step_prob(
                             debug_assert!(x < max_rounded_px_w);
 
                             // Update gradient with scaled cosine value
-                            obj_gradient[(y * max_rounded_px_w + x) as usize] += alpha * cosbs[j];
+                            obj_gradient[(y * max_rounded_px_w + x) as usize] = alpha.mul_add(
+                                cosbs[j],
+                                obj_gradient[(y * max_rounded_px_w + x) as usize],
+                            );
                         }
                     }
                 }

@@ -100,37 +100,53 @@ fn compute_step_tv2_inner(
         let g_xy_sym = g_xy_syms[c];
         let aux = &mut auxs[c];
 
-        aux.obj_gradient[(curr_y * max_rounded_px_w + curr_x) as usize] +=
-            alpha * (-(mul_add!(2.0_f32, g_yy, mul_add!(2.0_f32, g_xx, 2.0 * g_xy_sym))) / g2_norm);
+        aux.obj_gradient[(curr_y * max_rounded_px_w + curr_x) as usize] = alpha.mul_add(
+            -(mul_add!(2.0_f32, g_yy, mul_add!(2.0_f32, g_xx, 2.0 * g_xy_sym))) / g2_norm,
+            aux.obj_gradient[(curr_y * max_rounded_px_w + curr_x) as usize],
+        );
 
         if curr_x > 0 {
-            aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x - 1)) as usize] +=
-                alpha * ((g_xy_sym + g_xx) / g2_norm);
+            aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x - 1)) as usize] = alpha.mul_add(
+                (g_xy_sym + g_xx) / g2_norm,
+                aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x - 1)) as usize],
+            );
         }
 
         if curr_x < max_rounded_px_w - 1 {
-            aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x + 1)) as usize] +=
-                alpha * ((g_xy_sym + g_xx) / g2_norm);
+            aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x + 1)) as usize] = alpha.mul_add(
+                (g_xy_sym + g_xx) / g2_norm,
+                aux.obj_gradient[(curr_y * max_rounded_px_w + (curr_x + 1)) as usize],
+            );
         }
 
         if curr_y > 0 {
-            aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + curr_x) as usize] +=
-                alpha * ((g_yy + g_xy_sym) / g2_norm);
+            aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + curr_x) as usize] = alpha.mul_add(
+                (g_yy + g_xy_sym) / g2_norm,
+                aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + curr_x) as usize],
+            );
         }
 
         if curr_y < max_rounded_px_h - 1 {
-            aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + curr_x) as usize] +=
-                alpha * ((g_yy + g_xy_sym) / g2_norm);
+            aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + curr_x) as usize] = alpha.mul_add(
+                (g_yy + g_xy_sym) / g2_norm,
+                aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + curr_x) as usize],
+            );
         }
 
         if curr_x < max_rounded_px_w - 1 && curr_y > 0 {
-            aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + (curr_x + 1)) as usize] +=
-                alpha * ((-g_xy_sym) / g2_norm);
+            aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + (curr_x + 1)) as usize] = alpha
+                .mul_add(
+                    (-g_xy_sym) / g2_norm,
+                    aux.obj_gradient[((curr_y - 1) * max_rounded_px_w + (curr_x + 1)) as usize],
+                );
         }
 
         if curr_x > 0 && curr_y < max_rounded_px_h - 1 {
-            aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + (curr_x - 1)) as usize] +=
-                alpha * ((-g_xy_sym) / g2_norm);
+            aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + (curr_x - 1)) as usize] = alpha
+                .mul_add(
+                    (-g_xy_sym) / g2_norm,
+                    aux.obj_gradient[((curr_y + 1) * max_rounded_px_w + (curr_x - 1)) as usize],
+                );
         }
     }
 }
