@@ -1,5 +1,5 @@
 use criterion::Criterion;
-use rand::RngExt;
+use rand::Rng;
 use wide::f32x8;
 
 fn init_with_copy(target: [f32; 64]) -> f32x8 {
@@ -20,8 +20,8 @@ pub fn init_slice_benches(c: &mut Criterion) {
     let mut target = [0.0; 64];
     let mut rng = rand::rng();
 
-    for target_item in &mut target {
-        *target_item = rng.random();
+    for i in 0..64 {
+        target[i] = rng.random();
     }
 
     let mut group = c.benchmark_group("init_slice");

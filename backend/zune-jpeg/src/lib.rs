@@ -59,7 +59,7 @@
 //! use zune_jpeg::JpegDecoder;
 //!
 //! let mut decoder = JpegDecoder::new(ZCursor::new(&[]));
-//! decoder.decode().unwrap();
+//! decoder.decode_headers().unwrap();
 //! let image_info = decoder.info().unwrap();
 //! println!("{},{}",image_info.width,image_info.height)
 //! ```
@@ -101,6 +101,7 @@
 #![deny(clippy::std_instead_of_alloc, clippy::alloc_instead_of_core)]
 #![cfg_attr(not(feature = "x86"), forbid(unsafe_code))]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![macro_use]
 extern crate alloc;
 extern crate core;
 

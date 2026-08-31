@@ -50,58 +50,30 @@ pub fn compute_step_prob(
                     // Apply sampling factors (upsampling)
                     match (coef.vertical_samp_factor, coef.horizontal_samp_factor) {
                         (SampleFactor::One, SampleFactor::One) => {
-                            obj_gradient[(cy * max_rounded_px_w + cx) as usize] = alpha.mul_add(
-                                cosbs[j],
-                                obj_gradient[(cy * max_rounded_px_w + cx) as usize],
-                            );
+                            obj_gradient[(cy * max_rounded_px_w + cx) as usize] += alpha * cosbs[j];
                         }
                         (SampleFactor::One, SampleFactor::Two) => {
-                            obj_gradient[(cy * max_rounded_px_w + cx * 2) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[(cy * max_rounded_px_w + cx * 2 + 1) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
+                            obj_gradient[(cy * max_rounded_px_w + cx * 2) as usize] +=
+                                alpha * cosbs[j];
+                            obj_gradient[(cy * max_rounded_px_w + cx * 2 + 1) as usize] +=
+                                alpha * cosbs[j];
                         }
                         (SampleFactor::Two, SampleFactor::One) => {
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx) as usize],
-                                );
+                            obj_gradient[(cy * 2 * max_rounded_px_w + cx) as usize] +=
+                                alpha * cosbs[j];
+                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx) as usize] +=
+                                alpha * cosbs[j];
                         }
                         (SampleFactor::Two, SampleFactor::Two) => {
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2 + 1) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx * 2) as usize] =
-                                alpha.mul_add(
-                                    cosbs[j],
-                                    obj_gradient
-                                        [((cy * 2 + 1) * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx * 2 + 1) as usize] =
-                                alpha.mul_add(
-                                    cosbs[j],
-                                    obj_gradient
-                                        [((cy * 2 + 1) * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
+                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2) as usize] +=
+                                alpha * cosbs[j];
+                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2 + 1) as usize] +=
+                                alpha * cosbs[j];
+                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx * 2) as usize] +=
+                                alpha * cosbs[j];
+                            obj_gradient
+                                [((cy * 2 + 1) * max_rounded_px_w + cx * 2 + 1) as usize] +=
+                                alpha * cosbs[j];
                         }
                     }
                 }

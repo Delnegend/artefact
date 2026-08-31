@@ -38,18 +38,14 @@ impl From<Coefficient> for SIMD8Coef {
     fn from(c: Coefficient) -> Self {
         let dct_coefs = c
             .dct_coefs
-            .as_chunks::<8>()
-            .0
-            .iter()
-            .map(|c| f32x8::from_slc(c))
+            .chunks_exact(8)
+            .map(f32x8::from_slc)
             .collect::<Vec<f32x8>>();
 
         let quant_table: [f32x8; 8] = c
             .quant_table
-            .as_chunks::<8>()
-            .0
-            .iter()
-            .map(|c| f32x8::from_slc(c))
+            .chunks_exact(8)
+            .map(f32x8::from_slc)
             .collect::<Vec<f32x8>>()
             .try_into()
             .expect("Invalid quant_table length");

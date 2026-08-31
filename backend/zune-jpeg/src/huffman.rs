@@ -176,11 +176,12 @@ impl HuffmanTable {
                 // l -> Current code length,
                 // p => Its index in self.code and self.values
                 // Generate left justified code followed by all possible bit sequences
-                for look_bits in ((huff_code[p] as usize) << (HUFF_LOOKAHEAD - l)..)
-                    .take(1 << (HUFF_LOOKAHEAD - l))
-                {
+                let mut look_bits = (huff_code[p] as usize) << (HUFF_LOOKAHEAD - l);
+
+                for _ in 0..1 << (HUFF_LOOKAHEAD - l) {
                     self.lookup[look_bits] =
                         (i32::from(l) << HUFF_LOOKAHEAD) | i32::from(self.values[p]);
+                    look_bits += 1;
                 }
 
                 p += 1;

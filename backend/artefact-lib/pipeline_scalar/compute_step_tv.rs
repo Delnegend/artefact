@@ -68,24 +68,19 @@ pub fn compute_step_tv_inner(
     g_norm = g_norm.sqrt();
 
     let alpha = 1.0 / (nchannel as f32).sqrt();
-    *tv = f64::mul_add(f64::from(alpha), f64::from(g_norm), *tv);
+    *tv += f64::from(alpha) * f64::from(g_norm);
 
     // compute derivatives
     if g_norm != 0.0 {
         for c in 0..nchannel {
-            auxs[c].obj_gradient[curr_px_idx] = alpha.mul_add(
-                -(g_xs[c] + g_ys[c]) / g_norm,
-                auxs[c].obj_gradient[curr_px_idx],
-            );
+            auxs[c].obj_gradient[curr_px_idx] += alpha * -(g_xs[c] + g_ys[c]) / g_norm;
 
             if !px_at_right_edge {
-                auxs[c].obj_gradient[next_px_idx] =
-                    alpha.mul_add(g_xs[c] / g_norm, auxs[c].obj_gradient[next_px_idx]);
+                auxs[c].obj_gradient[next_px_idx] += alpha * g_xs[c] / g_norm;
             }
 
             if !px_at_bottom_edge {
-                auxs[c].obj_gradient[below_px_idx] =
-                    alpha.mul_add(g_ys[c] / g_norm, auxs[c].obj_gradient[below_px_idx]);
+                auxs[c].obj_gradient[below_px_idx] += alpha * g_ys[c] / g_norm;
             }
         }
     }

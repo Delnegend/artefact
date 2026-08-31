@@ -1,13 +1,12 @@
 use std::hint::black_box;
 
 use criterion::Criterion;
-use rand::RngExt;
+use rand::Rng;
 
 fn safe_cast(input: Vec<u16>) -> Vec<f32> {
     input.into_iter().map(|x| x as f32).collect()
 }
 
-#[allow(clippy::uninit_vec)]
 fn unsafe_cast(input: Vec<u16>) -> Vec<f32> {
     let mut output = Vec::with_capacity(input.len());
     unsafe {

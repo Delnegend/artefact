@@ -60,7 +60,7 @@ pub fn compute_step(
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
             for i in 0..max_rounded_px_count {
-                aux.fdata[i] = step_size.mul_add(-(aux.obj_gradient[i] / norm), aux.fdata[i]);
+                aux.fdata[i] -= step_size * (aux.obj_gradient[i] / norm);
             }
         }
     }

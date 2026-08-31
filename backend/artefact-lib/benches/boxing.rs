@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::Criterion;
-use rand::RngExt;
+use rand::Rng;
 use wide::f32x8;
 
 fn boxing(
