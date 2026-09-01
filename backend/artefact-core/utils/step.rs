@@ -7,7 +7,6 @@ use crate::utils::{auxiliary::Aux, coef::Coef, macros::mul_add};
 ///
 /// `prob_fn` and `proj_fn` are width-specific (f32x8 vs f32x64),
 /// `tv_fn`/`tv2_fn` are dispatched via closures to handle adaptive widths.
-
 #[allow(clippy::too_many_arguments)]
 pub fn step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
     max_w: u32,

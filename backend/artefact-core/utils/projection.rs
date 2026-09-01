@@ -6,7 +6,7 @@ use crate::utils::{
 };
 
 /// Generic projection — resample + DCT box clamp.
-/// `clamp_fn` is width-specific (scalar f32::clamp vs f32x8::clmp vs f32x64::simd_clamp).
+/// `clamp_fn` is width-specific (scalar `f32::clamp` vs `f32x8::clmp` vs `f32x64::simd_clamp`).
 pub fn projection<C, F>(max_w: u32, max_h: u32, aux: &mut Aux, coef: &C, mut clamp_fn: F)
 where
     C: Coef,

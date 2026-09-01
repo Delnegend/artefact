@@ -88,6 +88,8 @@ macro_rules! gen_clamp {
 gen_clamp!(8, 16, 32, 64);
 
 pub trait SafeDiv {
+    /// Perform element-wise division, but if the divisor is 0, the result is 0
+    #[must_use]
     fn safe_div(&self, divisor: Self) -> Self;
 }
 

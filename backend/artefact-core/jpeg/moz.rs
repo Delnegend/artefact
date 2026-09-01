@@ -55,11 +55,11 @@ pub enum MozDecoderErr {
 
 #[cfg(feature = "moz")]
 impl Jpeg {
-    pub fn from(jpeg_source: JpegSource) -> Result<Jpeg, String> {
+    pub fn from(jpeg_source: JpegSource) -> Result<Self, String> {
         let mut decoder = MozDecoder::new().map_err(|e| e.to_string())?;
         decoder.set_source(jpeg_source).map_err(|e| e.to_string())?;
         decoder.read_header().map_err(|e| e.to_string())?;
-        Ok(Jpeg {
+        Ok(Self {
             nchannel: decoder.cinfo.num_components as u32,
             real_px_w: decoder.cinfo.image_width,
             real_px_h: decoder.cinfo.image_height,
@@ -68,7 +68,7 @@ impl Jpeg {
     }
 }
 impl MozDecoder {
-    fn new() -> Result<MozDecoder, MozDecoderErr> {
+    fn new() -> Result<Self, MozDecoderErr> {
         // init new error struct
         let mut jerr = Box::new(MaybeUninit::<jpeg_error_mgr>::uninit());
         let error = unsafe {
@@ -91,7 +91,7 @@ impl MozDecoder {
         };
         unsafe { jpeg_create_decompress(cinfo.as_mut_ptr()) };
         let cinfo = unsafe { cinfo.assume_init() };
-        Ok(MozDecoder {
+        Ok(Self {
             cinfo,
             jerr,
             is_source_set: false,
@@ -112,7 +112,7 @@ impl MozDecoder {
                 let mut file = catch_unwind(|| unsafe {
                     let ptr = libc::fopen(path.as_ptr().cast::<i8>(), "rb".as_ptr().cast::<i8>());
                     if ptr.is_null() {
-                        return Err(MozDecoderErr::DerefNull("libc::open".to_string()))?;
+                        Err(MozDecoderErr::DerefNull("libc::open".to_string()))?;
                     }
                     Ok(Box::from_raw(ptr))
                 })
@@ -137,7 +137,7 @@ impl MozDecoder {
             return Err(MozDecoderErr::SourceNotSet);
         }
         if unsafe { jpeg_read_header(self.cinfo.as_mut(), boolean::from(true)) } != 1 {
-            return Err(MozDecoderErr::ParseHeaderErr('get_last_err: {
+            Err(MozDecoderErr::ParseHeaderErr('get_last_err: {
                 let buffer = [0u8; 80];
                 if let Some(format_fn) = self.jerr.format_message {
                     unsafe {
