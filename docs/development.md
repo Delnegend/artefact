@@ -64,6 +64,8 @@ cargo build --bin artefact-cli --release
 
 ## SIMD implementation
 
+Pipelines live in `backend/artefact-core/pipeline/{scalar,simd8,adaptive}` — `scalar` is the frozen reference, `adaptive` is the production default (`simd,simd_adaptive` features), `simd8` is a fixed-width reference. Shared logic (FISTA, projection, step orchestration, DCT, boxing, SIMD traits) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD paths.
+
 To toggle specific SIMD features when building the CLI, modify [artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and add the desired features to the `[dependencies.artefact-core]` features list.
 
 Example:
@@ -72,13 +74,16 @@ Example:
 [dependencies.artefact-core]
 path = "../artefact-core"
 features = [
-"simd", # enable SIMD
-"simd_std", # using `std::simd` instead of `wide`
+"simd", # enable SIMD via `std::simd`
 "simd_adaptive", # dynamically switch between x8, x16, x32 and x64
 "native", # use LLVM "mul_add" intrinsic for more accurate rounding, requires "-Ctarget-cpu=native" or else it'll most likely be slower
 "moz", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
 ]
 ```
+
+## Sample images & regression
+
+`scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). `scripts/verify.sh` decodes 420/422/444 via `artefact-cli`, compares against an `ffmpeg` reference (`mean <10`, `max <100`, no glitch, color blocks + checker), and fails on subsampling regressions (e.g. the 1x2 vertical shift bug in `backend/zune-jpeg/src/mcu.rs`). Run both with `just sample` and `just verify`.
 
 ## Building the WASM library and web UI
 
