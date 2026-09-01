@@ -1,17 +1,22 @@
 mod adaptive_width;
 mod coef;
 mod compute_projection;
-mod compute_step;
 mod compute_step_prob;
 mod compute_step_tv;
 mod compute_step_tv2;
 
 use rayon::prelude::*;
 
-use crate::{jpeg::Coefficient, utils::fista};
+use crate::{
+    jpeg::Coefficient,
+    pipeline::adaptive::{
+        compute_projection::compute_projection, compute_step_prob::compute_step_prob,
+        compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
+    },
+    utils::{fista, step},
+};
 use adaptive_width::get_adaptive_widths;
 use coef::SIMDAdaptiveCoef;
-use compute_step::compute_step;
 
 #[allow(unused)]
 pub fn compute(
@@ -43,7 +48,7 @@ pub fn compute(
         max_rounded_px_count,
         radius,
         |coefs, auxs, step_size| {
-            compute_step(
+            step::step(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 max_rounded_px_count,
@@ -53,7 +58,10 @@ pub fn compute(
                 step_size,
                 weight,
                 &pweight,
-                &adaptive_widths,
+                compute_step_prob,
+                |w, h, nch, auxs| compute_step_tv(w, h, nch, auxs, &adaptive_widths),
+                |w, h, nch, auxs, alpha| compute_step_tv2(w, h, nch, auxs, alpha, &adaptive_widths),
+                compute_projection,
             );
         },
     )
