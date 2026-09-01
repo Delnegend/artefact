@@ -1,9 +1,13 @@
+#![feature(portable_simd)]
 #![allow(dead_code)]
 
 mod boxing;
 mod casting;
 mod dct;
 mod init_slice;
+mod tv;
+mod tv_par;
+mod tv_simd64;
 
 use criterion::{criterion_group, criterion_main};
 
@@ -13,5 +17,6 @@ criterion_group!(
     init_slice::init_slice_benches,
     casting::casting_benches,
     dct::dct_benches,
+    tv::tv_benches,
 );
 criterion_main!(benches);

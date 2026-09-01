@@ -1,9 +1,7 @@
-#![feature(portable_simd)]
-
 use std::{hint::black_box, simd::f32x8};
 
 use criterion::Criterion;
-use rand::RngExt;
+use rand::Rng;
 
 fn boxing(
     input: &[f32],

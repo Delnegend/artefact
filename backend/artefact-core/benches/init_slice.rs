@@ -1,9 +1,7 @@
-#![feature(portable_simd)]
-
 use std::simd::f32x8;
 
 use criterion::Criterion;
-use rand::RngExt;
+use rand::Rng;
 
 fn init_with_copy(target: [f32; 64]) -> f32x8 {
     f32x8::from_array({
