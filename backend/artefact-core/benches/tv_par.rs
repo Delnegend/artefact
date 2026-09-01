@@ -1,12 +1,8 @@
-use std::simd::StdFloat;
+use std::simd::{StdFloat, f32x8};
 
 use rayon::prelude::*;
 
-use super::f32x8;
-use crate::utils::{
-    auxiliary::Aux,
-    traits::{FromSlice, SafeDiv, WriteTo},
-};
+use artefact_core::{Aux, FromSlice, SafeDiv, WriteTo};
 
 /// A slower version (for some reason) of [`compute_step_tv_simd`] with
 /// [`rayon`] parallelization.
@@ -52,8 +48,9 @@ pub fn compute_step_tv_simd_par(
         for (chan_g_xs, chan_g_ys) in &chans_forward_diffs {
             let g_xs = chan_g_xs[group_idx];
             let g_ys = chan_g_ys[group_idx];
-            g_norm[group_idx] += (g_xs * g_xs + g_ys * g_ys).sqrt();
+            g_norm[group_idx] += g_xs * g_xs + g_ys * g_ys;
         }
+        g_norm[group_idx] = g_norm[group_idx].sqrt();
     }
 
     auxs.par_iter_mut()

@@ -2,6 +2,7 @@
 name = "artefact-core"
 version = "0.1.0"
 edition = "2024"
+autobenches = false
 
 [dependencies]
 image = { workspace = true }
@@ -27,7 +28,12 @@ simd_std = []
 simd_adaptive = []
 native = []
 moz = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
+bench = []
 
 [[bench]]
 name = "bench"
 harness = false
+
+[[test]]
+name = "tv_equivalence"
+required-features = ["bench"]

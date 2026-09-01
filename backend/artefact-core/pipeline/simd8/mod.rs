@@ -7,6 +7,8 @@ mod compute_step_tv2;
 
 pub use std::simd::f32x8;
 
+pub use compute_step_tv::compute_step_tv;
+
 use rayon::prelude::*;
 
 use crate::{jpeg::Coefficient, utils::fista};

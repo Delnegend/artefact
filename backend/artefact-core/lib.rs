@@ -12,8 +12,11 @@
 )]
 
 mod jpeg;
-mod pipeline;
+pub mod pipeline;
 mod utils;
+
+pub use utils::auxiliary::{Aux, PixelDifference};
+pub use utils::traits::{FromSlice, SafeDiv, WriteTo};
 
 pub use image;
 use rayon::prelude::*;

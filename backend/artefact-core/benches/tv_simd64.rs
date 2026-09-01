@@ -1,6 +1,6 @@
-use std::simd::{cmp::SimdPartialEq, f32x64, StdFloat};
+use std::simd::{StdFloat, cmp::SimdPartialEq, f32x64};
 
-use crate::utils::auxiliary::Aux;
+use artefact_core::Aux;
 
 /// This unfortunately slower than [`f32x8`].
 ///
