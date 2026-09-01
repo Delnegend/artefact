@@ -1,4 +1,3 @@
-#[cfg(feature = "simd_std")]
 use std::simd::StdFloat;
 
 use rayon::prelude::*;

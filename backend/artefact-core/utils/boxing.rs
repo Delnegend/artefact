@@ -1,10 +1,4 @@
-#[cfg(feature = "simd")]
-use crate::{
-    pipeline_simd_8::f32x8,
-    utils::traits::{FromSlice, WriteTo},
-};
-
-/// Convert from 8x8 block to 64x1 block
+/// Scalar boxing/unboxing (8x8 block remapping).
 pub fn unboxing(
     input: &[f32],
     output: &mut [f32],
@@ -21,22 +15,10 @@ pub fn unboxing(
 
     for block_y in 0..block_h {
         for block_x in 0..block_w {
-            #[cfg(feature = "simd")]
-            for in_y in 0..8 {
-                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-
-                f32x8::from_slc(&input[index..index + 8])
-                    .write_to(&mut output[row_start..row_start + 8]);
-
-                index += 8;
-            }
-
-            #[cfg(not(feature = "simd"))]
             for in_y in 0..8 {
                 for in_x in 0..8 {
                     output[((block_y * 8 + in_y) * rounded_px_w + (block_x * 8 + in_x)) as usize] =
                         input[index];
-
                     index += 1;
                 }
             }
@@ -44,7 +26,6 @@ pub fn unboxing(
     }
 }
 
-/// Convert from 64x1 block to 8x8 block
 pub fn boxing(
     input: &[f32],
     output: &mut [f32],
@@ -61,17 +42,6 @@ pub fn boxing(
 
     for block_y in 0..block_h {
         for block_x in 0..block_w {
-            #[cfg(feature = "simd")]
-            for in_y in 0..8 {
-                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-
-                f32x8::from_slc(&input[row_start..row_start + 8])
-                    .write_to(&mut output[index..index + 8]);
-
-                index += 8;
-            }
-
-            #[cfg(not(feature = "simd"))]
             for in_y in 0..8 {
                 for in_x in 0..8 {
                     output[index] = input

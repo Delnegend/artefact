@@ -1,4 +1,3 @@
-mod adaptive_width;
 mod coef;
 mod compute_projection;
 mod compute_step;
@@ -6,14 +5,13 @@ mod compute_step_prob;
 mod compute_step_tv;
 mod compute_step_tv2;
 
+use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+
+use crate::pipeline::scalar::coef::ScalarCoef;
 use crate::{
     jpeg::Coefficient,
     utils::{auxiliary::Aux, macros::mul_add},
 };
-use adaptive_width::get_adaptive_widths;
-use coef::SIMDAdaptiveCoef;
-use compute_step::compute_step;
-use rayon::prelude::*;
 
 #[allow(unused)]
 pub fn compute(
@@ -26,10 +24,10 @@ pub fn compute(
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
 ) -> Vec<Vec<f32>> {
-    let mut coefs = coefs
+    let coefs: Vec<ScalarCoef> = coefs
         .into_par_iter()
-        .map(SIMDAdaptiveCoef::from)
-        .collect::<Vec<_>>();
+        .map(std::convert::Into::into)
+        .collect();
 
     // Initialize working buffers for each channel
     let mut auxs = (0..nchannel)
@@ -47,8 +45,6 @@ pub fn compute(
     let radius = (max_rounded_px_count as f32).sqrt() / 2.0;
     let mut term = 1.0_f32;
 
-    let adaptive_widths = get_adaptive_widths(max_rounded_px_w);
-
     // Main iteration loop
     for _ in 0..iterations {
         // FISTA update
@@ -65,7 +61,7 @@ pub fn compute(
         term = next_term;
 
         // Take a step
-        compute_step(
+        compute_step::compute_step(
             max_rounded_px_w,
             max_rounded_px_h,
             max_rounded_px_count,
@@ -75,9 +71,8 @@ pub fn compute(
             radius / (1.0 + iterations as f32).sqrt(),
             weight,
             &pweight,
-            &adaptive_widths,
         );
     }
 
-    auxs.into_iter().map(|aux| aux.fdata).collect()
+    auxs.into_par_iter().map(|aux| aux.fdata).collect()
 }

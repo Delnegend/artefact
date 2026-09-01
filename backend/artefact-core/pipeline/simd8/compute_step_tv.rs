@@ -1,11 +1,7 @@
-#[cfg(feature = "simd_std")]
 use std::{
     ops::Div,
     simd::{StdFloat, cmp::SimdPartialEq},
 };
-
-#[cfg(not(feature = "simd_std"))]
-use crate::utils::traits::SafeDiv;
 
 use super::f32x8;
 use crate::utils::{
@@ -106,7 +102,6 @@ fn compute_step_tv_inner(
         .fold(f32x8::splat(0.0), |acc, x| acc + x)
         .sqrt();
 
-    #[cfg(feature = "simd_std")]
     let mask = g_norm.simd_ne(f32x8::splat(0.0));
 
     for c in 0..nchannel {
@@ -118,13 +113,12 @@ fn compute_step_tv_inner(
             let b = px_idx_start_of_group + 7;
             let target = &mut aux.obj_gradient[a..=b];
 
-            #[cfg(not(feature = "simd_std"))]
+            #[cfg(any())]
             (alpha * -(g_xs[c] + g_ys[c]))
                 .safe_div(g_norm)
                 .add_slice(target)
                 .write_to(target);
 
-            #[cfg(feature = "simd_std")]
             (alpha * -(g_xs[c] + g_ys[c]))
                 .div(g_norm)
                 .add_slice(target)
@@ -137,13 +131,12 @@ fn compute_step_tv_inner(
                 let b = px_idx_start_of_group + 7;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * g_xs[c])
                     .safe_div(g_norm)
                     .add_short_slice(target)
                     .write_partial_to(target, 0..=6);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * g_xs[c])
                     .div(g_norm)
                     .add_short_slice(target)
@@ -153,13 +146,12 @@ fn compute_step_tv_inner(
                 let b = px_idx_start_of_group + 8;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * g_xs[c])
                     .safe_div(g_norm)
                     .add_slice(target)
                     .write_to(target);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * g_xs[c])
                     .div(g_norm)
                     .add_slice(target)
@@ -173,13 +165,12 @@ fn compute_step_tv_inner(
             let b = a + 7;
             let target = &mut aux.obj_gradient[a..=b];
 
-            #[cfg(not(feature = "simd_std"))]
+            #[cfg(any())]
             (alpha * g_ys[c])
                 .safe_div(g_norm)
                 .add_slice(target)
                 .write_to(target);
 
-            #[cfg(feature = "simd_std")]
             (alpha * g_ys[c])
                 .div(g_norm)
                 .add_slice(target)

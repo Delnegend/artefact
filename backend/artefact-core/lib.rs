@@ -12,9 +12,7 @@
 )]
 
 mod jpeg;
-mod pipeline_scalar;
-mod pipeline_simd_8;
-mod pipeline_simd_adaptive;
+mod pipeline;
 mod utils;
 
 pub use image;
@@ -24,12 +22,13 @@ use jpeg::Jpeg;
 pub use jpeg::JpegSource;
 use utils::macros::mul_add;
 
-#[cfg(not(feature = "simd"))]
-use pipeline_scalar::compute;
-#[cfg(all(feature = "simd", not(feature = "simd_adaptive")))]
-use pipeline_simd_8::compute;
+// New single-crate dispatch — always buildable, no bloat via features
 #[cfg(all(feature = "simd", feature = "simd_adaptive"))]
-use pipeline_simd_adaptive::compute;
+use pipeline::adaptive::compute;
+#[cfg(not(feature = "simd"))]
+use pipeline::scalar::compute;
+#[cfg(all(feature = "simd", not(feature = "simd_adaptive")))]
+use pipeline::simd8::compute;
 
 #[derive(Debug)]
 pub enum ValueCollection<T> {

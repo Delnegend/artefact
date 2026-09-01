@@ -1,4 +1,5 @@
-use crate::{pipeline_scalar::coef::ScalarCoef, utils::dct::idct8x8s};
+use crate::pipeline::scalar::coef::ScalarCoef;
+use crate::utils::dct::idct8x8s;
 
 // Compute objective gradient for the distance of DCT coefficients from normal decoding
 // N.B. destroys cos

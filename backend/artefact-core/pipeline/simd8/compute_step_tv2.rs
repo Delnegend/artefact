@@ -1,4 +1,3 @@
-#[cfg(feature = "simd_std")]
 use std::{
     ops::Div,
     simd::{StdFloat, cmp::SimdPartialEq},
@@ -148,7 +147,6 @@ fn compute_step_tv2_inner(
         .fold(f32x8::splat(0.0), |acc, x| acc + x)
         .sqrt();
 
-    #[cfg(feature = "simd_std")]
     let mask = g2_norm.simd_ne(f32x8::splat(0.0));
 
     // compute derivatives
@@ -163,7 +161,7 @@ fn compute_step_tv2_inner(
             let b = curr_group_idx + 7;
             let target = &mut aux.obj_gradient[a..=b];
 
-            #[cfg(not(feature = "simd_std"))]
+            #[cfg(any())]
             (alpha
                 * -(f32x8::splat(2.0) * g_xx
                     + f32x8::splat(2.0) * g_xy_sym
@@ -172,7 +170,6 @@ fn compute_step_tv2_inner(
                 .add_slice(target)
                 .write_to(target);
 
-            #[cfg(feature = "simd_std")]
             (alpha
                 * -(f32x8::splat(2.0) * g_xx
                     + f32x8::splat(2.0) * g_xy_sym
@@ -200,13 +197,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 6;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * (g_xy_sym + g_xx))
                     .safe_div(g2_norm)
                     .add_slice(target)
                     .write_to(target);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
                     .add_slice(target)
@@ -223,13 +219,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 7;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * (g_xy_sym + g_xx))
                     .safe_div(g2_norm)
                     .add_range_slice(target, 0..=6)
                     .write_partial_to(target, 0..=6);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
                     .add_short_slice(target)
@@ -239,13 +234,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 8;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * (g_xy_sym + g_xx))
                     .safe_div(g2_norm)
                     .add_slice(target)
                     .write_to(target);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
                     .add_slice(target)
@@ -259,13 +253,12 @@ fn compute_step_tv2_inner(
             let b = a + 7;
             let target = &mut aux.obj_gradient[a..=b];
 
-            #[cfg(not(feature = "simd_std"))]
+            #[cfg(any())]
             (alpha * (g_yy + g_xy_sym))
                 .safe_div(g2_norm)
                 .add_slice(target)
                 .write_to(target);
 
-            #[cfg(feature = "simd_std")]
             (alpha * (g_yy + g_xy_sym))
                 .div(g2_norm)
                 .add_slice(target)
@@ -277,13 +270,12 @@ fn compute_step_tv2_inner(
             let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
             let b = a + 7;
             let target = &mut aux.obj_gradient[a..=b];
-            #[cfg(not(feature = "simd_std"))]
+            #[cfg(any())]
             (alpha * (g_yy + g_xy_sym))
                 .safe_div(g2_norm)
                 .add_slice(target)
                 .write_to(target);
 
-            #[cfg(feature = "simd_std")]
             (alpha * (g_yy + g_xy_sym))
                 .div(g2_norm)
                 .add_slice(target)
@@ -300,13 +292,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 7;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * -g_xy_sym)
                     .safe_div(g2_norm)
                     .add_range_slice(target, 0..=6)
                     .write_partial_to(target, 0..=6);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
                     .add_short_slice(target)
@@ -316,13 +307,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 8;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * -g_xy_sym)
                     .safe_div(g2_norm)
                     .add_slice(target)
                     .write_to(target);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
                     .add_slice(target)
@@ -349,13 +339,12 @@ fn compute_step_tv2_inner(
                 let b = curr_group_idx + 6;
                 let target = &mut aux.obj_gradient[a..=b];
 
-                #[cfg(not(feature = "simd_std"))]
+                #[cfg(any())]
                 (alpha * -g_xy_sym)
                     .safe_div(g2_norm)
                     .add_slice(target)
                     .write_to(target);
 
-                #[cfg(feature = "simd_std")]
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
                     .add_slice(target)

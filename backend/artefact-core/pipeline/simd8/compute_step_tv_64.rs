@@ -4,7 +4,7 @@ use crate::utils::auxiliary::Aux;
 
 /// This unfortunately slower than [`f32x8`].
 ///
-/// [`f32x8`]: wide::f32x8
+/// [`f32x8`]: std::simd::f32x8
 #[allow(unused)]
 pub fn compute_step_tv_simd_64(
     max_rounded_px_w: u32,

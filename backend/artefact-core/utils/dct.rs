@@ -1,22 +1,10 @@
-//! Source: `<http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html>`
-//! fft2d.zip (2006/12/28) file shrtdct.c
-//!
-//! Copyright Takuya OOURA, 1996-2001
-//!
-//! You may use, copy, modify and distribute this code for any purpose
-//! (include commercial use) and without fee. Please refer to this package
-//! when you modify this code.
-
+//! Ooura DCT — copied from `utils/dct.rs`
 #![allow(clippy::identity_op)]
 #![allow(clippy::erasing_op)]
 #![allow(clippy::excessive_precision)]
 
 use crate::utils::macros::mul_add;
 
-// Cn_kR = sqrt(2.0/n) * cos(pi/2*k/n)
-// Cn_kI = sqrt(2.0/n) * sin(pi/2*k/n)
-// Wn_kR = cos(pi/2*k/n)
-// Wn_kI = sin(pi/2*k/n)
 pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
 pub const C8_1I: f32 = 0.097_545_161_008_064_133_92;
 pub const C8_2R: f32 = 0.461_939_766_255_643_378_06;
@@ -24,9 +12,8 @@ pub const C8_2I: f32 = 0.191_341_716_182_544_885_86;
 pub const C8_3R: f32 = 0.415_734_806_151_272_618_54;
 pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
 pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
-pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2; // 0.707_106_781_186_547_524_40
+pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
-/// Inverse Discrete Cosine Transform (IDCT) for 8x8 blocks
 pub fn idct8x8s(a: &mut [f32; 64]) {
     let mut x0r: f32;
     let mut x0i: f32;
