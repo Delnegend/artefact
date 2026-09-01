@@ -5,9 +5,10 @@ dev:
 	cd frontend && bun x nuxt dev  --no-fork
 
 # check code for: rust (backend), js (frontend)
-# default: all
+# default: all — rust checks ensure all pipelines always buildable (no silent regression)
 check kind="all":
 	#!/usr/bin/env bash
+	set -euo pipefail
 
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "js" ]]; then
 		cd frontend
@@ -19,8 +20,14 @@ check kind="all":
 	fi
 
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "rust" ]]; then
-		cargo fmt
-		cargo clippy
+		cargo fmt -- --check
+		# always-buildable: scalar / simd8 / adaptive are all compiled
+		cargo check --workspace
+		cargo check --workspace --all-features
+		# wasm — std::simd must build for wasm32 (wide removed)
+		cargo check -p artefact-core --target wasm32-unknown-unknown
+		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,simd_adaptive
+		cargo clippy --workspace --all-features
 	fi
 
 # build: native CLI, wasm, or web
@@ -65,57 +72,6 @@ update where="all":
 	if [[ "{{where}}" = "all" || "{{where}}" = "rust" ]]; then
 		cargo update
 	fi
-
-alias encode := encode-sample-image
-
-# generate sample images with different chroma subsampling from a base image
-encode-sample-image input="assets/sample.png":
-	#!/usr/bin/env bash
-
-	INPUT="{{input}}"
-
-	declare -A MODES=(
-		["j444"]="yuvj444p"
-		["j422"]="yuvj422p"
-		["j420"]="yuvj420p"
-		["420"]="yuv420p"
-		["422"]="yuv422p"
-		["444"]="yuv444p"
-	)
-
-	# Loop through each mode and convert
-	for suffix in "${!MODES[@]}"; do
-		pix_fmt=${MODES[$suffix]}
-		filename="${input%.*}"
-		output="assets/sample.${suffix}.input.jpg"
-
-		echo "Converting $INPUT to $output using $pix_fmt..."
-
-		ffmpeg -i "$INPUT" -pix_fmt "$pix_fmt" "$output" -y
-	done
-
-alias decode := decode-sample-image
-
-
-decode-sample-image chroma="420":
-	#!/usr/bin/env bash
-
-	CHROMA="{{chroma}}"
-
-	valid_chromas=("j444" "j422" "j420" "420" "422" "444")
-	if [[ ! " ${valid_chromas[@]} " =~ "$CHROMA" ]]; then
-		echo "Invalid chroma subsampling: ${CHROMA}"
-		echo "Valid options are: ${valid_chromas[*]}"
-		exit 1
-	fi
-
-	INPUT="assets/sample.${CHROMA}.input.jpg"
-	OUTPUT="assets/sample.${CHROMA}.decoded.png"
-
-	echo "Decoding $INPUT to $OUTPUT..."
-
-	cargo run --bin artefact-cli -- "$INPUT" -o "$OUTPUT" -y
-
 flame chroma="420":
 	#!/usr/bin/env bash
 
@@ -129,3 +85,14 @@ flame chroma="420":
 	fi
 
 	CARGO_PROFILE_RELEASE_DEBUG=true RUSTFLAGS="-Ctarget-cpu=native" cargo flamegraph --bin artefact-cli --release -- assets/sample.${CHROMA}.input.jpg -y
+
+# generate synthetic sample.png via ffmpeg (see scripts/generate-sample.sh)
+generate-sample output="assets/sample.png":
+	./scripts/generate-sample.sh "{{output}}"
+
+alias sample := generate-sample
+
+# verify decoded output vs ffmpeg reference — hoisted to scripts/verify.sh
+# catches 1x2/2x1 subsampling regressions like the 2x1 vertical shift bug (422/444)
+verify:
+	./scripts/verify.sh
