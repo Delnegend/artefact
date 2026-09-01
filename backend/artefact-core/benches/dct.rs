@@ -1,11 +1,13 @@
+#![feature(portable_simd)]
 #![allow(unused)]
 #![allow(clippy::identity_op)]
 #![allow(clippy::erasing_op)]
 #![allow(clippy::excessive_precision)]
 
+use std::simd::f32x8;
+
 use criterion::Criterion;
 use rand::RngExt;
-use wide::f32x8;
 
 pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
 pub const C8_1I: f32 = 0.097_545_161_008_064_133_92;
@@ -29,20 +31,28 @@ pub fn idct8x8s_simd(a: &mut [f32; 64]) {
         let mut xr = f32x8::splat(0.0);
         let mut xi = f32x8::splat(0.0);
 
-        x1r = C8_1R * f32x8::from(&a[1 * 8..1 * 8 + 8]) + C8_1I * f32x8::from(&a[7 * 8..7 * 8 + 8]);
-        x1i = C8_1R * f32x8::from(&a[7 * 8..7 * 8 + 8]) - C8_1I * f32x8::from(&a[1 * 8..1 * 8 + 8]);
-        x3r = C8_3R * f32x8::from(&a[3 * 8..3 * 8 + 8]) + C8_3I * f32x8::from(&a[5 * 8..5 * 8 + 8]);
-        x3i = C8_3R * f32x8::from(&a[5 * 8..5 * 8 + 8]) - C8_3I * f32x8::from(&a[3 * 8..3 * 8 + 8]);
+        x1r = C8_1R * f32x8::from_slice(&a[1 * 8..1 * 8 + 8])
+            + C8_1I * f32x8::from_slice(&a[7 * 8..7 * 8 + 8]);
+        x1i = C8_1R * f32x8::from_slice(&a[7 * 8..7 * 8 + 8])
+            - C8_1I * f32x8::from_slice(&a[1 * 8..1 * 8 + 8]);
+        x3r = C8_3R * f32x8::from_slice(&a[3 * 8..3 * 8 + 8])
+            + C8_3I * f32x8::from_slice(&a[5 * 8..5 * 8 + 8]);
+        x3i = C8_3R * f32x8::from_slice(&a[5 * 8..5 * 8 + 8])
+            - C8_3I * f32x8::from_slice(&a[3 * 8..3 * 8 + 8]);
         xr = x1r - x3r;
         xi = x1i + x3i;
         x1r += x3r;
         x3i -= x1i;
         x1i = W8_4R * (xr + xi);
         x3r = W8_4R * (xr - xi);
-        xr = C8_2R * f32x8::from(&a[2 * 8..2 * 8 + 8]) + C8_2I * f32x8::from(&a[6 * 8..6 * 8 + 8]);
-        xi = C8_2R * f32x8::from(&a[6 * 8..6 * 8 + 8]) - C8_2I * f32x8::from(&a[2 * 8..2 * 8 + 8]);
-        x0r = C8_4R * (f32x8::from(&a[0 * 8..0 * 8 + 8]) + f32x8::from(&a[4 * 8..4 * 8 + 8]));
-        x0i = C8_4R * (f32x8::from(&a[0 * 8..0 * 8 + 8]) - f32x8::from(&a[4 * 8..4 * 8 + 8]));
+        xr = C8_2R * f32x8::from_slice(&a[2 * 8..2 * 8 + 8])
+            + C8_2I * f32x8::from_slice(&a[6 * 8..6 * 8 + 8]);
+        xi = C8_2R * f32x8::from_slice(&a[6 * 8..6 * 8 + 8])
+            - C8_2I * f32x8::from_slice(&a[2 * 8..2 * 8 + 8]);
+        x0r = C8_4R
+            * (f32x8::from_slice(&a[0 * 8..0 * 8 + 8]) + f32x8::from_slice(&a[4 * 8..4 * 8 + 8]));
+        x0i = C8_4R
+            * (f32x8::from_slice(&a[0 * 8..0 * 8 + 8]) - f32x8::from_slice(&a[4 * 8..4 * 8 + 8]));
         x2r = x0r - xr;
         x2i = x0i - xi;
         x0r += xr;

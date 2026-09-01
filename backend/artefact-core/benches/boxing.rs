@@ -1,8 +1,9 @@
-use std::hint::black_box;
+#![feature(portable_simd)]
+
+use std::{hint::black_box, simd::f32x8};
 
 use criterion::Criterion;
 use rand::RngExt;
-use wide::f32x8;
 
 fn boxing(
     input: &[f32],
@@ -50,7 +51,7 @@ fn boxing_simd(
         for block_x in 0..block_w {
             for in_y in 0..8 {
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
-                let result = f32x8::from(&input[row_start..row_start + 8]);
+                let result = f32x8::from_slice(&input[row_start..row_start + 8]);
                 output[index..index + 8].copy_from_slice(result.as_array());
                 index += 8;
             }
@@ -128,7 +129,7 @@ pub fn unboxing_simd(
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                let result = f32x8::from(&input[index..index + 8]);
+                let result = f32x8::from_slice(&input[index..index + 8]);
 
                 let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
                 output[row_start..row_start + 8].copy_from_slice(result.as_array());

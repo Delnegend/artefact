@@ -7,7 +7,6 @@ edition = "2024"
 image = { workspace = true }
 zune-jpeg = { workspace = true }
 mozjpeg-sys = { workspace = true, optional = true }
-wide = { workspace = true, optional = true }
 rayon = { workspace = true }
 thiserror = { workspace = true, optional = true }
 libc = { workspace = true, optional = true }
@@ -17,14 +16,13 @@ paste = { workspace = true }
 criterion = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
-wide = { workspace = true }
 
 [lib]
 name = "artefact_core"
 path = "lib.rs"
 
 [features]
-simd = ["dep:wide"]
+simd = []
 simd_std = []
 simd_adaptive = []
 native = []

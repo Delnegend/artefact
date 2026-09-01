@@ -1,9 +1,12 @@
+#![feature(portable_simd)]
+
+use std::simd::f32x8;
+
 use criterion::Criterion;
 use rand::RngExt;
-use wide::f32x8;
 
 fn init_with_copy(target: [f32; 64]) -> f32x8 {
-    f32x8::from({
+    f32x8::from_array({
         let mut tmp = [0.0; 8];
         tmp[0..=6].copy_from_slice(&target[0..=6]);
         tmp
@@ -11,7 +14,7 @@ fn init_with_copy(target: [f32; 64]) -> f32x8 {
 }
 
 fn manual_init(target: [f32; 64]) -> f32x8 {
-    f32x8::new([
+    f32x8::from_array([
         target[0], target[1], target[2], target[3], target[4], target[5], target[6], 0.0,
     ])
 }

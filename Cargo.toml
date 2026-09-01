@@ -16,7 +16,6 @@ rand_core = { version = "0.10.1" }
 rayon = { version = "1.11.0" }
 thiserror = { version = "2.0.17" }
 wasm-bindgen = { version = "0.2.104" }
-wide = { version = "1.6.1" }
 zune-core = { version = "0.5.0-rc2" }
 zune-jpeg = { path = "backend/zune-jpeg" }
 zune-ppm = { version = "0.5.0-rc0" }
