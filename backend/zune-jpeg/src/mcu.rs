@@ -233,9 +233,10 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                         )?;
                     }
                     (SampleFactor::One, SampleFactor::Two) => {
-                        // TODO: need sample image to test this
-                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
-                        for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
+                        // 1x2 sampling: 2 blocks stacked vertically
+                        let idx0 = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
+                        let idx1 = idx0 + mcu_width;
+                        for idx in [idx0, idx1] {
                             let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
                             let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
 
