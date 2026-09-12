@@ -8,7 +8,6 @@ clap = { version = "4.5.23", features = ["derive"] }
 console_error_panic_hook = { version = "0.1.7" }
 criterion = { version = "0.8.2" }
 image = { version = "0.25.8", default-features = false, features = ["png", "webp", "bmp", "tiff"] }
-paste = { version = "1.0.15" }
 rand = { version = "0.10.2" }
 rand_core = { version = "0.10.1" }
 rayon = { version = "1.11.0" }

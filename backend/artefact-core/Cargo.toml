@@ -8,7 +8,6 @@ autobenches = false
 image = { workspace = true }
 zune-jpeg = { workspace = true }
 rayon = { workspace = true }
-paste = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
