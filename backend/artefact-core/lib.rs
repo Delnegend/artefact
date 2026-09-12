@@ -189,52 +189,39 @@ impl Artefact {
             *item += 128.0;
         }
 
+        let max_w = max_rounded_px_w as usize;
+
         // YCbCr -> RGB
         if jpeg.nchannel == 3 {
-            let mut rgb: Vec<[u8; 3]> =
-                Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
-            for i in 0..jpeg.real_px_h {
-                for j in 0..jpeg.real_px_w {
-                    let idx = (i * max_rounded_px_w + j) as usize;
-
-                    let yi = output[0][idx];
-                    let cbi = output[1][idx];
-                    let cri = output[2][idx];
-
-                    rgb.push([
-                        mul_add!(1.402_f32, cri, yi).clamp(0.0, 255.0) as u8,
-                        mul_add!(0.71414_f32, -cri, mul_add!(0.34414_f32, -cbi, yi))
-                            .clamp(0.0, 255.0) as u8,
-                        mul_add!(1.772_f32, cbi, yi).clamp(0.0, 255.0) as u8,
-                    ]);
-                }
-            }
-
+            let (luma, cb, cr) = (&output[0], &output[1], &output[2]);
             return Ok(image::RgbImage::from_fn(
                 jpeg.real_px_w,
                 jpeg.real_px_h,
                 |x, y| {
-                    let i = (y * jpeg.real_px_w + x) as usize;
-                    image::Rgb(rgb[i])
+                    let idx = y as usize * max_w + x as usize;
+
+                    let yi = luma[idx];
+                    let cbi = cb[idx];
+                    let cri = cr[idx];
+
+                    image::Rgb([
+                        mul_add!(1.402_f32, cri, yi).clamp(0.0, 255.0) as u8,
+                        mul_add!(0.71414_f32, -cri, mul_add!(0.34414_f32, -cbi, yi))
+                            .clamp(0.0, 255.0) as u8,
+                        mul_add!(1.772_f32, cbi, yi).clamp(0.0, 255.0) as u8,
+                    ])
                 },
             ));
         }
 
         // Grayscale
-        let mut gray: Vec<u8> = Vec::with_capacity((jpeg.real_px_h * jpeg.real_px_w) as usize);
-        for i in 0..jpeg.real_px_h {
-            for j in 0..jpeg.real_px_w {
-                let idx = (i * max_rounded_px_w + j) as usize;
-                gray.push(output[0][idx].clamp(0.0, 255.0) as u8);
-            }
-        }
-
+        let luma = &output[0];
         Ok(image::RgbImage::from_fn(
             jpeg.real_px_w,
             jpeg.real_px_h,
             |x, y| {
-                let i = (y * jpeg.real_px_w + x) as usize;
-                image::Rgb([gray[i], gray[i], gray[i]])
+                let v = luma[y as usize * max_w + x as usize].clamp(0.0, 255.0) as u8;
+                image::Rgb([v, v, v])
             },
         ))
     }

@@ -6,7 +6,6 @@ use crate::{
     jpeg::Coefficient,
     utils::{
         auxiliary::AuxTraits,
-        boxing::unboxing,
         dct::idct8x8s,
         traits::{FromSlice, WriteTo},
     },
@@ -69,31 +68,28 @@ impl From<Coefficient> for SIMDAdaptiveCoef {
                 .collect(),
 
             image_data: {
-                let mut tmp = vec![0.0; c.rounded_px_count as usize];
+                let mut image_data = vec![0.0; c.rounded_px_count as usize];
+                let block_w = c.block_w as usize;
+                let rounded_px_w = c.rounded_px_w as usize;
 
-                for i in 0..(c.block_count as usize) {
-                    let result = dct_coefs[i] * quant_table;
-                    result.write_to(&mut tmp[i * 64..(i + 1) * 64]);
+                for (i, dct) in dct_coefs.iter().enumerate() {
+                    let mut block = [0.0_f32; 64];
+                    (*dct * quant_table).write_to(&mut block);
 
-                    idct8x8s(
-                        tmp[i * 64..(i + 1) * 64]
-                            .as_mut()
-                            .try_into()
-                            .expect("Invalid image_data length"),
-                    );
+                    idct8x8s(&mut block);
+
+                    // 8x8 -> raster
+                    let block_y = i / block_w;
+                    let block_x = i % block_w;
+                    for in_y in 0..8 {
+                        let row = (block_y * 8 + in_y) * rounded_px_w + block_x * 8;
+                        for in_x in 0..8 {
+                            image_data[row + in_x] = block[in_y * 8 + in_x];
+                        }
+                    }
                 }
 
-                // 8x8 -> 64x1
-                unboxing(
-                    &tmp.clone(),
-                    tmp.as_mut(),
-                    c.rounded_px_w,
-                    c.rounded_px_h,
-                    c.block_w,
-                    c.block_h,
-                );
-
-                tmp
+                image_data
             },
 
             dct_coefs,

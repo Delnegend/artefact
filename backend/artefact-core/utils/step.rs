@@ -42,7 +42,7 @@ pub fn step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
 {
     // DCT coefficient distance gradient
     auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
-        aux.obj_gradient = vec![0.0; max_count];
+        aux.obj_gradient.fill(0.0);
         if pweight[c] != 0.0 {
             prob_fn(
                 max_w,
