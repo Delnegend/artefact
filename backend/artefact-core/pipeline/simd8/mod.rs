@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use crate::{
     jpeg::Coefficient,
     pipeline::simd8::compute_step_prob::compute_step_prob,
-    utils::{fista, projection::projection, step},
+    utils::{aligned::AlignedF32, fista, projection::projection, step},
 };
 use coef::SIMD8Coef;
 
@@ -27,7 +27,7 @@ pub fn compute(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
-) -> Vec<Vec<f32>> {
+) -> Vec<AlignedF32> {
     let coefs: Vec<SIMD8Coef> = coefs.into_par_iter().map(SIMD8Coef::from).collect();
     let radius = fista::radius(max_rounded_px_count);
     let widths = uniform_widths(max_rounded_px_w);

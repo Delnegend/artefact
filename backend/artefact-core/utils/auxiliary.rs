@@ -1,25 +1,27 @@
+use crate::utils::aligned::AlignedF32;
+
 #[derive(Debug)]
 pub struct PixelDifference {
-    pub x: Vec<f32>,
-    pub y: Vec<f32>,
+    pub x: AlignedF32,
+    pub y: AlignedF32,
 }
 
 /// Working buffers for each component
 #[derive(Debug)]
 pub struct Aux {
     /// DCT coefficients for `step_prob`
-    pub cos: Vec<f32>,
+    pub cos: AlignedF32,
 
     /// Gradient (derivative) of the objective function
-    pub obj_gradient: Vec<f32>,
+    pub obj_gradient: AlignedF32,
 
     pub pixel_diff: PixelDifference,
 
     /// Image data
-    pub fdata: Vec<f32>,
+    pub fdata: AlignedF32,
 
     /// Previous step image data for FISTA
-    pub fista: Vec<f32>,
+    pub fista: AlignedF32,
 }
 
 pub trait AuxTraits {
@@ -72,19 +74,19 @@ impl Aux {
         max_rounded_px_count: usize,
         coef: &impl AuxTraits,
     ) -> Self {
-        let mut fdata = vec![0.0; max_rounded_px_count];
+        let mut fdata = AlignedF32::zeros(max_rounded_px_count);
         coef.get_fdata(max_rounded_px_w, max_rounded_px_h, &mut fdata);
 
-        let mut cos = vec![0.0; coef.cos_count()];
+        let mut cos = AlignedF32::zeros(coef.cos_count());
         coef.get_cos(&mut cos);
 
         Self {
             cos,
-            obj_gradient: vec![0.0; max_rounded_px_count],
+            obj_gradient: AlignedF32::zeros(max_rounded_px_count),
 
             pixel_diff: PixelDifference {
-                x: vec![0.0; max_rounded_px_count],
-                y: vec![0.0; max_rounded_px_count],
+                x: AlignedF32::zeros(max_rounded_px_count),
+                y: AlignedF32::zeros(max_rounded_px_count),
             },
 
             fista: fdata.clone(),

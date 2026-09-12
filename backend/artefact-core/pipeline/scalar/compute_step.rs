@@ -2,7 +2,7 @@ use super::{
     coef::ScalarCoef, compute_projection::compute_projection, compute_step_prob::compute_step_prob,
     compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
 };
-use crate::utils::{auxiliary::Aux, macros::mul_add};
+use crate::utils::{aligned::AlignedF32, auxiliary::Aux, macros::mul_add};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compute_step(
@@ -20,7 +20,7 @@ pub fn compute_step(
         let aux = &mut auxs[c];
         let coef = &coefs[c];
 
-        aux.obj_gradient = vec![0.0; max_rounded_px_count];
+        aux.obj_gradient = AlignedF32::zeros(max_rounded_px_count);
 
         // DCT coefficient distance
         if pweight[c] != 0.0 {

@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments, clippy::similar_names)]
 
 pub mod adaptive_width;
+pub mod aligned;
 pub mod auxiliary;
 pub mod boxing;
 pub mod coef;

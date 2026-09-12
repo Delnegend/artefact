@@ -11,7 +11,7 @@ mod tv_par;
 mod tv_simd64;
 
 use artefact_core::pipeline::simd8::{compute_step_tv, uniform_widths};
-use artefact_core::{Aux, PixelDifference};
+use artefact_core::{AlignedF32, Aux, PixelDifference};
 
 const W: u32 = 1600;
 const H: u32 = 1200;
@@ -23,16 +23,16 @@ fn make_auxs() -> Vec<Aux> {
     let count = (W * H) as usize;
     (0..NCH)
         .map(|_| Aux {
-            cos: vec![0.0; count],
-            obj_gradient: vec![0.0; count],
+            cos: AlignedF32::zeros(count),
+            obj_gradient: AlignedF32::zeros(count),
             pixel_diff: PixelDifference {
-                x: vec![0.0; count],
-                y: vec![0.0; count],
+                x: AlignedF32::zeros(count),
+                y: AlignedF32::zeros(count),
             },
             fdata: (0..count)
                 .map(|i| ((i * 31) % 251) as f32 / 250.0 - 0.5)
                 .collect(),
-            fista: vec![0.0; count],
+            fista: AlignedF32::zeros(count),
         })
         .collect()
 }
@@ -55,13 +55,13 @@ fn clone_auxs(src: &[Aux]) -> Vec<Aux> {
 fn max_diff(a: &[Aux], b: &[Aux]) -> f32 {
     let mut m = 0.0_f32;
     for (ca, cb) in a.iter().zip(b) {
-        for (x, y) in ca.obj_gradient.iter().zip(&cb.obj_gradient) {
+        for (x, y) in ca.obj_gradient.iter().zip(cb.obj_gradient.iter()) {
             m = m.max((x - y).abs());
         }
-        for (x, y) in ca.pixel_diff.x.iter().zip(&cb.pixel_diff.x) {
+        for (x, y) in ca.pixel_diff.x.iter().zip(cb.pixel_diff.x.iter()) {
             m = m.max((x - y).abs());
         }
-        for (x, y) in ca.pixel_diff.y.iter().zip(&cb.pixel_diff.y) {
+        for (x, y) in ca.pixel_diff.y.iter().zip(cb.pixel_diff.y.iter()) {
             m = m.max((x - y).abs());
         }
     }

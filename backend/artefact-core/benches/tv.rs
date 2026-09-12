@@ -8,7 +8,7 @@ use std::hint::black_box;
 use artefact_core::pipeline::simd8::{
     AdaptiveWidth, compute_step_tv, compute_step_tv2, uniform_widths,
 };
-use artefact_core::{Aux, PixelDifference};
+use artefact_core::{AlignedF32, Aux, PixelDifference};
 use criterion::Criterion;
 
 use super::{tv_par, tv_simd64};
@@ -24,18 +24,18 @@ fn make_auxs(w: u32, h: u32) -> Vec<Aux> {
     let count = (w * h) as usize;
     (0..NCH)
         .map(|_| Aux {
-            cos: vec![0.0; count],
-            obj_gradient: vec![0.0; count],
+            cos: AlignedF32::zeros(count),
+            obj_gradient: AlignedF32::zeros(count),
             pixel_diff: PixelDifference {
-                x: vec![0.0; count],
-                y: vec![0.0; count],
+                x: AlignedF32::zeros(count),
+                y: AlignedF32::zeros(count),
             },
             // deterministic pseudo-gradient so fdata isn't uniform (all-zero g_norm
             // would short-circuit the derivative writes and misrepresent the work)
             fdata: (0..count)
                 .map(|i| ((i * 31) % 251) as f32 / 250.0 - 0.5)
                 .collect(),
-            fista: vec![0.0; count],
+            fista: AlignedF32::zeros(count),
         })
         .collect()
 }

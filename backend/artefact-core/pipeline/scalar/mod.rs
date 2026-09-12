@@ -10,7 +10,7 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIter
 use crate::pipeline::scalar::coef::ScalarCoef;
 use crate::{
     jpeg::Coefficient,
-    utils::{auxiliary::Aux, macros::mul_add},
+    utils::{aligned::AlignedF32, auxiliary::Aux, macros::mul_add},
 };
 
 #[allow(unused)]
@@ -23,7 +23,7 @@ pub fn compute(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
-) -> Vec<Vec<f32>> {
+) -> Vec<AlignedF32> {
     let coefs: Vec<ScalarCoef> = coefs
         .into_par_iter()
         .map(std::convert::Into::into)

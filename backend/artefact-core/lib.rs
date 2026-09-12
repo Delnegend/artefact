@@ -15,6 +15,7 @@ mod jpeg;
 pub mod pipeline;
 mod utils;
 
+pub use utils::aligned::AlignedF32;
 pub use utils::auxiliary::{Aux, PixelDifference};
 pub use utils::traits::{FromSlice, SafeDiv, WriteTo};
 

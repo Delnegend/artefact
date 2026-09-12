@@ -38,10 +38,13 @@ fn decode(suffix: &str) -> Option<(Jpeg, usize, u32, u32, usize)> {
     Some((jpeg, nchannel, w, h, (w * h) as usize))
 }
 
-fn max_diff(a: &[Vec<f32>], b: &[Vec<f32>]) -> f32 {
+fn max_diff(
+    a: &[crate::utils::aligned::AlignedF32],
+    b: &[crate::utils::aligned::AlignedF32],
+) -> f32 {
     let mut m = 0.0_f32;
     for (ca, cb) in a.iter().zip(b) {
-        for (x, y) in ca.iter().zip(cb) {
+        for (x, y) in ca.iter().zip(cb.iter()) {
             m = m.max((x - y).abs());
         }
     }

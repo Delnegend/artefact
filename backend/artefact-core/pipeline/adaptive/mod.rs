@@ -7,8 +7,8 @@ use crate::{
     jpeg::Coefficient,
     pipeline::adaptive::compute_step_prob::compute_step_prob,
     utils::{
-        adaptive_width::get_adaptive_widths, fista, projection::projection, step,
-        tv::compute_step_tv, tv2::compute_step_tv2,
+        adaptive_width::get_adaptive_widths, aligned::AlignedF32, fista, projection::projection,
+        step, tv::compute_step_tv, tv2::compute_step_tv2,
     },
 };
 use coef::SIMDAdaptiveCoef;
@@ -23,7 +23,7 @@ pub fn compute(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
-) -> Vec<Vec<f32>> {
+) -> Vec<AlignedF32> {
     let coefs = coefs
         .into_par_iter()
         .map(SIMDAdaptiveCoef::from)
