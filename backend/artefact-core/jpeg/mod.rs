@@ -1,6 +1,3 @@
-#[cfg(feature = "moz")]
-mod moz;
-#[cfg(not(feature = "moz"))]
 mod zune;
 
 use zune_jpeg::sample_factor::SampleFactor;

@@ -5,7 +5,6 @@ use crate::utils::{
     dct::idct8x8s,
     traits::{FromSlice, WriteTo},
 };
-use zune_jpeg::sample_factor::SampleFactor;
 
 // Gradient of the distance between the current DCT coefficients and the
 // quantized originals, back-projected to the pixel domain.
@@ -48,61 +47,14 @@ pub fn compute_step_prob(
                     let cx = block_x * 8 + in_x;
                     let cy = block_y * 8 + in_y;
 
-                    // Apply sampling factors (upsampling)
-                    match (coef.vertical_samp_factor, coef.horizontal_samp_factor) {
-                        (SampleFactor::One, SampleFactor::One) => {
-                            obj_gradient[(cy * max_rounded_px_w + cx) as usize] = alpha.mul_add(
-                                cosbs[j],
-                                obj_gradient[(cy * max_rounded_px_w + cx) as usize],
-                            );
-                        }
-                        (SampleFactor::One, SampleFactor::Two) => {
-                            obj_gradient[(cy * max_rounded_px_w + cx * 2) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[(cy * max_rounded_px_w + cx * 2 + 1) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
-                        }
-                        (SampleFactor::Two, SampleFactor::One) => {
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx) as usize],
-                                );
-                        }
-                        (SampleFactor::Two, SampleFactor::Two) => {
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2 + 1) as usize] = alpha
-                                .mul_add(
-                                    cosbs[j],
-                                    obj_gradient[(cy * 2 * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx * 2) as usize] =
-                                alpha.mul_add(
-                                    cosbs[j],
-                                    obj_gradient
-                                        [((cy * 2 + 1) * max_rounded_px_w + cx * 2) as usize],
-                                );
-                            obj_gradient[((cy * 2 + 1) * max_rounded_px_w + cx * 2 + 1) as usize] =
-                                alpha.mul_add(
-                                    cosbs[j],
-                                    obj_gradient
-                                        [((cy * 2 + 1) * max_rounded_px_w + cx * 2 + 1) as usize],
-                                );
+                    // Apply sampling factors (upsampling): replicate each
+                    // coefficient pixel across the component's subsampling block.
+                    let vf = coef.vertical_samp_factor.u32();
+                    let hf = coef.horizontal_samp_factor.u32();
+                    for sy in 0..vf {
+                        for sx in 0..hf {
+                            let idx = ((cy * vf + sy) * max_rounded_px_w + (cx * hf + sx)) as usize;
+                            obj_gradient[idx] = alpha.mul_add(cosbs[j], obj_gradient[idx]);
                         }
                     }
                 }

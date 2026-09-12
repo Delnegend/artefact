@@ -1,5 +1,8 @@
 use crate::jpeg::{Coefficient, Jpeg, JpegSource};
-use zune_jpeg::{JpegDecoder, zune_core::bytestream::ZCursor};
+use zune_jpeg::{
+    JpegDecoder,
+    zune_core::{bytestream::ZCursor, options::DecoderOptions},
+};
 
 impl Jpeg {
     pub fn from(jpeg_source: JpegSource) -> Result<Self, String> {
@@ -9,24 +12,39 @@ impl Jpeg {
             JpegSource::Buffer(buffer) => buffer,
         };
 
-        let mut img = JpegDecoder::new(ZCursor::new(&buffer));
+        // Strict mode so truncated/corrupt streams error out instead of
+        // silently returning zeroed coefficients.
+        let mut img = JpegDecoder::new_with_options(
+            ZCursor::new(&buffer),
+            DecoderOptions::default().set_strict_mode(true),
+        );
         img.decode()
             .map_err(|e| format!("Failed to decode JPEG: {e}"))?;
 
-        let (real_px_w, real_px_h) = img.dimensions().expect("Failed to get dimensions");
+        let (real_px_w, real_px_h) = img
+            .dimensions()
+            .ok_or_else(|| "JPEG headers were not decoded".to_string())?;
 
         let nchannel = img.components.len();
+        if nchannel != 1 && nchannel != 3 {
+            return Err(format!(
+                "Unsupported number of components: {nchannel} (only grayscale and YCbCr are supported)"
+            ));
+        }
 
         let mut coefs = Vec::with_capacity(nchannel);
 
         for comp in img.components {
+            let block_w = comp.rounded_px_w / 8;
+            let block_h = comp.rounded_px_h / 8;
+
             coefs.push(Coefficient {
-                rounded_px_w: comp.rounded_px_w.into(),
-                rounded_px_h: comp.rounded_px_h.into(),
+                rounded_px_w: comp.rounded_px_w,
+                rounded_px_h: comp.rounded_px_h,
                 rounded_px_count: comp.rounded_px_count as u32,
-                block_w: (comp.rounded_px_w / 8).into(),
-                block_h: (comp.rounded_px_h / 8).into(),
-                block_count: u32::from(comp.rounded_px_w / 8) * u32::from(comp.rounded_px_h / 8),
+                block_w,
+                block_h,
+                block_count: block_w * block_h,
                 horizontal_samp_factor: comp.horizontal_samp_factor,
                 vertical_samp_factor: comp.vertical_samp_factor,
 

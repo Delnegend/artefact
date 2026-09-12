@@ -7,10 +7,7 @@ autobenches = false
 [dependencies]
 image = { workspace = true }
 zune-jpeg = { workspace = true }
-mozjpeg-sys = { workspace = true, optional = true }
 rayon = { workspace = true }
-thiserror = { workspace = true, optional = true }
-libc = { workspace = true, optional = true }
 paste = { workspace = true }
 
 [dev-dependencies]
@@ -27,7 +24,6 @@ simd = []
 simd_std = []
 simd_adaptive = []
 native = []
-moz = ["dep:mozjpeg-sys", "dep:thiserror", "dep:libc"]
 bench = []
 
 [[bench]]
