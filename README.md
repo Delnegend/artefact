@@ -33,7 +33,7 @@ JPEG compression discards data and regular decoders "fill in" the gaps with nois
 - **~3× faster** — `rayon` parallelism + optional SIMD (`std::simd`, `simd_adaptive` for x8/x16/x32/x64 dispatch)
 - **WASM-ready** — `backend/artefact-wasm` via `wasm-pack`, runs 100% client-side at [artefact.delnegend.com](https://artefact.delnegend.com) (no upload)
 - **CLI + Web** — same solver for native binary (`artefact-cli`) and browser (`frontend` Nuxt + `vite-plugin-wasm`)
-- **Flexible I/O** — input `.jpg`/`.jpeg`, output `png`/`webp`/`tiff`/`bmp`/`gif` (auto by extension)
+- **Flexible I/O** — input `.jpg`/`.jpeg`, output `png`/`webp`/`tiff`/`bmp` (auto by extension)
 - **Tunable solver** — per-channel `weight` / `pweight` / `iterations`, `separate_components` for YCbCr
 
 ## Quick start
@@ -180,7 +180,7 @@ just flame 420           # flamegraph for profiling
 ```mermaid
 graph TD
     Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>pipeline/{scalar,simd8,adaptive}<br/>rayon]
-    L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp/gif]
+    L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp]
     L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib]
     W --> F[frontend<br/>Nuxt 4 / Vue / Vite<br/>vite-plugin-wasm + PWA<br/>artefact.delnegend.com]
     F -. upload .-> W
@@ -194,11 +194,11 @@ graph TD
 |---|---|---|---|
 | `<input>` | — | — | Input JPEG file |
 | `--output <path>` | `-o` | `<input>.png` | Output file (extension infers format when `--format auto`) |
-| `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp`/`gif` |
+| `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp` |
 | `--weight <f32>` | `-w` | `0.3` | 2nd-order weight — higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
 | `--pweight <f32>` | `-p` | `0.001` | Fidelity weight — higher = closer to source JPEG |
 | `--iterations <n>` | `-i` | `50` | Solver iterations — higher = better but slower. Single or `Y,Cb,Cr` |
-| `--spearate-components` | `-s` | `false` | Optimize Y/Cb/Cr separately instead of jointly |
+| `--separate-components` | `-s` | `false` | Optimize Y/Cb/Cr separately instead of jointly |
 | `--benchmark` | `-b` | `false` | Run solver but don't write output |
 | `--overwrite` | `-y` | `false` | Overwrite existing output |
 

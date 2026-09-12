@@ -1,6 +1,7 @@
 use std::path::PathBuf;
+use std::process::ExitCode;
 
-use artefact_core::{Artefact, JpegSource, ValueCollection};
+use artefact_core::{Artefact, ArtefactError, JpegSource, ValueCollection};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -14,7 +15,7 @@ struct Args {
     #[arg(short, long)]
     output: Option<String>,
 
-    /// Output format (auto, png, webp, tiff, bmp, gif)
+    /// Output format (auto, png, webp, tiff, bmp)
     #[arg(short, long, default_value = "auto")]
     format: String,
 
@@ -41,124 +42,123 @@ struct Args {
     iterations: String,
 
     /// Separately optimize components instead of all together
-    #[arg(short, long, default_value = "false")]
-    spearate_components: bool,
+    #[arg(short, long, default_value = "false", alias = "spearate-components")]
+    separate_components: bool,
 
     /// Benchmark mode, do not save output image
     #[arg(short, long, default_value = "false")]
     benchmark: bool,
 }
 
-const POSSIBLE_FORMATS: [&str; 5] = ["png", "webp", "tiff", "bmp", "gif"];
+const POSSIBLE_FORMATS: [&str; 4] = ["png", "webp", "tiff", "bmp"];
 
-fn main() {
-    let args = Args::parse();
+/// Parse `1` or `3` comma-separated values into a [`ValueCollection`].
+fn parse_values<T>(raw: &str, label: &str) -> Result<ValueCollection<T>, String>
+where
+    T: std::str::FromStr + Copy,
+{
+    let vals = raw
+        .split(',')
+        .map(|s| {
+            s.trim()
+                .parse::<T>()
+                .map_err(|_| format!("invalid {label} value: {s}"))
+        })
+        .collect::<Result<Vec<T>, String>>()?;
 
-    let output = {
-        let final_format = match (&args.format, &args.output) {
-            (f, Some(output)) if f == "auto" => {
-                let output = PathBuf::from(output);
-                output
-                    .extension()
-                    .map(|ext| ext.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "png".to_string())
-            }
-            (f, None) if f == "auto" => "png".to_string(),
-            (f, _) => {
-                if !POSSIBLE_FORMATS.contains(&f.as_str()) {
-                    eprintln!(
-                        "Invalid output format ({f}), possible values: {}",
-                        POSSIBLE_FORMATS.join(", ")
-                    );
-                    return;
-                }
-                f.clone()
-            }
-        };
+    match vals.as_slice() {
+        [one] => Ok(ValueCollection::ForAll(*one)),
+        [a, b, c] => Ok(ValueCollection::ForEach([*a, *b, *c])),
+        _ => Err(format!(
+            "{label} expects 1 or 3 comma-separated values, got {}",
+            vals.len()
+        )),
+    }
+}
 
-        match args.output.map(PathBuf::from).map(|p| {
-            (
-                p.extension().map(|ext| ext.to_string_lossy().to_string()),
-                p,
-            )
-        }) {
-            Some((Some(output_ext), output_path)) => {
-                if args.format != "auto" && output_ext != final_format {
-                    eprintln!("Output file extension does not match output format");
-                    return;
-                }
-                output_path
+/// Resolve the output path and format, validating explicit formats/extensions.
+fn resolve_output(args: &Args) -> Result<(PathBuf, String), String> {
+    let ext = args
+        .output
+        .as_deref()
+        .map(PathBuf::from)
+        .and_then(|p| p.extension().map(|e| e.to_string_lossy().to_lowercase()));
+
+    let format = if args.format == "auto" {
+        match &ext {
+            Some(e) if POSSIBLE_FORMATS.contains(&e.as_str()) => e.clone(),
+            Some(e) => {
+                return Err(format!(
+                    "cannot infer format from extension .{e}; use --format"
+                ));
             }
-            Some((None, output)) => output.with_extension(&final_format),
-            _ => {
-                let input_path = PathBuf::from(&args.input);
-                input_path.with_extension(&final_format)
-            }
+            None => "png".to_string(),
         }
+    } else {
+        if !POSSIBLE_FORMATS.contains(&args.format.as_str()) {
+            return Err(format!(
+                "invalid output format ({}), possible values: {}",
+                args.format,
+                POSSIBLE_FORMATS.join(", ")
+            ));
+        }
+        if let Some(e) = &ext
+            && *e != args.format.to_lowercase()
+        {
+            return Err(format!(
+                "output extension (.{e}) does not match --format {}",
+                args.format
+            ));
+        }
+        args.format.clone()
     };
 
+    let path = match &args.output {
+        Some(out) => {
+            let p = PathBuf::from(out);
+            if p.extension().is_some() {
+                p
+            } else {
+                p.with_extension(&format)
+            }
+        }
+        None => PathBuf::from(&args.input).with_extension(&format),
+    };
+
+    Ok((path, format))
+}
+
+fn main() -> ExitCode {
+    match run(Args::parse()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run(args: Args) -> Result<(), String> {
+    let (output, _format) = resolve_output(&args)?;
+
     if output.exists() && !args.overwrite && !args.benchmark {
-        eprintln!("Output file already exists, use -y to overwrite");
-        return;
+        return Err("output file already exists, use -y to overwrite".into());
     }
 
-    match Artefact::default()
-        .source(JpegSource::File(args.input))
-        .weight({
-            let vals = args
-                .weight
-                .split(",")
-                .map(|s| {
-                    s.parse()
-                        .unwrap_or_else(|_| panic!("Invalid weight value: {}", s))
-                })
-                .collect::<Vec<f32>>();
-            match vals.len() {
-                1 => ValueCollection::ForAll(vals[0]),
-                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
-                _ => panic!("Invalid number of weight values"),
-            }
-        })
-        .pweight({
-            let vals = args
-                .pweight
-                .split(",")
-                .map(|s| {
-                    s.parse()
-                        .unwrap_or_else(|_| panic!("Invalid pweight value: {}", s))
-                })
-                .collect::<Vec<f32>>();
-            match vals.len() {
-                1 => ValueCollection::ForAll(vals[0]),
-                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
-                _ => panic!("Invalid number of pweight values"),
-            }
-        })
-        .iterations({
-            let vals = args
-                .iterations
-                .split(",")
-                .map(|s| {
-                    s.parse()
-                        .unwrap_or_else(|_| panic!("Invalid iterations value: {}", s))
-                })
-                .collect::<Vec<usize>>();
-            match vals.len() {
-                1 => ValueCollection::ForAll(vals[0]),
-                3 => ValueCollection::ForEach([vals[0], vals[1], vals[2]]),
-                _ => panic!("Invalid number of iterations values"),
-            }
-        })
+    let result = Artefact::default()
+        .source(JpegSource::File(args.input.clone()))
+        .weight(parse_values::<f32>(&args.weight, "weight")?)
+        .pweight(parse_values::<f32>(&args.pweight, "pweight")?)
+        .iterations(parse_values::<usize>(&args.iterations, "iterations")?)
         .benchmark(args.benchmark)
-        .separate_components(args.spearate_components)
-        .process()
-    {
-        Ok(img) => img.save(output).expect("Cannot save output image"),
-        Err(e) => {
-            if e == "BENCHMARK" {
-                return;
-            }
-            eprintln!("Error: {e:?}");
-        }
+        .separate_components(args.separate_components)
+        .process();
+
+    match result {
+        Ok(img) => img
+            .save(&output)
+            .map_err(|e| format!("cannot save {}: {e}", output.display())),
+        Err(ArtefactError::Benchmark) => Ok(()),
+        Err(e) => Err(e.to_string()),
     }
 }

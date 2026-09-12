@@ -34,6 +34,30 @@ use pipeline::scalar::compute;
 use pipeline::simd8::compute;
 
 #[derive(Debug)]
+pub enum ArtefactError {
+    /// Returned by `Artefact::process` when `benchmark` mode is enabled.
+    Benchmark,
+    Message(String),
+}
+
+impl std::fmt::Display for ArtefactError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Benchmark => write!(f, "benchmark mode"),
+            Self::Message(m) => write!(f, "{m}"),
+        }
+    }
+}
+
+impl std::error::Error for ArtefactError {}
+
+impl From<String> for ArtefactError {
+    fn from(message: String) -> Self {
+        Self::Message(message)
+    }
+}
+
+#[derive(Debug)]
 pub enum ValueCollection<T> {
     ForAll(T),
     ForEach([T; 3]),
@@ -99,14 +123,16 @@ impl Artefact {
     );
 
     /// Process the JPEG and return an RGB image buffer.
-    /// If `benchmark` is set, returns an error with the message "BENCHMARK".
-    /// Otherwise, returns the processed image or an error message.
+    /// If `benchmark` is set, returns [`ArtefactError::Benchmark`] instead.
     /// # Errors
-    /// Returns an error if the source is not set or if reading the JPEG fails.
-    /// Also returns an error with the message "BENCHMARK" if benchmarking is enabled.
-    pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, String> {
-        let jpeg = Jpeg::from(self.source.ok_or("Source is not set")?)
-            .map_err(|e| format!("Failed to read JPEG: {e}"))?;
+    /// Returns [`ArtefactError::Message`] if the source is not set or the JPEG
+    /// fails to decode, and [`ArtefactError::Benchmark`] when benchmarking.
+    pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        let jpeg = Jpeg::from(
+            self.source
+                .ok_or_else(|| ArtefactError::Message("source is not set".into()))?,
+        )
+        .map_err(|e| ArtefactError::Message(format!("failed to read JPEG: {e}")))?;
         let (max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = {
             let mut w = 0;
             let mut h = 0;
@@ -155,7 +181,7 @@ impl Artefact {
         };
 
         if self.benchmark {
-            return Err("BENCHMARK".to_string());
+            return Err(ArtefactError::Benchmark);
         }
 
         // Fixup luma range for first channel
