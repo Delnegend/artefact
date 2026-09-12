@@ -19,6 +19,8 @@ dist
 *.png
 !assets/*.png
 !src/public/*.png
+!backend/zune-jpeg/tests/fixtures/*.jpg
+!backend/artefact-core/tests/fixtures/*.jpg
 assets/sample*
 perf.*
 *.svg

@@ -19,7 +19,6 @@ use crate::components::SampleRatios;
 use crate::decoder::MAX_COMPONENTS;
 use crate::errors::DecodeErrors;
 use crate::marker::Marker;
-use crate::sample_factor::SampleFactor;
 
 impl<T: ZByteReaderTrait> JpegDecoder<T> {
     /// Check for existence of DC and AC Huffman Tables
@@ -210,79 +209,48 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             for (comp_idx, comp) in &mut self.components.iter_mut().enumerate() {
                 let dc_table = self.dc_huffman_tables[comp.dc_huff_table % MAX_COMPONENTS]
                     .as_ref()
-                    .unwrap();
+                    .ok_or_else(|| {
+                        DecodeErrors::HuffmanDecode(format!(
+                            "No DC Huffman table for component {comp_idx}"
+                        ))
+                    })?;
                 let ac_table = self.ac_huffman_tables[comp.ac_huff_table % MAX_COMPONENTS]
                     .as_ref()
-                    .unwrap();
+                    .ok_or_else(|| {
+                        DecodeErrors::HuffmanDecode(format!(
+                            "No AC Huffman table for component {comp_idx}"
+                        ))
+                    })?;
 
-                // If image is interleaved iterate over scan components,
-                // otherwise if it-s non-interleaved, these routines iterate in
-                // trivial scanline order(Y,Cb,Cr)
-                match (comp.horizontal_samp, comp.vertical_samp) {
-                    (SampleFactor::One, SampleFactor::One) => {
-                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
-                        let start_idx = (mcu_idx * 64).clamp(0, max_lens[comp_idx]);
-                        let end_idx = ((mcu_idx + 1) * 64).clamp(0, max_lens[comp_idx]);
+                // A component contributes `horizontal_samp x vertical_samp` blocks
+                // to each MCU, stored in the component's own raster block grid.
+                let h_samp = comp.horizontal_samp.usize();
+                let v_samp = comp.vertical_samp.usize();
+                let comp_block_w = mcu_width * h_samp;
+
+                for v in 0..v_samp {
+                    for h in 0..h_samp {
+                        let idx =
+                            (curr_mcu_row * v_samp + v) * comp_block_w + curr_mcu_col * h_samp + h;
+                        let start_idx = idx * 64;
+                        let end_idx = start_idx + 64;
+
+                        let block = dct_coefs[comp_idx]
+                            .get_mut(start_idx..end_idx)
+                            .ok_or_else(|| {
+                                DecodeErrors::MCUError(format!(
+                                    "Block {idx} out of bounds for component {comp_idx} ({} blocks)",
+                                    max_lens[comp_idx] / 64
+                                ))
+                            })?;
 
                         stream.decode_mcu_block(
                             &mut self.stream,
                             dc_table,
                             ac_table,
-                            &mut dct_coefs[comp_idx][start_idx..end_idx],
+                            block,
                             &mut comp.dc_pred,
                         )?;
-                    }
-                    (SampleFactor::One, SampleFactor::Two) => {
-                        // 1x2 sampling: 2 blocks stacked vertically
-                        let idx0 = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
-                        let idx1 = idx0 + mcu_width;
-                        for idx in [idx0, idx1] {
-                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
-                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
-
-                            stream.decode_mcu_block(
-                                &mut self.stream,
-                                dc_table,
-                                ac_table,
-                                &mut dct_coefs[comp_idx][start_idx..end_idx],
-                                &mut comp.dc_pred,
-                            )?;
-                        }
-                    }
-                    (SampleFactor::Two, SampleFactor::One) => {
-                        let mcu_idx = curr_mcu_row * mcu_width + curr_mcu_col;
-                        for idx in [2 * mcu_idx, 2 * mcu_idx + 1] {
-                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
-                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
-
-                            stream.decode_mcu_block(
-                                &mut self.stream,
-                                dc_table,
-                                ac_table,
-                                &mut dct_coefs[comp_idx][start_idx..end_idx],
-                                &mut comp.dc_pred,
-                            )?;
-                        }
-                    }
-                    (SampleFactor::Two, SampleFactor::Two) => {
-                        let mcu_idx = curr_mcu_row * mcu_width * 2 + curr_mcu_col;
-                        for idx in [
-                            2 * mcu_idx,
-                            2 * mcu_idx + 1,
-                            2 * mcu_idx + mcu_width * 2,
-                            2 * mcu_idx + mcu_width * 2 + 1,
-                        ] {
-                            let start_idx = (idx * 64).clamp(0, max_lens[comp_idx]);
-                            let end_idx = ((idx + 1) * 64).clamp(0, max_lens[comp_idx]);
-
-                            stream.decode_mcu_block(
-                                &mut self.stream,
-                                dc_table,
-                                ac_table,
-                                &mut dct_coefs[comp_idx][start_idx..end_idx],
-                                &mut comp.dc_pred,
-                            )?;
-                        }
                     }
                 }
             }
@@ -338,7 +306,11 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     // this routine is shared with mcu_prog
     #[cold]
     pub(crate) fn handle_rst(&mut self, stream: &mut BitStream) -> Result<(), DecodeErrors> {
-        self.todo = self.restart_interval;
+        self.todo = if self.restart_interval != 0 {
+            self.restart_interval
+        } else {
+            usize::MAX
+        };
 
         if let Some(marker) = stream.marker {
             // Found a marker

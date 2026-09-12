@@ -172,7 +172,7 @@ impl BitStream {
     ///
     /// This function will only refill if `self.count` is less than 32
     #[inline(always)] // to many call sites? ( perf improvement by 4%)
-    fn refill<T>(&mut self, reader: &mut ZReader<T>) -> Result<bool, DecodeErrors>
+    pub fn refill<T>(&mut self, reader: &mut ZReader<T>) -> Result<bool, DecodeErrors>
     where
         T: ZByteReaderTrait,
     {

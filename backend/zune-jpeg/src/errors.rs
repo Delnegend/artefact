@@ -126,6 +126,8 @@ pub enum UnsupportedSchemes {
     ProgressiveDctArithmetic,
     /// Lossless ( sequential), arithmetic coding
     LosslessArithmetic,
+    /// Differential or reserved coding schemes (SOF5-7, SOF13-15, ...)
+    Differential,
 }
 
 impl Debug for UnsupportedSchemes {
@@ -161,6 +163,12 @@ impl Debug for UnsupportedSchemes {
                     "The library cannot yet decode images encoded with Lossless Arithmetic encoding scheme"
                 )
             }
+            Self::Differential => {
+                write!(
+                    f,
+                    "The library cannot decode differential or reserved JPEG coding schemes"
+                )
+            }
         }
     }
 }
@@ -181,6 +189,8 @@ impl UnsupportedSchemes {
             START_OF_FRAME_LOS_SEQ_AR => Some(Self::LosslessArithmetic),
             START_OF_FRAME_EXT_SEQ => Some(Self::ExtendedSequentialHuffman),
             START_OF_FRAME_EXT_AR => Some(Self::ExtendedSequentialDctArithmetic),
+            // Differential (SOF5-7, SOF13-15) and reserved SOF markers
+            0xFFC5 | 0xFFC6 | 0xFFC7 | 0xFFCD | 0xFFCE | 0xFFCF => Some(Self::Differential),
             _ => None,
         }
     }

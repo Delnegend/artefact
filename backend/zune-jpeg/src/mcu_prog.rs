@@ -177,8 +177,14 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                         }
                     }
                 }
-                _ => {
+                Marker::EOI => {
                     break 'eoi;
+                }
+                // A stray restart marker between scans: safe to ignore.
+                Marker::RST(_) => {}
+                // APPn/COM/DRI/... are legal between scans; parse/skip and keep going.
+                other => {
+                    self.parse_marker_inner(other)?;
                 }
             }
 
@@ -206,6 +212,12 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
     ) -> Result<(), DecodeErrors> {
         stream.reset();
         self.components.iter_mut().for_each(|x| x.dc_pred = 0);
+        // A scan starts a fresh restart sequence.
+        self.todo = if self.restart_interval != 0 {
+            self.restart_interval
+        } else {
+            usize::MAX
+        };
 
         if usize::from(self.num_scans) > self.input_colorspace.num_components() {
             return Err(Format(format!(
@@ -252,6 +264,15 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
 
             for i in 0..mcu_height {
                 for j in 0..mcu_width {
+                    // libjpeg checks for a pending restart before decoding each
+                    // MCU, so the end of a scan is never mistaken for one.
+                    if self.restart_interval != 0 {
+                        if self.todo == 0 {
+                            self.handle_rst_main(stream)?;
+                        }
+                        self.todo -= 1;
+                    }
+
                     if self.spec_start != 0 && self.succ_high == 0 && stream.eob_run > 0 {
                         // handle EOB runs here.
                         stream.eob_run -= 1;
@@ -261,11 +282,14 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
 
                     let data: &mut [i16; 64] = buffer
                         .get_mut(k)
-                        .unwrap()
-                        .get_mut(start..start + 64)
-                        .unwrap()
+                        .and_then(|blocks| blocks.get_mut(start..start + 64))
+                        .ok_or_else(|| {
+                            DecodeErrors::MCUError(format!(
+                                "Progressive block {start} out of bounds for component {k} (corrupt JPEG)"
+                            ))
+                        })?
                         .try_into()
-                        .unwrap();
+                        .map_err(|_| DecodeErrors::FormatStatic("Invalid coefficient block length"))?;
 
                     if self.spec_start == 0 {
                         let pos = self.components[k].dc_huff_table & (MAX_COMPONENTS - 1);
@@ -320,12 +344,6 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             stream.decode_mcu_ac_refine(&mut self.stream, ac_table, data)?;
                         }
                     }
-                    // + EOB and investigate effect.
-                    self.todo -= 1;
-
-                    if self.todo == 0 {
-                        self.handle_rst(stream)?;
-                    }
                 }
             }
         } else {
@@ -371,6 +389,13 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             // the DC coefficients in the first scan for each component of a progressive frame.
             for i in 0..self.min_mcu_h {
                 for j in 0..self.min_mcu_w {
+                    if self.restart_interval != 0 {
+                        if self.todo == 0 {
+                            self.handle_rst_main(stream)?;
+                        }
+                        self.todo -= 1;
+                    }
+
                     // process scan n elements in order
                     for k in 0..self.num_scans {
                         let n = self.z_order[k as usize];
@@ -390,7 +415,11 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                                 let y2 = i * component.vertical_samp.usize() + v_samp;
                                 let position = 64 * (x2 + y2 * component.width_stride / 8);
 
-                                let data = &mut buffer[n][position];
+                                let data = buffer[n].get_mut(position).ok_or_else(|| {
+                                    DecodeErrors::MCUError(format!(
+                                        "Progressive block {position} out of bounds for component {n} (corrupt JPEG)"
+                                    ))
+                                })?;
 
                                 if self.succ_high == 0 {
                                     stream.decode_prog_dc_first(
@@ -405,15 +434,40 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             }
                         }
                     }
-                    // We want wrapping subtraction here because it means
-                    // we get a higher number in the case this underflows
-                    self.todo = self.todo.wrapping_sub(1);
-                    // after every scan that's a mcu, count down restart markers.
-                    if self.todo == 0 {
-                        self.handle_rst(stream)?;
-                    }
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Restart handling for progressive scans: if the restart interval expired,
+    /// make sure the RST marker is located (those bytes may sit between the
+    /// bit-reader's position and the marker) before resetting the DC predictors.
+    fn handle_rst_main(&mut self, stream: &mut BitStream) -> Result<(), DecodeErrors> {
+        if self.todo == 0 {
+            if stream.marker.is_none() && !stream.seen_eoi {
+                // At a restart boundary the remaining bits are just padding to
+                // the next byte; discard them and let the bit reader find the
+                // RST marker (refill() sets `marker` when it hits 0xFF Dn).
+                stream.reset();
+                stream.refill(&mut self.stream)?;
+            }
+
+            if stream.marker.is_none() && self.restart_interval != 0 && !stream.seen_eoi {
+                let _start = self.stream.position()?;
+                if let Ok(marker) = get_marker(&mut self.stream, stream) {
+                    let _end = self.stream.position()?;
+                    stream.marker = Some(marker);
+                    warn!(
+                        "{} extraneous bytes before marker {marker:?}",
+                        _end - _start
+                    );
+                } else {
+                    warn!("RST marker was not found where expected, image may be garbled");
+                }
+            }
+
+            self.handle_rst(stream)?;
         }
         Ok(())
     }

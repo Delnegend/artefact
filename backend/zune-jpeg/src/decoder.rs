@@ -196,11 +196,20 @@ where
         if self.is_progressive {
             self.decode_mcu_ycbcr_progressive(&mut dct_coefs)?;
         } else {
+            // We only implement the common interleaved baseline layout. A scan
+            // holding fewer components than the frame means non-interleaved
+            // (multi-scan) baseline, which we do not reconstruct correctly, so
+            // reject it instead of silently producing garbage.
+            if usize::from(self.num_scans) < self.components.len() {
+                return Err(DecodeErrors::FormatStatic(
+                    "Non-interleaved (multi-scan) baseline JPEG is not supported",
+                ));
+            }
             self.decode_mcu_ycbcr_baseline(&mut dct_coefs)?;
         }
 
         for (i, comp) in self.components.iter_mut().enumerate() {
-            comp.dct_coefs = std::mem::take(&mut dct_coefs[i]);
+            comp.dct_coefs = core::mem::take(&mut dct_coefs[i]);
         }
 
         Ok(())
@@ -218,15 +227,13 @@ where
 
     /// Returns the image information
     ///
-    /// This **must** be called after a subsequent call to [`decode`] or [`decode_headers`]
-    /// it will return `None`
+    /// This **must** be called after [`decode`], otherwise it will return `None`.
     ///
     /// # Returns
     /// - `Some(info)`: Image information,width, height, number of components
     /// - None: Indicates image headers haven't been decoded
     ///
     /// [`decode`]: JpegDecoder::decode
-    /// [`decode_headers`]: JpegDecoder::decode_headers
     #[must_use]
     pub fn info(&self) -> Option<ImageInfo> {
         // we check for fails to that call by comparing what we have to the default, if
@@ -550,7 +557,7 @@ where
     /// and is correct
     ///
     /// One needs not to decode the whole image to extract this,
-    /// calling [`decode_headers`] for an image with an ICC profile
+    /// calling `decode` for an image with an ICC profile
     /// allows you to decode this
     ///
     /// # Returns
@@ -558,7 +565,6 @@ where
     /// - `None`: May indicate an error  in the ICC profile , non-existence of
     /// an ICC profile, or that the headers weren't decoded.
     ///
-    /// [`decode_headers`]:Self::decode_headers
     #[must_use]
     pub fn icc_profile(&self) -> Option<Vec<u8>> {
         let mut marker_present: [Option<&ICCChunk>; 256] = [None; 256];
@@ -625,7 +631,7 @@ where
     /// as markers such as Adobe APP14 may dictate different colorspaces
     /// than requested.
     ///
-    /// Calling `decode_headers` is sufficient to know what colorspace the
+    /// Decoding the headers (via `decode`) is sufficient to know what colorspace the
     /// output is, if this is called after `decode` it indicates the colorspace
     /// the output is currently in
     ///
@@ -662,20 +668,12 @@ where
         {
             return Ok(());
         }
-        match (self.max_horizontal_samp, self.max_vertical_samp) {
-            (SampleFactor::One, SampleFactor::One) => {
-                self.sub_sample_ratio = SampleRatios::None;
-            }
-            (SampleFactor::One, SampleFactor::Two) => {
-                self.sub_sample_ratio = SampleRatios::V;
-            }
-            (SampleFactor::Two, SampleFactor::One) => {
-                self.sub_sample_ratio = SampleRatios::H;
-            }
-            (SampleFactor::Two, SampleFactor::Two) => {
-                self.sub_sample_ratio = SampleRatios::HV;
-            }
-        }
+        self.sub_sample_ratio = match (self.max_horizontal_samp, self.max_vertical_samp) {
+            (SampleFactor::One, SampleFactor::One) => SampleRatios::None,
+            (SampleFactor::One, _) => SampleRatios::V,
+            (_, SampleFactor::One) => SampleRatios::H,
+            _ => SampleRatios::HV,
+        };
 
         for comp in &mut self.components {
             comp.setup_upsample_scanline();

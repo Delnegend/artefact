@@ -69,8 +69,8 @@ pub struct Components {
 
     pub horizontal_samp_factor: SampleFactor,
     pub vertical_samp_factor: SampleFactor,
-    pub rounded_px_w: u16,
-    pub rounded_px_h: u16,
+    pub rounded_px_w: u32,
+    pub rounded_px_h: u32,
     pub rounded_px_count: usize,
 }
 
@@ -97,24 +97,16 @@ impl Components {
             }
         };
 
-        let horizontal_samp = match a[1] >> 4 {
-            1 => SampleFactor::One,
-            2 => SampleFactor::Two,
-            x => {
-                return Err(DecodeErrors::Format(format!(
-                    "Unknown horizontal sample found: {x}, expected either 1 or 2"
-                )));
-            }
-        };
-        let vertical_samp = match a[1] & 0x0f {
-            1 => SampleFactor::One,
-            2 => SampleFactor::Two,
-            x => {
-                return Err(DecodeErrors::Format(format!(
-                    "Unknown vertical sample found: {x}, expected either 1 or 2"
-                )));
-            }
-        };
+        let horizontal_samp = SampleFactor::try_from(a[1] >> 4).map_err(|x| {
+            DecodeErrors::Format(format!(
+                "Unknown horizontal sample found: {x}, expected 1, 2 or 4"
+            ))
+        })?;
+        let vertical_samp = SampleFactor::try_from(a[1] & 0x0f).map_err(|x| {
+            DecodeErrors::Format(format!(
+                "Unknown vertical sample found: {x}, expected 1, 2 or 4"
+            ))
+        })?;
         let quant_table_number = a[2];
         // confirm quantization number is between 0 and MAX_COMPONENTS
         if usize::from(quant_table_number) >= MAX_COMPONENTS {

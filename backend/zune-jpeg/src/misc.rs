@@ -206,12 +206,12 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
     img.is_interleaved =
         img.max_horizontal_samp != SampleFactor::One || img.max_vertical_samp != SampleFactor::One;
 
-    let nearest_multiple_w = 8 * img.max_horizontal_samp.u16() - 1;
-    let nearest_multiple_h = 8 * img.max_vertical_samp.u16() - 1;
+    let nearest_multiple_w = 8 * img.max_horizontal_samp.u32() - 1;
+    let nearest_multiple_h = 8 * img.max_vertical_samp.u32() - 1;
 
-    // round to the nearest multiple of 8 or 16
-    let rounded_px_w = (real_px_w + nearest_multiple_w) & !nearest_multiple_w;
-    let rounded_px_h = (real_px_h + nearest_multiple_h) & !nearest_multiple_h;
+    // round up to the next multiple of 8 * max sampling factor (8, 16 or 32)
+    let rounded_px_w = (u32::from(real_px_w) + nearest_multiple_w) & !nearest_multiple_w;
+    let rounded_px_h = (u32::from(real_px_h) + nearest_multiple_h) & !nearest_multiple_h;
 
     assert!(rounded_px_w.is_multiple_of(8));
     assert!(rounded_px_h.is_multiple_of(8));
@@ -241,8 +241,8 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         comp.horizontal_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
         comp.vertical_samp_factor = img.max_vertical_samp / comp.vertical_samp;
 
-        comp.rounded_px_w = rounded_px_w / comp.horizontal_samp_factor.u16();
-        comp.rounded_px_h = rounded_px_h / comp.vertical_samp_factor.u16();
+        comp.rounded_px_w = rounded_px_w / comp.horizontal_samp_factor.u32();
+        comp.rounded_px_h = rounded_px_h / comp.vertical_samp_factor.u32();
         assert!(comp.rounded_px_w % 8 == 0);
         assert!(comp.rounded_px_h % 8 == 0);
 
@@ -272,7 +272,7 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
             .components
             .iter()
             .find(|c| c.component_id == ComponentID::Y)
-            && (y_component.horizontal_samp.u8() == 2 || y_component.vertical_samp.u8() == 2)
+            && (y_component.horizontal_samp.u8() > 1 || y_component.vertical_samp.u8() > 1)
         {
             handle_that_annoying_bug = true;
         }
