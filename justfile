@@ -28,6 +28,8 @@ check kind="all":
 		cargo check -p artefact-core --target wasm32-unknown-unknown
 		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,simd_adaptive
 		cargo clippy --workspace --all-features
+		# decode/fixture regression tests (zune-jpeg + pipelines + verify)
+		cargo test --workspace --all-features
 	fi
 
 # build: native CLI, wasm, or web
@@ -58,20 +60,6 @@ build target="native":
 	echo "Building native CLI (release)"
 	cargo build --bin artefact-cli --release
 
-# update dependencies for: rust/js
-# default: all
-update where="all":
-	#!/usr/bin/env bash
-
-	if [[ "{{where}}" = "all" || "{{where}}" = "js" ]]; then
-		cd frontend
-		bun update
-		cd -
-	fi
-
-	if [[ "{{where}}" = "all" || "{{where}}" = "rust" ]]; then
-		cargo update
-	fi
 flame chroma="420":
 	#!/usr/bin/env bash
 
@@ -91,8 +79,3 @@ generate-sample output="assets/sample.png":
 	./scripts/generate-sample.sh "{{output}}"
 
 alias sample := generate-sample
-
-# verify decoded output vs ffmpeg reference — hoisted to scripts/verify.sh
-# catches 1x2/2x1 subsampling regressions like the 2x1 vertical shift bug (422/444)
-verify:
-	./scripts/verify.sh

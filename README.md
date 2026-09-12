@@ -157,12 +157,12 @@ just build            # -> target/release/artefact-cli
 # trigger: workflow_dispatch (release_version + create_release) or merged PR
 ```
 
-SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`, `simd_adaptive`, `native`, `moz`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation). Pipelines live in `pipeline/{scalar,simd8,adaptive}` with shared logic in `utils/` (scalar is the frozen reference, `adaptive` is the default).
+SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`, `simd_adaptive`, `native`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation). Pipelines live in `pipeline/{scalar,simd8,adaptive}` with shared logic in `utils/` (scalar is the frozen reference, `adaptive` is the default).
 
 ### Checks
 
 ```bash
-just check          # cargo fmt + cargo clippy + oxlint + prettier (all)
+just check          # fmt + clippy + tests + oxlint + prettier (all)
 just check rust     # Rust only
 just check js       # frontend only (oxlint + prettier)
 ```
@@ -186,7 +186,7 @@ graph TD
     F -. upload .-> W
 ```
 
-`artefact-core` is feature-gated: default scalar, `simd` enables `std::simd`, `simd_adaptive` adds runtime dispatch, `native` uses LLVM `mul_add` (`-Ctarget-cpu=native`), `moz` swaps `zune-jpeg` for `mozjpeg-sys`.
+`artefact-core` is feature-gated: default scalar, `simd` enables `std::simd`, `simd_adaptive` adds runtime dispatch, `native` uses LLVM `mul_add` (`-Ctarget-cpu=native`). Decoding always goes through the vendored `zune-jpeg` fork.
 
 ## CLI reference
 

@@ -77,13 +77,12 @@ features = [
 "simd", # enable SIMD via `std::simd`
 "simd_adaptive", # dynamically switch between x8, x16, x32 and x64
 "native", # use LLVM "mul_add" intrinsic for more accurate rounding, requires "-Ctarget-cpu=native" or else it'll most likely be slower
-"moz", # use `mozjpeg` instead of `zune-jpeg` for decoding, might provide better compatibility
 ]
 ```
 
 ## Sample images & regression
 
-`scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). `scripts/verify.sh` decodes 420/422/444 via `artefact-cli`, compares against an `ffmpeg` reference (`mean <10`, `max <100`, no glitch, color blocks + checker), and fails on subsampling regressions (e.g. the 1x2 vertical shift bug in `backend/zune-jpeg/src/mcu.rs`). Run both with `just sample` and `just verify`.
+`scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). Decoding regressions are covered by native Rust tests (`cargo test --workspace`, run as part of `just check`): `backend/zune-jpeg/tests/decode.rs` decodes committed `cjpeg` fixtures (4:4:4/4:2:2/4:2:0/4:1:1, progressive, restart intervals, grayscale, arithmetic-rejected) and `backend/artefact-core/tests/verify.rs` checks reconstructed color blocks end-to-end. `just sample` regenerates the large sample inputs.
 
 ## Building the WASM library and web UI
 
