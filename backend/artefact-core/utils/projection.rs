@@ -5,12 +5,11 @@ use crate::utils::{
     dct::{dct8x8s, idct8x8s},
 };
 
-/// Generic projection — resample + DCT box clamp.
-/// `clamp_fn` is width-specific (scalar `f32::clamp` vs `f32x8::clmp` vs `f32x64::simd_clamp`).
-pub fn projection<C, F>(max_w: u32, max_h: u32, aux: &mut Aux, coef: &C, mut clamp_fn: F)
+/// Generic projection — resample to the subsampling grid, project each 8x8
+/// block onto its quantized DCT box, then write back to pixels.
+pub fn projection<C>(max_w: u32, max_h: u32, aux: &mut Aux, coef: &C)
 where
     C: Coef,
-    F: FnMut(&mut [f32], &C),
 {
     let resample = coef.rounded_px_w() != max_w || coef.rounded_px_h() != max_h;
 
@@ -61,7 +60,9 @@ where
         );
     }
 
-    clamp_fn(&mut aux.pixel_diff.x, coef);
+    for i in 0..coef.block_count() as usize {
+        coef.clamp_block(i, &mut aux.pixel_diff.x[i * 64..(i + 1) * 64]);
+    }
 
     aux.cos.clone_from(&aux.pixel_diff.x);
 

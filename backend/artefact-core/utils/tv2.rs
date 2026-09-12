@@ -5,8 +5,8 @@ use std::{
 
 use paste::paste;
 
-use super::adaptive_width::AdaptiveWidth;
 use crate::utils::{
+    adaptive_width::AdaptiveWidth,
     auxiliary::Aux,
     traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
@@ -176,7 +176,7 @@ macro_rules! gen_func {
                     let g_xy_sym = g_xy_syms[c];
                     let aux = &mut auxs[c];
 
-                    '_for_current_group: {
+                    {
                         let a = curr_group_idx;
                         let b = curr_group_idx + 7 + $pad;
                         let target = &mut aux.obj_gradient[a..=b];
@@ -190,7 +190,7 @@ macro_rules! gen_func {
                             .store_select(target, mask);
                     }
 
-                    '_for_shifted_left_1px_group: {
+                    {
                         if group_at_left_edge {
                             // ignore the first pixel in the group because it's out of bounds
                             // [_] [0] [1] [2] [3] [4] [5] [6]
@@ -215,7 +215,7 @@ macro_rules! gen_func {
                         }
                     }
 
-                    '_for_shifted_right_1px_group: {
+                    {
                         if group_at_right_edge {
                             let a = curr_group_idx + 1;
                             let b = curr_group_idx + 7 + $pad;

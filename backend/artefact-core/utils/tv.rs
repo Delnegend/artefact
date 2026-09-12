@@ -5,12 +5,14 @@ use std::{
 
 use paste::paste;
 
-use super::adaptive_width::AdaptiveWidth;
 use crate::utils::{
+    adaptive_width::AdaptiveWidth,
     auxiliary::Aux,
     traits::{AddSlice, FromSlice, WriteTo},
 };
 
+/// First-order TV gradient, width-generic: each run in `adaptive_widths` is
+/// processed with the matching f32xN lane width.
 pub fn compute_step_tv(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
@@ -116,7 +118,7 @@ macro_rules! gen_func {
                     // ===== compute derivatives =====
                     let aux = &mut auxs[c];
 
-                    '_for_current_group: {
+                    {
                         let a = px_idx_start_of_group;
                         let b = px_idx_start_of_group + 7 + $pad;
                         let target = &mut aux.obj_gradient[a..=b];
@@ -127,7 +129,7 @@ macro_rules! gen_func {
                             .store_select(target, mask);
                     }
 
-                    '_for_shifted_right_1px_group: {
+                    {
                         if group_at_right_edge {
                             let a = px_idx_start_of_group + 1;
                             let b = px_idx_start_of_group + 7 + $pad;

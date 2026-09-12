@@ -72,23 +72,16 @@ impl AuxTraits for ScalarCoef {
         max_rounded_px_h: u32,
         max_rounded_px_count: usize,
     ) -> Vec<f32> {
-        let mut fdata = vec![0.0; max_rounded_px_count];
-
-        for y in 0..max_rounded_px_h as usize {
-            for x in 0..max_rounded_px_w as usize {
-                let cy =
-                    (y / self.vertical_samp_factor.usize()).min(self.rounded_px_h as usize - 1);
-                let cx =
-                    (x / self.horizontal_samp_factor.usize()).min(self.rounded_px_w as usize - 1);
-
-                let fdata_idx = y * max_rounded_px_w as usize + x;
-                let img_data_idx = cy * self.rounded_px_w as usize + cx;
-
-                fdata[fdata_idx] = self.image_data[img_data_idx];
-            }
-        }
-
-        fdata
+        crate::utils::auxiliary::upsample_fdata(
+            &self.image_data,
+            self.rounded_px_w,
+            self.rounded_px_h,
+            self.horizontal_samp_factor.usize(),
+            self.vertical_samp_factor.usize(),
+            max_rounded_px_w,
+            max_rounded_px_h,
+            max_rounded_px_count,
+        )
     }
 
     fn get_cos(&self) -> Vec<f32> {

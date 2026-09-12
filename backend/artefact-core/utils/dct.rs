@@ -1,4 +1,5 @@
-//! Ooura DCT — copied from `utils/dct.rs`
+//! Ooura DCT/IDCT (source: <http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html>,
+//! `fft2d.zip`, `shrtdct.c`; Copyright Takuya OOURA 1996-2001).
 #![allow(clippy::identity_op)]
 #![allow(clippy::erasing_op)]
 #![allow(clippy::excessive_precision)]

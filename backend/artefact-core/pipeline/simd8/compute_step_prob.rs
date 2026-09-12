@@ -1,16 +1,17 @@
-use super::{SIMD8Coef, f32x8};
+use std::simd::f32x8;
+
+use super::SIMD8Coef;
 use crate::utils::{
     dct::idct8x8s,
     traits::{FromSlice, WriteTo},
 };
 use zune_jpeg::sample_factor::SampleFactor;
 
-// Compute objective gradient for the distance of DCT coefficients from normal decoding
-// N.B. destroys cos
-#[allow(unused_variables)]
+// Gradient of the distance between the current DCT coefficients and the
+// quantized originals, back-projected to the pixel domain.
 pub fn compute_step_prob(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
-    max_rounded_px_h: u32,    // Maximum height after rounding to block size
+    _max_rounded_px_h: u32,   // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
     coef: &SIMD8Coef,         // JPEG coefficient data
     cos: &[f32],              // Cosine transform data

@@ -1,9 +1,4 @@
-#![allow(unused)]
-
-use std::{
-    ops::RangeInclusive,
-    simd::{cmp::SimdPartialEq, num::SimdFloat},
-};
+use std::{ops::RangeInclusive, simd::cmp::SimdPartialEq};
 
 use paste::paste;
 
@@ -69,24 +64,6 @@ macro_rules! gen_from_slice {
 
 gen_from_slice!(8, 16, 32, 64);
 
-pub trait Clamp {
-    fn clmp(&self, min: Self, max: Self) -> Self;
-}
-
-macro_rules! gen_clamp {
-    ($($width:literal),+) => {
-        $(paste! {
-            impl Clamp for [<StdF32x $width>] {
-                fn clmp(&self, min: Self, max: Self) -> Self {
-                    self.simd_clamp(min, max)
-                }
-            }
-        })+
-    };
-}
-
-gen_clamp!(8, 16, 32, 64);
-
 pub trait SafeDiv {
     /// Perform element-wise division, but if the divisor is 0, the result is 0
     #[must_use]
@@ -135,25 +112,3 @@ macro_rules! gen_add_slice {
 }
 
 gen_add_slice!(8, 16, 32, 64);
-
-pub trait SimdWidth: FromSlice + WriteTo + Clamp + SafeDiv + AddSlice + Copy {
-    const WIDTH: usize;
-    const PAD: usize;
-}
-
-impl SimdWidth for std::simd::f32x8 {
-    const WIDTH: usize = 8;
-    const PAD: usize = 0;
-}
-impl SimdWidth for std::simd::f32x16 {
-    const WIDTH: usize = 16;
-    const PAD: usize = 8;
-}
-impl SimdWidth for std::simd::f32x32 {
-    const WIDTH: usize = 32;
-    const PAD: usize = 24;
-}
-impl SimdWidth for std::simd::f32x64 {
-    const WIDTH: usize = 64;
-    const PAD: usize = 56;
-}

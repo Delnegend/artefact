@@ -1,6 +1,5 @@
-use std::ops::Mul;
+use std::{ops::Mul, simd::f32x8};
 
-use super::f32x8;
 use crate::{
     jpeg::Coefficient,
     utils::{
@@ -134,23 +133,16 @@ impl AuxTraits for SIMD8Coef {
         max_rounded_px_h: u32,
         max_rounded_px_count: usize,
     ) -> Vec<f32> {
-        let mut fdata = vec![0.0; max_rounded_px_count];
-
-        for y in 0..max_rounded_px_h as usize {
-            for x in 0..max_rounded_px_w as usize {
-                let cy =
-                    (y / self.vertical_samp_factor.usize()).min(self.rounded_px_h as usize - 1);
-                let cx =
-                    (x / self.horizontal_samp_factor.usize()).min(self.rounded_px_w as usize - 1);
-
-                let fdata_idx = y * max_rounded_px_w as usize + x;
-                let img_data_idx = cy * self.rounded_px_w as usize + cx;
-
-                fdata[fdata_idx] = self.image_data[img_data_idx];
-            }
-        }
-
-        fdata
+        crate::utils::auxiliary::upsample_fdata(
+            &self.image_data,
+            self.rounded_px_w,
+            self.rounded_px_h,
+            self.horizontal_samp_factor.usize(),
+            self.vertical_samp_factor.usize(),
+            max_rounded_px_w,
+            max_rounded_px_h,
+            max_rounded_px_count,
+        )
     }
 
     fn get_cos(&self) -> Vec<f32> {
@@ -190,5 +182,17 @@ impl crate::utils::coef::Coef for SIMD8Coef {
     }
     fn vert_factor(&self) -> u32 {
         self.vertical_samp_factor.u32()
+    }
+    fn clamp_block(&self, block_idx: usize, data: &mut [f32]) {
+        use crate::utils::traits::WriteTo;
+        use std::simd::num::SimdFloat;
+        for j in 0..8 {
+            let a = j * 8;
+            let b = a + 7;
+            let old = &mut data[a..=b];
+            let max = self.dequant_dct_coefs_max[block_idx * 8 + j];
+            let min = self.dequant_dct_coefs_min[block_idx * 8 + j];
+            f32x8::from_slice(old).simd_clamp(min, max).write_to(old);
+        }
     }
 }

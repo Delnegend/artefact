@@ -10,7 +10,7 @@ mod tv_par;
 #[path = "../benches/tv_simd64.rs"]
 mod tv_simd64;
 
-use artefact_core::pipeline::simd8::compute_step_tv;
+use artefact_core::pipeline::simd8::{compute_step_tv, uniform_widths};
 use artefact_core::{Aux, PixelDifference};
 
 const W: u32 = 1600;
@@ -72,8 +72,9 @@ fn max_diff(a: &[Aux], b: &[Aux]) -> f32 {
 fn tv_implementations_match() {
     let base = make_auxs();
 
+    let widths = uniform_widths(W);
     let mut a = clone_auxs(&base);
-    compute_step_tv(W, H, NCH, &mut a);
+    compute_step_tv(W, H, NCH, &mut a, &widths);
 
     let mut b = clone_auxs(&base);
     tv_par::compute_step_tv_simd_par(W, H, NCH, &mut b);

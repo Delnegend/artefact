@@ -1,12 +1,11 @@
-// TV implementations benchmark: f32x8 (compute_step_tv) vs f32x64 8x8 block
-// (compute_step_tv_simd_64) vs rayon-parallel f32x8 (compute_step_tv_simd_par).
-// The 64/par variants are experimental (slower) and live here in benches/,
-// only the f32x8 one is kept in pipeline/simd8.
-// Run with: cargo bench --features bench --bench bench -- tv
+// TV implementations benchmark: shared width-generic f32x8 (compute_step_tv)
+// vs f32x64 8x8 block (compute_step_tv_simd_64) vs rayon-parallel f32x8
+// (compute_step_tv_simd_par). Run with:
+//   cargo bench --features bench --bench bench -- tv
 
 use std::hint::black_box;
 
-use artefact_core::pipeline::simd8::compute_step_tv;
+use artefact_core::pipeline::simd8::{compute_step_tv, uniform_widths};
 use artefact_core::{Aux, PixelDifference};
 use criterion::Criterion;
 
@@ -49,12 +48,13 @@ fn reset(auxs: &mut [Aux]) {
 
 pub fn tv_benches(c: &mut Criterion) {
     let mut auxs = make_auxs();
+    let widths = uniform_widths(W);
     let mut group = c.benchmark_group("tv");
 
     group.bench_function("f32x8 (compute_step_tv)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            compute_step_tv(W, H, NCH, black_box(&mut auxs));
+            compute_step_tv(W, H, NCH, black_box(&mut auxs), black_box(&widths));
         })
     });
 

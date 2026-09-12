@@ -33,8 +33,31 @@ pub trait AuxTraits {
     fn get_cos(&self) -> Vec<f32>;
 }
 
+/// Nearest-neighbour upsample of a subsampled raster (`image_data`) to the full
+/// rounded resolution, replicating each sample by the component's sampling factors.
+pub fn upsample_fdata(
+    image_data: &[f32],
+    rounded_px_w: u32,
+    rounded_px_h: u32,
+    horiz_factor: usize,
+    vert_factor: usize,
+    max_rounded_px_w: u32,
+    max_rounded_px_h: u32,
+    max_rounded_px_count: usize,
+) -> Vec<f32> {
+    let mut fdata = vec![0.0; max_rounded_px_count];
+    for y in 0..max_rounded_px_h as usize {
+        for x in 0..max_rounded_px_w as usize {
+            let cy = (y / vert_factor).min(rounded_px_h as usize - 1);
+            let cx = (x / horiz_factor).min(rounded_px_w as usize - 1);
+            fdata[y * max_rounded_px_w as usize + x] = image_data[cy * rounded_px_w as usize + cx];
+        }
+    }
+    fdata
+}
+
 impl Aux {
-    /// Init a new auxilary buffer
+    /// Init a new auxiliary buffer
     ///
     /// # Arguments
     ///
