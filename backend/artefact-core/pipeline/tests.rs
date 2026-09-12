@@ -78,7 +78,7 @@ fn simd8_matches_adaptive() {
         );
         let d = max_diff(&simd8, &adaptive);
         println!("{suffix}: max|simd8 - adaptive| = {d:.3e}");
-        assert!(d <= 20.0, "simd8 diverged from adaptive on {suffix} by {d}");
+        assert!(d <= 1e-3, "simd8 diverged from adaptive on {suffix} by {d}");
     }
     if checked == 0 {
         eprintln!("skipped: no assets/sample.*.input.jpg fixtures (run `just sample`)");

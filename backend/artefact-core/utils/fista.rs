@@ -3,14 +3,13 @@ use rayon::prelude::*;
 use crate::utils::{auxiliary::Aux, coef::Coef, macros::mul_add};
 
 pub fn fista_loop<C, F>(
-    mut auxs: Vec<Aux>,
+    auxs: &mut [Aux],
     coefs: &[C],
     iterations: usize,
     max_rounded_px_count: usize,
     radius: f32,
     mut step_fn: F,
-) -> Vec<Vec<f32>>
-where
+) where
     C: Coef + Sync,
     F: FnMut(&[C], &mut [Aux], f32),
 {
@@ -30,10 +29,8 @@ where
         term = next_term;
 
         let step_size = radius / (1.0 + iterations as f32).sqrt();
-        step_fn(coefs, &mut auxs, step_size);
+        step_fn(coefs, auxs, step_size);
     }
-
-    auxs.into_par_iter().map(|aux| aux.fdata).collect()
 }
 
 pub fn init_auxs<C>(max_w: u32, max_h: u32, max_count: usize, coefs: &[C]) -> Vec<Aux>

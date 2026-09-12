@@ -122,12 +122,11 @@ impl From<Coefficient> for SIMD8Coef {
 }
 
 impl AuxTraits for SIMD8Coef {
-    fn get_fdata(
-        &self,
-        max_rounded_px_w: u32,
-        max_rounded_px_h: u32,
-        max_rounded_px_count: usize,
-    ) -> Vec<f32> {
+    fn cos_count(&self) -> usize {
+        self.rounded_px_count as usize
+    }
+
+    fn get_fdata(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
         crate::utils::auxiliary::upsample_fdata(
             &self.image_data,
             self.rounded_px_w,
@@ -136,23 +135,21 @@ impl AuxTraits for SIMD8Coef {
             self.vertical_samp_factor.usize(),
             max_rounded_px_w,
             max_rounded_px_h,
-            max_rounded_px_count,
-        )
+            out,
+        );
     }
 
-    fn get_cos(&self) -> Vec<f32> {
-        let mut cos = vec![0.0; (self.rounded_px_count) as usize];
+    fn get_cos(&self, out: &mut [f32]) {
         for i in 0..self.block_count as usize {
             for j in 0..8 {
-                let a = i * 8 + j;
-                let b = (i + 1) * 8 + j;
+                let a = i * 64 + j * 8;
+                let b = a + 8;
 
-                self.dct_coefs[a]
+                self.dct_coefs[i * 8 + j]
                     .mul(self.quant_table[j])
-                    .write_to(&mut cos[a..b]);
+                    .write_to(&mut out[a..b]);
             }
         }
-        cos
     }
 }
 

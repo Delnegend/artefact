@@ -28,7 +28,7 @@ pub fn compute(
         .into_par_iter()
         .map(SIMDAdaptiveCoef::from)
         .collect::<Vec<_>>();
-    let auxs = fista::init_auxs(
+    let mut auxs = fista::init_auxs(
         max_rounded_px_w,
         max_rounded_px_h,
         max_rounded_px_count,
@@ -37,7 +37,7 @@ pub fn compute(
     let radius = fista::radius(max_rounded_px_count);
     let widths = get_adaptive_widths(max_rounded_px_w);
     fista::fista_loop(
-        auxs,
+        &mut auxs,
         &coefs,
         iterations,
         max_rounded_px_count,
@@ -59,5 +59,7 @@ pub fn compute(
                 projection,
             );
         },
-    )
+    );
+
+    auxs.into_par_iter().map(|aux| aux.fdata).collect()
 }

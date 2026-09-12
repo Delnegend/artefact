@@ -31,13 +31,14 @@ pub fn compute(
     let coefs: Vec<SIMD8Coef> = coefs.into_par_iter().map(SIMD8Coef::from).collect();
     let radius = fista::radius(max_rounded_px_count);
     let widths = uniform_widths(max_rounded_px_w);
+    let mut auxs = fista::init_auxs(
+        max_rounded_px_w,
+        max_rounded_px_h,
+        max_rounded_px_count,
+        &coefs,
+    );
     fista::fista_loop(
-        fista::init_auxs(
-            max_rounded_px_w,
-            max_rounded_px_h,
-            max_rounded_px_count,
-            &coefs,
-        ),
+        &mut auxs,
         &coefs,
         iterations,
         max_rounded_px_count,
@@ -59,5 +60,7 @@ pub fn compute(
                 projection,
             );
         },
-    )
+    );
+
+    auxs.into_par_iter().map(|aux| aux.fdata).collect()
 }
