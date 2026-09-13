@@ -3,6 +3,7 @@ mod coef;
 mod dct_gradient;
 mod fista;
 mod projection;
+mod run;
 mod step;
 mod tgv;
 pub mod traits;

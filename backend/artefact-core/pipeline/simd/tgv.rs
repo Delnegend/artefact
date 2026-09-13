@@ -5,7 +5,8 @@ use std::{
 
 use super::{
     adaptive_width::{AdaptiveWidth, dispatch_run},
-    traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
+    run::{add_shifted_left, load, load_shifted_right, run_mut},
+    traits::{AddSlice, SafeDiv},
 };
 use crate::utils::auxiliary::Aux;
 
@@ -56,7 +57,7 @@ fn tgv_run<const N: usize>(
     let mut g_yys = [Simd::<f32, N>::splat(0.0); 3];
     let mut g_xy_syms = [Simd::<f32, N>::splat(0.0); 3];
 
-    let curr_group_idx = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
+    let idx = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
     let group_at_top_edge = curr_row == 0;
     let group_at_left_edge = curr_row_px_idx == 0;
     let group_at_bottom_edge = curr_row == max_rounded_px_h - 1;
@@ -65,84 +66,36 @@ fn tgv_run<const N: usize>(
     for c in 0..nchannel {
         let aux = &mut auxs[c];
 
-        // backward difference x
+        // backward difference x of `pixel_diff.y`
         let g_yx = if group_at_left_edge {
-            let a = curr_group_idx + 1;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group =
-                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
-
-            let a = curr_group_idx;
-            let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group =
-                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
-
-            curr_group - shift_left_1px_group
+            load_shifted_right::<N>(&aux.pixel_diff.y, idx + 1, N - 1)
+                - load_shifted_right::<N>(&aux.pixel_diff.y, idx, N - 1)
         } else {
-            let a = curr_group_idx;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
-
-            let a = curr_group_idx - 1;
-            let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
-
-            curr_group - shift_left_1px_group
+            load::<N>(&aux.pixel_diff.y, idx) - load::<N>(&aux.pixel_diff.y, idx - 1)
         };
 
-        // backward difference y
+        // backward difference y of `pixel_diff.x`
         let g_xy = if group_at_top_edge {
             Simd::<f32, N>::splat(0.0)
         } else {
-            let a = curr_group_idx;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
-
-            let a = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let shift_up_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
-
-            curr_group - shift_up_1px_group
+            let above = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            load::<N>(&aux.pixel_diff.x, idx) - load::<N>(&aux.pixel_diff.x, above)
         };
 
-        // backward difference x
+        // backward difference x of `pixel_diff.x`
         g_xxs[c] = if group_at_left_edge {
-            let a = curr_group_idx + 1;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group =
-                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
-
-            let a = curr_group_idx;
-            let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group =
-                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
-
-            curr_group - shift_left_1px_group
+            load_shifted_right::<N>(&aux.pixel_diff.x, idx + 1, N - 1)
+                - load_shifted_right::<N>(&aux.pixel_diff.x, idx, N - 1)
         } else {
-            let a = curr_group_idx;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
-
-            let a = curr_group_idx - 1;
-            let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
-
-            curr_group - shift_left_1px_group
+            load::<N>(&aux.pixel_diff.x, idx) - load::<N>(&aux.pixel_diff.x, idx - 1)
         };
 
-        // backward difference y
+        // backward difference y of `pixel_diff.y`
         g_yys[c] = if group_at_top_edge {
             Simd::<f32, N>::splat(0.0)
         } else {
-            let a = curr_group_idx;
-            let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
-
-            let a = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let shift_up_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
-
-            curr_group - shift_up_1px_group
+            let above = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            load::<N>(&aux.pixel_diff.y, idx) - load::<N>(&aux.pixel_diff.y, above)
         };
 
         // symmetrize
@@ -169,9 +122,7 @@ fn tgv_run<const N: usize>(
         let aux = &mut auxs[c];
 
         {
-            let a = curr_group_idx;
-            let b = curr_group_idx + 7 + pad;
-            let target = &mut aux.obj_gradient[a..=b];
+            let target = run_mut(&mut aux.obj_gradient, idx, N);
 
             (alpha
                 * -(Simd::<f32, N>::splat(2.0) * g_xx
@@ -187,18 +138,11 @@ fn tgv_run<const N: usize>(
                 // ignore the first pixel in the group because it's out of bounds
                 // [_] [0] [1] [2] [3] [4] [5] [6]
 
-                let a = curr_group_idx;
-                let b = curr_group_idx + 6 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx, N - 1);
 
-                (alpha * (g_xy_sym + g_xx))
-                    .safe_div(g2_norm)
-                    .add_range_slice(target, 1..=7 + pad)
-                    .write_partial_to(target, 1..=7 + pad);
+                add_shifted_left::<N>(target, (alpha * (g_xy_sym + g_xx)).safe_div(g2_norm));
             } else {
-                let a = curr_group_idx - 1;
-                let b = curr_group_idx + 6 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx - 1, N);
 
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
@@ -209,18 +153,14 @@ fn tgv_run<const N: usize>(
 
         {
             if group_at_right_edge {
-                let a = curr_group_idx + 1;
-                let b = curr_group_idx + 7 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx + 1, N - 1);
 
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
                     .add_short_slice(target)
                     .store_select(target, mask);
             } else {
-                let a = curr_group_idx + 1;
-                let b = curr_group_idx + 8 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx + 1, N);
 
                 (alpha * (g_xy_sym + g_xx))
                     .div(g2_norm)
@@ -229,11 +169,10 @@ fn tgv_run<const N: usize>(
             }
         }
 
-        // for shifted up 1px group | group above the current group
+        // for the group above the current group
         if !group_at_top_edge {
-            let a = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let target = &mut aux.obj_gradient[a..=b];
+            let above = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            let target = run_mut(&mut aux.obj_gradient, above, N);
 
             (alpha * (g_yy + g_xy_sym))
                 .div(g2_norm)
@@ -241,11 +180,10 @@ fn tgv_run<const N: usize>(
                 .store_select(target, mask);
         }
 
-        // for shifted down 1px group | group below the current group
+        // for the group below the current group
         if !group_at_bottom_edge {
-            let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let target = &mut aux.obj_gradient[a..=b];
+            let below = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
+            let target = run_mut(&mut aux.obj_gradient, below, N);
 
             (alpha * (g_yy + g_xy_sym))
                 .div(g2_norm)
@@ -253,21 +191,17 @@ fn tgv_run<const N: usize>(
                 .store_select(target, mask);
         }
 
-        // for shift up right 1px group
+        // for the group up right 1px
         if !group_at_top_edge {
             if group_at_right_edge {
-                let a = curr_group_idx + 1;
-                let b = curr_group_idx + 7 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx + 1, N - 1);
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
                     .add_short_slice(target)
                     .store_select(target, mask);
             } else {
-                let a = curr_group_idx + 1;
-                let b = curr_group_idx + 8 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx + 1, N);
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
@@ -276,21 +210,14 @@ fn tgv_run<const N: usize>(
             }
         }
 
-        // for shift down left 1px group
+        // for the group down left 1px
         if !group_at_bottom_edge {
             if group_at_left_edge {
-                let a = curr_group_idx;
-                let b = curr_group_idx + 6 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx, N - 1);
 
-                (alpha * -g_xy_sym)
-                    .safe_div(g2_norm)
-                    .add_range_slice(target, 1..=7 + pad)
-                    .write_partial_to(target, 1..=7 + pad);
+                add_shifted_left::<N>(target, (alpha * -g_xy_sym).safe_div(g2_norm));
             } else {
-                let a = curr_group_idx - 1;
-                let b = curr_group_idx + 6 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, idx - 1, N);
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)

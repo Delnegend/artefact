@@ -5,6 +5,7 @@ use std::{
 
 use super::{
     adaptive_width::{AdaptiveWidth, dispatch_run},
+    run::{load, load_or_zero, run_mut},
     traits::{AddSlice, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
@@ -46,9 +47,10 @@ fn tv_run<const N: usize>(
     // A run is N pixels wide but the stencil only overlaps by 8, hence the
     // padding when indexing a run's neighbourhood.
     let pad = N - 8;
-    let px_idx_start_of_group = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
+    let start = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
     let group_at_right_edge = curr_row_px_idx as usize + 8 + pad == max_rounded_px_w as usize;
     let group_at_bottom_edge = curr_row + 1 == max_rounded_px_h;
+    let below = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
 
     let mut g_xs = [Simd::<f32, N>::splat(0.0); 3];
     let mut g_ys = [Simd::<f32, N>::splat(0.0); 3];
@@ -59,38 +61,15 @@ fn tv_run<const N: usize>(
 
         // forward difference x
         g_xs[c] = if group_at_right_edge {
-            let a = px_idx_start_of_group;
-            let b = px_idx_start_of_group + 6 + pad;
-            let curr_group = Simd::<f32, N>::load_or_default(&aux.fdata[a..=b]);
-
-            let a = px_idx_start_of_group + 1;
-            let b = px_idx_start_of_group + 7 + pad;
-            let shift_right_1px_group = Simd::<f32, N>::load_or_default(&aux.fdata[a..=b]);
-
-            shift_right_1px_group - curr_group
+            load_or_zero::<N>(&aux.fdata, start + 1, N - 1)
+                - load_or_zero::<N>(&aux.fdata, start, N - 1)
         } else {
-            let a = px_idx_start_of_group;
-            let b = px_idx_start_of_group + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
-
-            let a = px_idx_start_of_group + 1;
-            let b = px_idx_start_of_group + 8 + pad;
-            let shift_right_1px_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
-
-            shift_right_1px_group - curr_group
+            load::<N>(&aux.fdata, start + 1) - load::<N>(&aux.fdata, start)
         };
 
         // forward difference y
         if !group_at_bottom_edge {
-            let a = px_idx_start_of_group;
-            let b = px_idx_start_of_group + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
-
-            let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let shift_down_1px_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
-
-            g_ys[c] = shift_down_1px_group - curr_group;
+            g_ys[c] = load::<N>(&aux.fdata, below) - load::<N>(&aux.fdata, start);
         }
     }
 
@@ -107,9 +86,7 @@ fn tv_run<const N: usize>(
         let aux = &mut auxs[c];
 
         {
-            let a = px_idx_start_of_group;
-            let b = px_idx_start_of_group + 7 + pad;
-            let target = &mut aux.obj_gradient[a..=b];
+            let target = run_mut(&mut aux.obj_gradient, start, N);
 
             (alpha * -(g_xs[c] + g_ys[c]))
                 .div(g_norm)
@@ -119,18 +96,14 @@ fn tv_run<const N: usize>(
 
         {
             if group_at_right_edge {
-                let a = px_idx_start_of_group + 1;
-                let b = px_idx_start_of_group + 7 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, start + 1, N - 1);
 
                 (alpha * g_xs[c])
                     .div(g_norm)
                     .add_short_slice(target)
                     .store_select(target, mask);
             } else {
-                let a = px_idx_start_of_group + 1;
-                let b = px_idx_start_of_group + 8 + pad;
-                let target = &mut aux.obj_gradient[a..=b];
+                let target = run_mut(&mut aux.obj_gradient, start + 1, N);
 
                 (alpha * g_xs[c])
                     .div(g_norm)
@@ -139,11 +112,9 @@ fn tv_run<const N: usize>(
             }
         }
 
-        // for shifted_down_1px_group aka group below the current group
+        // for the group below the current group
         if !group_at_bottom_edge {
-            let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let b = a + 7 + pad;
-            let target = &mut aux.obj_gradient[a..=b];
+            let target = run_mut(&mut aux.obj_gradient, below, N);
 
             (alpha * g_ys[c])
                 .div(g_norm)
@@ -152,12 +123,9 @@ fn tv_run<const N: usize>(
         }
 
         // ===== store for the second-order TGV pass =====
-        let a = px_idx_start_of_group;
-        let b = px_idx_start_of_group + 7 + pad;
-
-        g_xs[c].write_to(&mut auxs[c].pixel_diff.x[a..=b]);
+        g_xs[c].write_to(run_mut(&mut aux.pixel_diff.x, start, N));
         if !group_at_bottom_edge {
-            g_ys[c].write_to(&mut auxs[c].pixel_diff.y[a..=b]);
+            g_ys[c].write_to(run_mut(&mut aux.pixel_diff.y, start, N));
         }
     }
 }
