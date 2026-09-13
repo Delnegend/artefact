@@ -9,9 +9,16 @@
 		"--hostname=artefact",
 		"--cap-add",
 		"PERFMON",
+		// NVIDIA GPUs (requires the NVIDIA Container Toolkit on the host)
+		"--gpus=all",
+		// AMD/Intel GPUs via DRM render nodes (Mesa RADV/ANV/lavapipe in the image)
+		"--device=/dev/dri",
 		"-v",
 		"cargo-cache:/usr/local/cargo"
 	],
+	"hostRequirements": {
+		"gpu": "optional"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
