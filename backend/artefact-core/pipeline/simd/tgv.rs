@@ -4,14 +4,14 @@ use std::{
 };
 
 use super::{
-    adaptive_width::{AdaptiveWidth, dispatch_width},
+    adaptive_width::{AdaptiveWidth, dispatch_run},
     traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
 
-/// Second-order (TGV) TV gradient: each run in `adaptive_widths` is processed
-/// with the matching `Simd<f32, N>` lane width.
-pub fn compute_step_tv2(
+/// Second-order Total Generalized Variation (TGV) gradient: each run in
+/// `adaptive_widths` is processed with the matching `Simd<f32, N>` lane width.
+pub fn tgv_gradient(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -23,9 +23,9 @@ pub fn compute_step_tv2(
 
     for curr_row in 0..max_rounded_px_h {
         for &adaptive_width in adaptive_widths {
-            dispatch_width!(
+            dispatch_run!(
                 adaptive_width,
-                tv2_inner,
+                tgv_run,
                 max_rounded_px_w,
                 max_rounded_px_h,
                 nchannel,
@@ -38,7 +38,9 @@ pub fn compute_step_tv2(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn tv2_inner<const N: usize>(
+/// Second-order Total Generalized Variation (TGV) backward-difference gradient
+/// for one run of `N` lanes.
+fn tgv_run<const N: usize>(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,

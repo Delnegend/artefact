@@ -1,11 +1,13 @@
 use super::ScalarCoef;
 use crate::utils::{
     auxiliary::Aux,
-    boxing::{boxing, unboxing},
-    dct::{dct8x8s, idct8x8s},
+    blocks::{from_blocks, to_blocks},
+    dct::{dct8x8, idct8x8},
 };
 
-pub fn compute_projection(
+/// Project each 8x8 block onto its quantized Discrete Cosine Transform (DCT)
+/// interval (scalar reference).
+pub fn project_onto_box(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     aux: &mut Aux,
@@ -47,7 +49,7 @@ pub fn compute_projection(
     }
 
     // Project onto DCT box
-    boxing(
+    to_blocks(
         if resample {
             &aux.pixel_diff.y
         } else {
@@ -61,7 +63,7 @@ pub fn compute_projection(
     );
 
     for i in 0..coef.block_count as usize {
-        dct8x8s(
+        dct8x8(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
@@ -78,12 +80,12 @@ pub fn compute_projection(
         }
     }
 
-    // Save a copy of the DCT values for step_prob
+    // Save a copy of the DCT values for `dct_gradient`
     aux.cos = aux.pixel_diff.x.clone();
 
     // add back the difference (orthogonal to our subsampling vector)
     for i in 0..coef.block_count as usize {
-        idct8x8s(
+        idct8x8(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
@@ -91,7 +93,7 @@ pub fn compute_projection(
         );
     }
 
-    unboxing(
+    from_blocks(
         &aux.pixel_diff.x,
         if resample {
             aux.pixel_diff.y.as_mut()

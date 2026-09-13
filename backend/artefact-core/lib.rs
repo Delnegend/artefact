@@ -28,9 +28,9 @@ use utils::macros::mul_add;
 
 // Single-crate dispatch — always buildable, no bloat via features
 #[cfg(not(feature = "simd"))]
-use pipeline::scalar::compute;
+use pipeline::scalar::solve;
 #[cfg(feature = "simd")]
-use pipeline::simd::compute;
+use pipeline::simd::solve;
 
 #[derive(Debug)]
 pub enum ArtefactError {
@@ -147,7 +147,7 @@ impl Artefact {
         let iterations = self.iterations.to_slice();
 
         let mut output = if jpeg.nchannel == 3 && !self.separate_components {
-            compute(
+            solve(
                 3,
                 jpeg.coefs,
                 weight[0],
@@ -164,7 +164,7 @@ impl Artefact {
                 .enumerate()
                 .map(|(c, coef)| {
                     std::mem::take(
-                        &mut compute(
+                        &mut solve(
                             1,
                             vec![coef],
                             weight[c],

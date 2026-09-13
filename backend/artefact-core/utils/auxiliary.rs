@@ -9,7 +9,7 @@ pub struct PixelDifference {
 /// Working buffers for each component
 #[derive(Debug)]
 pub struct Aux {
-    /// DCT coefficients for `step_prob`
+    /// Discrete Cosine Transform (DCT) coefficients for `dct_gradient`
     pub cos: AlignedF32,
 
     /// Gradient (derivative) of the objective function
@@ -25,22 +25,22 @@ pub struct Aux {
 }
 
 pub trait AuxTraits {
-    /// Number of elements [`AuxTraits::get_cos`] writes (the component's rounded
+    /// Number of elements [`AuxTraits::init_dct_target_into`] writes (the component's rounded
     /// pixel count, i.e. `block_count * 64`).
     fn cos_count(&self) -> usize;
 
     /// Upsample this component's `image_data` into `out` (length
     /// `max_rounded_px_count`).
-    fn get_fdata(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]);
+    fn init_pixels_into(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]);
 
     /// Write the dequantized DCT coefficients into `out` (length
     /// [`AuxTraits::cos_count`]).
-    fn get_cos(&self, out: &mut [f32]);
+    fn init_dct_target_into(&self, out: &mut [f32]);
 }
 
 /// Nearest-neighbour upsample of a subsampled raster (`image_data`) to the full
 /// rounded resolution, replicating each sample by the component's sampling factors.
-pub fn upsample_fdata(
+pub fn upsample_pixels(
     image_data: &[f32],
     rounded_px_w: u32,
     rounded_px_h: u32,
@@ -75,10 +75,10 @@ impl Aux {
         coef: &impl AuxTraits,
     ) -> Self {
         let mut fdata = AlignedF32::zeros(max_rounded_px_count);
-        coef.get_fdata(max_rounded_px_w, max_rounded_px_h, &mut fdata);
+        coef.init_pixels_into(max_rounded_px_w, max_rounded_px_h, &mut fdata);
 
         let mut cos = AlignedF32::zeros(coef.cos_count());
-        coef.get_cos(&mut cos);
+        coef.init_dct_target_into(&mut cos);
 
         Self {
             cos,

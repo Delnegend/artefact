@@ -1,7 +1,7 @@
 use crate::utils::auxiliary::Aux;
 
 /// Computes the Total Variation (TV) regularization term and its gradient
-pub fn compute_step_tv(
+pub fn tv_gradient(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -11,7 +11,7 @@ pub fn compute_step_tv(
 
     for curr_row in 0..max_rounded_px_h {
         for curr_row_idx in 0..max_rounded_px_w {
-            compute_step_tv_inner(
+            tv_gradient_px(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 nchannel,
@@ -26,7 +26,7 @@ pub fn compute_step_tv(
     tv
 }
 
-pub fn compute_step_tv_inner(
+pub fn tv_gradient_px(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -90,7 +90,7 @@ pub fn compute_step_tv_inner(
         }
     }
 
-    // store for use in tv2
+    // store for the second-order TGV pass
     for c in 0..nchannel {
         auxs[c].pixel_diff.x[curr_px_idx] = g_xs[c];
         auxs[c].pixel_diff.y[curr_px_idx] = g_ys[c];

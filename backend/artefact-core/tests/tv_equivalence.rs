@@ -11,9 +11,7 @@ mod tv_par;
 #[path = "../benches/tv_simd64.rs"]
 mod tv_simd64;
 
-use artefact_core::pipeline::simd::{
-    compute_step_tv, compute_step_tv2, get_adaptive_widths, uniform_widths,
-};
+use artefact_core::pipeline::simd::{adaptive_runs, tgv_gradient, tv_gradient, uniform_runs};
 use artefact_core::{AlignedF32, Aux, PixelDifference};
 
 const W: u32 = 1600;
@@ -75,15 +73,15 @@ fn max_diff(a: &[Aux], b: &[Aux]) -> f32 {
 fn tv_implementations_match() {
     let base = make_auxs();
 
-    let widths = uniform_widths(W);
+    let widths = uniform_runs(W);
     let mut a = clone_auxs(&base);
-    compute_step_tv(W, H, NCH, &mut a, &widths);
+    tv_gradient(W, H, NCH, &mut a, &widths);
 
     let mut b = clone_auxs(&base);
-    tv_par::compute_step_tv_simd_par(W, H, NCH, &mut b);
+    tv_par::tv_gradient_par(W, H, NCH, &mut b);
 
     let mut c = clone_auxs(&base);
-    tv_simd64::compute_step_tv_simd_64(W, H, NCH, &mut c);
+    tv_simd64::tv_gradient_simd64(W, H, NCH, &mut c);
 
     let par = max_diff(&a, &b);
     let simd64 = max_diff(&a, &c);
@@ -102,23 +100,23 @@ fn tv_implementations_match() {
 }
 
 /// The adaptive 64/32/16/8 tiling must match the uniform x8 tiling of the same
-/// width-generic kernel (the per-width `tv_inner::<N>` dispatch).
+/// width-generic kernel (the per-width `tv_run::<N>` dispatch).
 #[test]
 fn mixed_widths_match_uniform() {
     let base = make_auxs();
-    let uniform = uniform_widths(W);
-    let mixed = get_adaptive_widths(W);
+    let uniform = uniform_runs(W);
+    let mixed = adaptive_runs(W);
 
     let mut uni_tv = clone_auxs(&base);
-    compute_step_tv(W, H, NCH, &mut uni_tv, &uniform);
+    tv_gradient(W, H, NCH, &mut uni_tv, &uniform);
     let mut mix_tv = clone_auxs(&base);
-    compute_step_tv(W, H, NCH, &mut mix_tv, &mixed);
+    tv_gradient(W, H, NCH, &mut mix_tv, &mixed);
     let tv_diff = max_diff(&uni_tv, &mix_tv);
 
     let mut uni_tv2 = clone_auxs(&base);
-    compute_step_tv2(W, H, NCH, &mut uni_tv2, 0.3, &uniform);
+    tgv_gradient(W, H, NCH, &mut uni_tv2, 0.3, &uniform);
     let mut mix_tv2 = clone_auxs(&base);
-    compute_step_tv2(W, H, NCH, &mut mix_tv2, 0.3, &mixed);
+    tgv_gradient(W, H, NCH, &mut mix_tv2, 0.3, &mixed);
     let tv2_diff = max_diff(&uni_tv2, &mix_tv2);
 
     println!("tv  uniform vs mixed: max diff = {tv_diff:.3e}");

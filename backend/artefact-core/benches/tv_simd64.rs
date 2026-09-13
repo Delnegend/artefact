@@ -6,7 +6,7 @@ use artefact_core::Aux;
 ///
 /// [`f32x8`]: std::simd::f32x8
 #[allow(unused)]
-pub fn compute_step_tv_simd_64(
+pub fn tv_gradient_simd64(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -16,7 +16,7 @@ pub fn compute_step_tv_simd_64(
 
     for curr_row in (0..max_rounded_px_h).step_by(8) {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
-            compute_step_tv_inner(
+            tv_gradient_px(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 nchannel,
@@ -29,7 +29,7 @@ pub fn compute_step_tv_simd_64(
     }
 }
 
-fn compute_step_tv_inner(
+fn tv_gradient_px(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -361,7 +361,7 @@ fn compute_step_tv_inner(
         }
     }
 
-    // store for use in tv2
+    // store for the second-order TGV pass
     for c in 0..nchannel {
         let diff = &mut auxs[c].pixel_diff;
 

@@ -5,7 +5,7 @@ use zune_jpeg::sample_factor::SampleFactor;
 use super::traits::WriteTo;
 use crate::{
     jpeg::Coefficient,
-    utils::{auxiliary::AuxTraits, dct::idct8x8s},
+    utils::{auxiliary::AuxTraits, dct::idct8x8},
 };
 
 pub trait Coef: AuxTraits {
@@ -17,8 +17,9 @@ pub trait Coef: AuxTraits {
     fn horiz_factor(&self) -> u32;
     fn vert_factor(&self) -> u32;
 
-    /// Clamp one dequantized 8x8 block (64 values) into its quantized box.
-    fn clamp_block(&self, block_idx: usize, data: &mut [f32]);
+    /// Clamp one dequantized 8x8 Discrete Cosine Transform (DCT) block (64
+    /// values) into its quantized interval.
+    fn clamp_dct_block(&self, block_idx: usize, data: &mut [f32]);
 }
 
 #[derive(Debug, Clone, Default)]
@@ -86,7 +87,7 @@ impl From<Coefficient> for SIMDCoef {
                     let mut block = [0.0_f32; 64];
                     (*dct * quant_table).write_to(&mut block);
 
-                    idct8x8s(&mut block);
+                    idct8x8(&mut block);
 
                     // 8x8 -> raster
                     let block_y = i / block_w;
@@ -113,8 +114,8 @@ impl AuxTraits for SIMDCoef {
         self.rounded_px_count as usize
     }
 
-    fn get_fdata(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
-        crate::utils::auxiliary::upsample_fdata(
+    fn init_pixels_into(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
+        crate::utils::auxiliary::upsample_pixels(
             &self.image_data,
             self.rounded_px_w,
             self.rounded_px_h,
@@ -126,7 +127,7 @@ impl AuxTraits for SIMDCoef {
         );
     }
 
-    fn get_cos(&self, out: &mut [f32]) {
+    fn init_dct_target_into(&self, out: &mut [f32]) {
         for i in 0..self.block_count as usize {
             self.dct_coefs[i]
                 .mul(self.quant_table)
@@ -157,7 +158,7 @@ impl Coef for SIMDCoef {
     fn vert_factor(&self) -> u32 {
         self.vertical_samp_factor.u32()
     }
-    fn clamp_block(&self, block_idx: usize, data: &mut [f32]) {
+    fn clamp_dct_block(&self, block_idx: usize, data: &mut [f32]) {
         use std::simd::num::SimdFloat;
         let max = self.dequant_dct_coefs_max[block_idx];
         let min = self.dequant_dct_coefs_min[block_idx];

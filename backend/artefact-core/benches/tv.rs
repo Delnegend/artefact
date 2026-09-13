@@ -1,13 +1,11 @@
-// TV implementations benchmark: shared width-generic f32x8 (compute_step_tv)
-// vs f32x64 8x8 block (compute_step_tv_simd_64) vs rayon-parallel f32x8
-// (compute_step_tv_simd_par), plus the adaptive mixed-width paths. Run with:
+// TV implementations benchmark: shared width-generic f32x8 (tv_gradient)
+// vs f32x64 8x8 block (tv_gradient_simd64) vs rayon-parallel f32x8
+// (tv_gradient_par), plus the adaptive mixed-width paths. Run with:
 //   cargo bench --features bench --bench bench -- tv
 
 use std::hint::black_box;
 
-use artefact_core::pipeline::simd::{
-    AdaptiveWidth, compute_step_tv, compute_step_tv2, uniform_widths,
-};
+use artefact_core::pipeline::simd::{AdaptiveWidth, tgv_gradient, tv_gradient, uniform_runs};
 use artefact_core::{AlignedF32, Aux, PixelDifference};
 use criterion::Criterion;
 
@@ -40,7 +38,7 @@ fn make_auxs(w: u32, h: u32) -> Vec<Aux> {
         .collect()
 }
 
-/// Mixed 64/32/16/8 tiling of a row (like `get_adaptive_widths`, but guaranteed
+/// Mixed 64/32/16/8 tiling of a row (like `adaptive_runs`, but guaranteed
 /// to include every width even for MCU-aligned fixture widths).
 fn mixed_widths(w: u32) -> Vec<AdaptiveWidth> {
     let mut out = Vec::new();
@@ -77,36 +75,36 @@ fn reset(auxs: &mut [Aux]) {
 pub fn tv_benches(c: &mut Criterion) {
     let mut auxs = make_auxs(W, H);
     let mut auxs_mixed = make_auxs(WM, H);
-    let widths = uniform_widths(W);
+    let widths = uniform_runs(W);
     let mixed = mixed_widths(WM);
 
     let mut group = c.benchmark_group("tv");
 
-    group.bench_function("f32x8 (compute_step_tv)", |b| {
+    group.bench_function("f32x8 (tv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            compute_step_tv(W, H, NCH, black_box(&mut auxs), black_box(&widths));
+            tv_gradient(W, H, NCH, black_box(&mut auxs), black_box(&widths));
         })
     });
 
-    group.bench_function("mixed widths (compute_step_tv)", |b| {
+    group.bench_function("mixed widths (tv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs_mixed));
-            compute_step_tv(WM, H, NCH, black_box(&mut auxs_mixed), black_box(&mixed));
+            tv_gradient(WM, H, NCH, black_box(&mut auxs_mixed), black_box(&mixed));
         })
     });
 
-    group.bench_function("f32x8 (compute_step_tv2)", |b| {
+    group.bench_function("f32x8 (tgv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            compute_step_tv2(W, H, NCH, black_box(&mut auxs), 0.3, black_box(&widths));
+            tgv_gradient(W, H, NCH, black_box(&mut auxs), 0.3, black_box(&widths));
         })
     });
 
-    group.bench_function("mixed widths (compute_step_tv2)", |b| {
+    group.bench_function("mixed widths (tgv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs_mixed));
-            compute_step_tv2(
+            tgv_gradient(
                 WM,
                 H,
                 NCH,
@@ -117,17 +115,17 @@ pub fn tv_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("f32x64 8x8 (compute_step_tv_simd_64)", |b| {
+    group.bench_function("f32x64 8x8 (tv_gradient_simd64)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            tv_simd64::compute_step_tv_simd_64(W, H, NCH, black_box(&mut auxs));
+            tv_simd64::tv_gradient_simd64(W, H, NCH, black_box(&mut auxs));
         })
     });
 
-    group.bench_function("rayon f32x8 (compute_step_tv_simd_par)", |b| {
+    group.bench_function("rayon f32x8 (tv_gradient_par)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            tv_par::compute_step_tv_simd_par(W, H, NCH, black_box(&mut auxs));
+            tv_par::tv_gradient_par(W, H, NCH, black_box(&mut auxs));
         })
     });
 

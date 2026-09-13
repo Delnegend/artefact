@@ -4,12 +4,10 @@ use rayon::prelude::*;
 
 use artefact_core::{Aux, SafeDiv, WriteTo};
 
-/// A slower version (for some reason) of [`compute_step_tv_simd`] with
-/// [`rayon`] parallelization.
-///
-/// [`compute_step_tv_simd`]: crate::compute::simd::compute_step_tv::compute_step_tv_simd
+/// A slower, rayon-parallelized variant of the first-order Total Variation (TV)
+/// gradient, kept as a benchmark reference.
 #[allow(unused)]
-pub fn compute_step_tv_simd_par(
+pub fn tv_gradient_par(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -194,7 +192,7 @@ fn compute_derivatives(
         (original + update).write_to(target);
     }
 
-    // store for use in tv2
+    // store for the second-order TGV pass
     g_xs.write_to(
         &mut aux.pixel_diff.x[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
     );

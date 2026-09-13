@@ -1,9 +1,11 @@
 use crate::pipeline::scalar::coef::ScalarCoef;
-use crate::utils::dct::idct8x8s;
+use crate::utils::dct::idct8x8;
 
-// Compute objective gradient for the distance of DCT coefficients from normal decoding
-// N.B. destroys cos
-pub fn compute_step_prob(
+/// Objective gradient of the Discrete Cosine Transform (DCT) data-fidelity term
+/// (the distance of the current coefficients from the quantized originals).
+///
+/// N.B. destroys `cos`.
+pub fn dct_gradient(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     max_rounded_px_h: u32,    // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
@@ -31,7 +33,7 @@ pub fn compute_step_prob(
             }
 
             // Apply inverse DCT to get spatial domain gradient
-            idct8x8s(&mut cosbs);
+            idct8x8(&mut cosbs);
 
             // Distribute gradient to output buffer with upsampling
             for in_y in 0..8 {

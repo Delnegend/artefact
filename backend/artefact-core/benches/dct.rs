@@ -17,7 +17,7 @@ pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
 pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
 pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
-pub fn idct8x8s_simd(a: &mut [f32; 64]) {
+pub fn idct8x8_simd(a: &mut [f32; 64]) {
     {
         let mut x0r = f32x8::splat(0.0);
         let mut x0i = f32x8::splat(0.0);
@@ -109,7 +109,7 @@ pub fn idct8x8s_simd(a: &mut [f32; 64]) {
     }
 }
 
-pub fn idct8x8s(a: &mut [f32; 64]) {
+pub fn idct8x8(a: &mut [f32; 64]) {
     let mut x0r: f32;
     let mut x0i: f32;
     let mut x1r: f32;
@@ -188,10 +188,10 @@ pub fn dct_benches(c: &mut Criterion) {
 
     let mut arr_b = arr_a;
 
-    group.bench_function("idct8x8s", |b| b.iter(|| idct8x8s(&mut arr_a)));
+    group.bench_function("idct8x8", |b| b.iter(|| idct8x8(&mut arr_a)));
 
     let mut a = [0.0; 64];
-    group.bench_function("idct8x8s_simd", |b| b.iter(|| idct8x8s_simd(&mut arr_b)));
+    group.bench_function("idct8x8_simd", |b| b.iter(|| idct8x8_simd(&mut arr_b)));
 
     group.finish();
 }

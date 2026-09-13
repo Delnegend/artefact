@@ -1,11 +1,15 @@
 use super::{
-    coef::ScalarCoef, compute_projection::compute_projection, compute_step_prob::compute_step_prob,
-    compute_step_tv::compute_step_tv, compute_step_tv2::compute_step_tv2,
+    coef::ScalarCoef, dct_gradient::dct_gradient, projection::project_onto_box, tgv::tgv_gradient,
+    tv::tv_gradient,
 };
 use crate::utils::{aligned::AlignedF32, auxiliary::Aux, macros::mul_add};
 
+/// One projected subgradient step (scalar reference): the Discrete Cosine
+/// Transform (DCT) data-fidelity gradient plus the Total Variation (TV) and
+/// Total Generalized Variation (TGV) gradients, a normalized descent step, and
+/// the projection onto the quantized DCT box.
 #[allow(clippy::too_many_arguments)]
-pub fn compute_step(
+pub fn solver_step(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     max_rounded_px_count: usize,
@@ -24,7 +28,7 @@ pub fn compute_step(
 
         // DCT coefficient distance
         if pweight[c] != 0.0 {
-            compute_step_prob(
+            dct_gradient(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt(),
@@ -36,10 +40,10 @@ pub fn compute_step(
     }
 
     // TV computation
-    compute_step_tv(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
+    tv_gradient(max_rounded_px_w, max_rounded_px_h, nchannel, auxs);
 
     // TGV second order
-    compute_step_tv2(
+    tgv_gradient(
         max_rounded_px_w,
         max_rounded_px_h,
         nchannel,
@@ -67,6 +71,6 @@ pub fn compute_step(
 
     // Project onto DCT basis
     auxs.iter_mut().enumerate().for_each(|(c, aux)| {
-        compute_projection(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
+        project_onto_box(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
     });
 }

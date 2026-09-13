@@ -3,7 +3,7 @@ use std::{hint::black_box, simd::f32x8};
 use criterion::Criterion;
 use rand::Rng;
 
-fn boxing(
+fn to_blocks(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -31,7 +31,7 @@ fn boxing(
     }
 }
 
-fn boxing_simd(
+fn to_blocks_simd(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -57,7 +57,7 @@ fn boxing_simd(
     }
 }
 
-fn boxing_batch(
+fn to_blocks_batch(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -82,7 +82,7 @@ fn boxing_batch(
     }
 }
 
-pub fn unboxing(
+pub fn from_blocks(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -110,7 +110,7 @@ pub fn unboxing(
     }
 }
 
-pub fn unboxing_simd(
+pub fn from_blocks_simd(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -137,7 +137,7 @@ pub fn unboxing_simd(
     }
 }
 
-pub fn unboxing_batch(
+pub fn from_blocks_batch(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -162,16 +162,16 @@ pub fn unboxing_batch(
     }
 }
 
-pub fn boxing_benches(c: &mut Criterion) {
+pub fn blocks_benches(c: &mut Criterion) {
     let mut rng = rand::rng();
     let input: Vec<f32> = (0..512 * 512).map(|_| rng.random()).collect();
     let mut output = vec![0.0; 512 * 512];
 
-    let mut group = c.benchmark_group("boxing");
+    let mut group = c.benchmark_group("to_blocks");
 
-    group.bench_function("boxing", |b| {
+    group.bench_function("to_blocks", |b| {
         b.iter(|| {
-            boxing(
+            to_blocks(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),
@@ -182,9 +182,9 @@ pub fn boxing_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("boxing_simd", |b| {
+    group.bench_function("to_blocks_simd", |b| {
         b.iter(|| {
-            boxing_simd(
+            to_blocks_simd(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),
@@ -195,9 +195,9 @@ pub fn boxing_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("boxing_batch", |b| {
+    group.bench_function("to_blocks_batch", |b| {
         b.iter(|| {
-            boxing_batch(
+            to_blocks_batch(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),
@@ -208,9 +208,9 @@ pub fn boxing_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("unboxing", |b| {
+    group.bench_function("from_blocks", |b| {
         b.iter(|| {
-            unboxing(
+            from_blocks(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),
@@ -221,9 +221,9 @@ pub fn boxing_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("unboxing_batch", |b| {
+    group.bench_function("from_blocks_batch", |b| {
         b.iter(|| {
-            unboxing_batch(
+            from_blocks_batch(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),
@@ -234,9 +234,9 @@ pub fn boxing_benches(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("unboxing_simd", |b| {
+    group.bench_function("from_blocks_simd", |b| {
         b.iter(|| {
-            unboxing_simd(
+            from_blocks_simd(
                 black_box(&input),
                 black_box(&mut output),
                 black_box(512),

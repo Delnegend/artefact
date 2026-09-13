@@ -1,9 +1,9 @@
 mod coef;
-mod compute_projection;
-mod compute_step;
-mod compute_step_prob;
-mod compute_step_tv;
-mod compute_step_tv2;
+mod dct_gradient;
+mod projection;
+mod step;
+mod tgv;
+mod tv;
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
@@ -13,8 +13,10 @@ use crate::{
     utils::{aligned::AlignedF32, auxiliary::Aux, macros::mul_add},
 };
 
+/// Solve for the smoothest image consistent with the JPEG's quantized DCT
+/// coefficients (scalar reference).
 #[allow(unused)]
-pub fn compute(
+pub fn solve(
     nchannel: usize,
     coefs: Vec<Coefficient>,
     weight: f32,
@@ -61,7 +63,7 @@ pub fn compute(
         term = next_term;
 
         // Take a step
-        compute_step::compute_step(
+        step::solver_step(
             max_rounded_px_w,
             max_rounded_px_h,
             max_rounded_px_count,

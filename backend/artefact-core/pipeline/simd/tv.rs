@@ -4,14 +4,14 @@ use std::{
 };
 
 use super::{
-    adaptive_width::{AdaptiveWidth, dispatch_width},
+    adaptive_width::{AdaptiveWidth, dispatch_run},
     traits::{AddSlice, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
 
-/// First-order TV gradient: each run in `adaptive_widths` is processed with the
-/// matching `Simd<f32, N>` lane width.
-pub fn compute_step_tv(
+/// First-order Total Variation (TV) gradient: each run in `adaptive_widths` is
+/// processed with the matching `Simd<f32, N>` lane width.
+pub fn tv_gradient(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -20,9 +20,9 @@ pub fn compute_step_tv(
 ) {
     for curr_row in 0..max_rounded_px_h {
         for &adaptive_width in adaptive_widths {
-            dispatch_width!(
+            dispatch_run!(
                 adaptive_width,
-                tv_inner,
+                tv_run,
                 max_rounded_px_w,
                 max_rounded_px_h,
                 nchannel,
@@ -33,7 +33,9 @@ pub fn compute_step_tv(
     }
 }
 
-fn tv_inner<const N: usize>(
+/// First-order Total Variation (TV) forward-difference gradient for one run of
+/// `N` lanes.
+fn tv_run<const N: usize>(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -149,7 +151,7 @@ fn tv_inner<const N: usize>(
                 .store_select(target, mask);
         }
 
-        // ===== store for use in tv2 =====
+        // ===== store for the second-order TGV pass =====
         let a = px_idx_start_of_group;
         let b = px_idx_start_of_group + 7 + pad;
 

@@ -1,6 +1,6 @@
 use crate::{
     jpeg::Coefficient,
-    utils::{auxiliary::AuxTraits, boxing::unboxing, dct::idct8x8s},
+    utils::{auxiliary::AuxTraits, blocks::from_blocks, dct::idct8x8},
 };
 use zune_jpeg::sample_factor::SampleFactor;
 
@@ -31,7 +31,7 @@ impl From<Coefficient> for ScalarCoef {
                 image_data[i * 64 + j] = c.dct_coefs[i * 64 + j] * c.quant_table[j];
             }
 
-            idct8x8s(
+            idct8x8(
                 image_data[i * 64..(i + 1) * 64]
                     .as_mut()
                     .try_into()
@@ -39,7 +39,7 @@ impl From<Coefficient> for ScalarCoef {
             );
 
             // 8x8 -> 64x1
-            unboxing(
+            from_blocks(
                 &image_data.clone(),
                 image_data.as_mut(),
                 c.rounded_px_w,
@@ -70,8 +70,8 @@ impl AuxTraits for ScalarCoef {
         self.rounded_px_count as usize
     }
 
-    fn get_fdata(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
-        crate::utils::auxiliary::upsample_fdata(
+    fn init_pixels_into(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
+        crate::utils::auxiliary::upsample_pixels(
             &self.image_data,
             self.rounded_px_w,
             self.rounded_px_h,
@@ -83,7 +83,7 @@ impl AuxTraits for ScalarCoef {
         );
     }
 
-    fn get_cos(&self, out: &mut [f32]) {
+    fn init_dct_target_into(&self, out: &mut [f32]) {
         for i in 0..self.block_count as usize {
             for j in 0..64 {
                 out[i * 64 + j] = self.dct_coefs[i * 64 + j] * self.quant_table[j];

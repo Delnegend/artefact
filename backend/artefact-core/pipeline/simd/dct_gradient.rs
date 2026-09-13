@@ -4,11 +4,12 @@ use std::{
 };
 
 use super::{coef::SIMDCoef, traits::WriteTo};
-use crate::utils::dct::idct8x8s;
+use crate::utils::dct::idct8x8;
 
-// Gradient of the distance between the current DCT coefficients and the
-// quantized originals, back-projected to the pixel domain.
-pub fn compute_step_prob(
+/// Gradient of the Discrete Cosine Transform (DCT) data-fidelity term: the
+/// squared deviation of the current coefficients from the quantized originals,
+/// back-projected to the pixel domain.
+pub fn dct_gradient(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     _max_rounded_px_h: u32,   // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
@@ -31,7 +32,7 @@ pub fn compute_step_prob(
                 .write_to(&mut cosbs);
 
             // Apply inverse DCT to get spatial domain gradient
-            idct8x8s(&mut cosbs);
+            idct8x8(&mut cosbs);
 
             // Distribute gradient to output buffer with upsampling
             for in_y in 0..8 {

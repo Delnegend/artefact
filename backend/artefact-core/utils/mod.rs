@@ -2,6 +2,6 @@
 
 pub mod aligned;
 pub mod auxiliary;
-pub mod boxing;
+pub mod blocks;
 pub mod dct;
 pub mod macros;

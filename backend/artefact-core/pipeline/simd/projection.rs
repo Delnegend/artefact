@@ -1,13 +1,14 @@
 use super::coef::Coef;
 use crate::utils::{
     auxiliary::Aux,
-    boxing::{boxing, unboxing},
-    dct::{dct8x8s, idct8x8s},
+    blocks::{from_blocks, to_blocks},
+    dct::{dct8x8, idct8x8},
 };
 
-/// Generic projection — resample to the subsampling grid, project each 8x8
-/// block onto its quantized DCT box, then write back to pixels.
-pub fn projection<C>(max_w: u32, max_h: u32, aux: &mut Aux, coef: &C)
+/// Project each 8x8 block onto its quantized Discrete Cosine Transform (DCT)
+/// interval: resample to the subsampling grid, DCT, clamp into the quantization
+/// box, then inverse-DCT back to the pixel domain.
+pub fn project_onto_box<C>(max_w: u32, max_h: u32, aux: &mut Aux, coef: &C)
 where
     C: Coef,
 {
@@ -38,7 +39,7 @@ where
         }
     }
 
-    boxing(
+    to_blocks(
         if resample {
             &aux.pixel_diff.y
         } else {
@@ -52,7 +53,7 @@ where
     );
 
     for i in 0..coef.block_count() as usize {
-        dct8x8s(
+        dct8x8(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
@@ -61,13 +62,13 @@ where
     }
 
     for i in 0..coef.block_count() as usize {
-        coef.clamp_block(i, &mut aux.pixel_diff.x[i * 64..(i + 1) * 64]);
+        coef.clamp_dct_block(i, &mut aux.pixel_diff.x[i * 64..(i + 1) * 64]);
     }
 
     aux.cos.clone_from(&aux.pixel_diff.x);
 
     for i in 0..coef.block_count() as usize {
-        idct8x8s(
+        idct8x8(
             aux.pixel_diff.x[i * 64..(i + 1) * 64]
                 .as_mut()
                 .try_into()
@@ -75,7 +76,7 @@ where
         );
     }
 
-    unboxing(
+    from_blocks(
         &aux.pixel_diff.x,
         if resample {
             aux.pixel_diff.y.as_mut()

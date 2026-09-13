@@ -1,4 +1,5 @@
-/// A horizontal run of pixels processed together by the width-generic TV kernels.
+/// A horizontal run of pixels processed together by the width-generic Total
+/// Variation (TV) kernels.
 #[derive(Debug, Clone, Copy)]
 pub enum AdaptiveWidth {
     X8(u32),
@@ -11,7 +12,7 @@ pub enum AdaptiveWidth {
 ///
 /// Keeps the direct, monomorphized calls (a `fn`-pointer dispatch loses them)
 /// while letting callers pass their argument list only once.
-macro_rules! dispatch_width {
+macro_rules! dispatch_run {
     ($width:expr, $f:ident $(, $arg:expr)*; $last:expr) => {
         match $width {
             $crate::pipeline::simd::adaptive_width::AdaptiveWidth::X8(x) => {
@@ -29,13 +30,13 @@ macro_rules! dispatch_width {
         }
     };
 }
-pub(crate) use dispatch_width;
+pub(crate) use dispatch_run;
 
 /// Greedy 64 > 32 > 16 > 8 tiling of a row, largest-first.
 ///
 /// Assumes `max_rounded_px_w` is a multiple of 8 (JPEG guarantees this).
 #[must_use]
-pub fn get_adaptive_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
+pub fn adaptive_runs(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     let mut out = Vec::new();
     let mut idx = 0;
     while idx < max_rounded_px_w {
@@ -56,8 +57,8 @@ pub fn get_adaptive_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
 }
 
 /// All-8-wide tiling, used by benches/tests as the fixed-width counterpart to
-/// [`get_adaptive_widths`].
-pub fn uniform_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
+/// [`adaptive_runs`].
+pub fn uniform_runs(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     (0..max_rounded_px_w)
         .step_by(8)
         .map(AdaptiveWidth::X8)

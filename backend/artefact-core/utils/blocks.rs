@@ -1,5 +1,6 @@
-/// Scalar boxing/unboxing (8x8 block remapping).
-pub fn unboxing(
+/// Reorder 8x8 block data (block-major, raster within each block) back into
+/// normal raster order.
+pub fn from_blocks(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,
@@ -26,7 +27,9 @@ pub fn unboxing(
     }
 }
 
-pub fn boxing(
+/// Reorder normal raster data into 8x8 block order (block-major, raster within
+/// each block) for per-block transforms.
+pub fn to_blocks(
     input: &[f32],
     output: &mut [f32],
     rounded_px_w: u32,

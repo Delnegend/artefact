@@ -3,7 +3,9 @@ use rayon::prelude::*;
 use super::coef::Coef;
 use crate::utils::{auxiliary::Aux, macros::mul_add};
 
-pub fn fista_loop<C, F>(
+/// FISTA (Fast Iterative Shrinkage-Thresholding Algorithm) accelerated loop:
+/// runs `iterations` of the projected subgradient step with Nesterov momentum.
+pub fn run_fista<C, F>(
     auxs: &mut [Aux],
     coefs: &[C],
     iterations: usize,
@@ -34,7 +36,8 @@ pub fn fista_loop<C, F>(
     }
 }
 
-pub fn init_auxs<C>(max_w: u32, max_h: u32, max_count: usize, coefs: &[C]) -> Vec<Aux>
+/// Build the per-channel working state from each component's coefficients.
+pub fn init_channel_states<C>(max_w: u32, max_h: u32, max_count: usize, coefs: &[C]) -> Vec<Aux>
 where
     C: Coef,
 {
@@ -44,6 +47,8 @@ where
         .collect()
 }
 
-pub fn radius(max_count: usize) -> f32 {
+/// Radius of the feasible box `[-0.5, 0.5]^n`, where `n` is the number of
+/// pixel-domain samples.
+pub fn box_radius(max_count: usize) -> f32 {
     (max_count as f32).sqrt() / 2.0
 }

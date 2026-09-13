@@ -1,7 +1,7 @@
 //! Cross-pipeline equivalence check on a real fixture.
 //!
 //! Only the SIMD pipeline remains; the scalar reference is checked but is
-//! `#[ignore]`d: its `Coefficient -> ScalarCoef` conversion calls `unboxing`
+//! `#[ignore]`d: its `Coefficient -> ScalarCoef` conversion calls `from_blocks`
 //! once per block (see `scalar/coef.rs`) instead of once after all blocks, so
 //! it starts from a scrambled `image_data`. The DCT projection in each solver
 //! step re-anchors to the JPEG coefficients, so the outputs converge again
@@ -56,7 +56,7 @@ fn max_diff(
 
 /// Known scalar init discrepancy — see module docs.
 #[test]
-#[ignore = "scalar Coefficient->ScalarCoef scrambles the init (per-block unboxing); converges only after many iterations, slated for removal"]
+#[ignore = "scalar Coefficient->ScalarCoef scrambles the init (per-block from_blocks); converges only after many iterations, slated for removal"]
 fn scalar_matches_simd() {
     let mut checked = 0;
     for suffix in ["420", "422", "444"] {
@@ -64,7 +64,7 @@ fn scalar_matches_simd() {
             continue;
         };
         checked += 1;
-        let scalar = crate::pipeline::scalar::compute(
+        let scalar = crate::pipeline::scalar::solve(
             nch,
             jpeg.coefs.clone(),
             WEIGHT,
@@ -74,7 +74,7 @@ fn scalar_matches_simd() {
             h,
             count,
         );
-        let simd = crate::pipeline::simd::compute(
+        let simd = crate::pipeline::simd::solve(
             nch,
             jpeg.coefs.clone(),
             WEIGHT,

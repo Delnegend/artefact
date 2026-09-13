@@ -1,7 +1,7 @@
 use crate::utils::{auxiliary::Aux, macros::mul_add};
 
 /// Computes the Total Generalized Variation (TGV) regularization term and its gradient
-pub fn compute_step_tv2(
+pub fn tgv_gradient(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
@@ -12,7 +12,7 @@ pub fn compute_step_tv2(
 
     for y in 0..max_rounded_px_h {
         for x in 0..max_rounded_px_w {
-            compute_step_tv2_inner(
+            tgv_gradient_px(
                 max_rounded_px_w,
                 max_rounded_px_h,
                 nchannel,
@@ -29,7 +29,7 @@ pub fn compute_step_tv2(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compute_step_tv2_inner(
+fn tgv_gradient_px(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
