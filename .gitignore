@@ -29,3 +29,4 @@ sw.*
 
 jpeg2png
 frontend/src/dev-dist/
+frontend/src/utils/artefact-wasm/

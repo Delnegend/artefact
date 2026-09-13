@@ -40,9 +40,7 @@ build target="native":
 
 	if [[ "{{target}}" = "wasm" ]]; then
 		rm -rf frontend/src/utils/artefact-wasm
-		cd backend/artefact-wasm
-		wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm
-		cd ..
+		(cd backend/artefact-wasm && wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm)
 		rm -f frontend/src/utils/artefact-wasm/.gitignore
 		exit 0
 	fi
