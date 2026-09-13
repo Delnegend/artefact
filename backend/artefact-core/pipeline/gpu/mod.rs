@@ -6,6 +6,13 @@
 pub use bytemuck;
 pub use wgpu;
 
+pub mod solver;
+
+pub use solver::solve;
+
+#[cfg(test)]
+mod tests;
+
 use std::{fmt, future::Future, pin::Pin};
 
 /// Errors from GPU initialisation.
@@ -15,6 +22,8 @@ pub enum GpuError {
     Unavailable(String),
     /// Adapter or device creation failed.
     Init(String),
+    /// A compute/readback operation failed.
+    Runtime(String),
 }
 
 impl fmt::Display for GpuError {
@@ -22,6 +31,7 @@ impl fmt::Display for GpuError {
         match self {
             Self::Unavailable(m) => write!(f, "no GPU adapter: {m}"),
             Self::Init(m) => write!(f, "GPU init failed: {m}"),
+            Self::Runtime(m) => write!(f, "GPU compute failed: {m}"),
         }
     }
 }
