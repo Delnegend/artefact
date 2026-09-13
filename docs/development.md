@@ -64,7 +64,7 @@ cargo build --bin artefact-cli --release
 
 ## SIMD implementation
 
-Pipelines live in `backend/artefact-core/pipeline/{scalar,simd}` — `scalar` is the frozen reference, `simd` is the production default and dispatches adaptively between x8/x16/x32/x64 per row. The `simd` feature selects `pipeline::simd`; without it, `pipeline::scalar` is used. Shared logic (FISTA, projection, step orchestration, DCT, boxing, SIMD traits, cache-aligned buffers) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD path.
+Pipelines live in `backend/artefact-core/pipeline/{scalar,simd}` — `scalar` is the frozen reference, `simd` is the production default and dispatches adaptively between x8/x16/x32/x64 per row. The `simd` feature selects `pipeline::simd`; without it, `pipeline::scalar` is used. Shared logic (FISTA, projection onto the DCT box, the solver step, DCT, block reordering, SIMD traits, cache-aligned buffers) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD path.
 
 [artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and [artefact-wasm's Cargo.toml](./backend/artefact-wasm/Cargo.toml) already enable `simd`, so both shipped binaries use the SIMD pipeline. Enable it manually for ad-hoc builds with `--features simd`.
 
