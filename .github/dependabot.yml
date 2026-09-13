@@ -39,3 +39,10 @@ updates:
     cooldown:
       default-days: 14
     open-pull-requests-limit: 1
+    ignore:
+      # TS 7 breaks `@vue/compiler-sfc` ("No fs option provided ... resolving
+      # imported types") so `nuxt generate` fails; revisit once the Vue
+      # toolchain supports it. Ignoring it also keeps the grouped PR non-major
+      # so the other minor/patch updates can auto-merge.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
