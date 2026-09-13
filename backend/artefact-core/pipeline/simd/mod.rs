@@ -5,13 +5,17 @@ use rayon::prelude::*;
 
 use crate::{
     jpeg::Coefficient,
-    pipeline::adaptive::compute_step_prob::compute_step_prob,
-    utils::{
-        adaptive_width::get_adaptive_widths, aligned::AlignedF32, fista, projection::projection,
-        step, tv::compute_step_tv, tv2::compute_step_tv2,
-    },
+    pipeline::simd::compute_step_prob::compute_step_prob,
+    utils::{aligned::AlignedF32, fista, projection::projection, step},
 };
-use coef::SIMDAdaptiveCoef;
+use coef::SIMDCoef;
+
+// Public entry points for the reference TV kernels + widths (used by benches/tests).
+pub use crate::utils::{
+    adaptive_width::{AdaptiveWidth, get_adaptive_widths, uniform_widths},
+    tv::compute_step_tv,
+    tv2::compute_step_tv2,
+};
 
 #[allow(unused)]
 pub fn compute(
@@ -26,7 +30,7 @@ pub fn compute(
 ) -> Vec<AlignedF32> {
     let coefs = coefs
         .into_par_iter()
-        .map(SIMDAdaptiveCoef::from)
+        .map(SIMDCoef::from)
         .collect::<Vec<_>>();
     let mut auxs = fista::init_auxs(
         max_rounded_px_w,

@@ -1,6 +1,7 @@
-// Verifies that the three TV implementations produce the same output.
-// The f32x8 one lives in pipeline/simd8 (bench export); the 64/par variants
-// are bench-local and pulled in via #[path].
+// Verifies that the TV implementations and width tilings produce the same output:
+// the width-generic TV kernel (pipeline/simd bench export) with uniform x8 tiling vs
+// the adaptive 64/32/16/8 tiling, plus the bench-local 64/par variants pulled in
+// via #[path].
 // Requires the `bench` feature. Run with: cargo test --features bench --test tv_equivalence
 
 #![feature(portable_simd)]
@@ -10,7 +11,9 @@ mod tv_par;
 #[path = "../benches/tv_simd64.rs"]
 mod tv_simd64;
 
-use artefact_core::pipeline::simd8::{compute_step_tv, uniform_widths};
+use artefact_core::pipeline::simd::{
+    compute_step_tv, compute_step_tv2, get_adaptive_widths, uniform_widths,
+};
 use artefact_core::{AlignedF32, Aux, PixelDifference};
 
 const W: u32 = 1600;
@@ -95,5 +98,38 @@ fn tv_implementations_match() {
     assert!(
         simd64 <= TOL,
         "f32x64 diverged from f32x8 by {simd64} (tol {TOL})"
+    );
+}
+
+/// The adaptive 64/32/16/8 tiling must match the uniform x8 tiling of the same
+/// width-generic kernel (the per-width `tv_inner::<N>` dispatch).
+#[test]
+fn mixed_widths_match_uniform() {
+    let base = make_auxs();
+    let uniform = uniform_widths(W);
+    let mixed = get_adaptive_widths(W);
+
+    let mut uni_tv = clone_auxs(&base);
+    compute_step_tv(W, H, NCH, &mut uni_tv, &uniform);
+    let mut mix_tv = clone_auxs(&base);
+    compute_step_tv(W, H, NCH, &mut mix_tv, &mixed);
+    let tv_diff = max_diff(&uni_tv, &mix_tv);
+
+    let mut uni_tv2 = clone_auxs(&base);
+    compute_step_tv2(W, H, NCH, &mut uni_tv2, 0.3, &uniform);
+    let mut mix_tv2 = clone_auxs(&base);
+    compute_step_tv2(W, H, NCH, &mut mix_tv2, 0.3, &mixed);
+    let tv2_diff = max_diff(&uni_tv2, &mix_tv2);
+
+    println!("tv  uniform vs mixed: max diff = {tv_diff:.3e}");
+    println!("tv2 uniform vs mixed: max diff = {tv2_diff:.3e}");
+
+    assert!(
+        tv_diff <= TOL,
+        "tv mixed tiling diverged by {tv_diff} (tol {TOL})"
+    );
+    assert!(
+        tv2_diff <= TOL,
+        "tv2 mixed tiling diverged by {tv2_diff} (tol {TOL})"
     );
 }

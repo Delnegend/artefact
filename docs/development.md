@@ -64,20 +64,14 @@ cargo build --bin artefact-cli --release
 
 ## SIMD implementation
 
-Pipelines live in `backend/artefact-core/pipeline/{scalar,simd8,adaptive}` — `scalar` is the frozen reference, `adaptive` is the production default (`simd,simd_adaptive` features), `simd8` is a fixed-width reference. Shared logic (FISTA, projection, step orchestration, DCT, boxing, SIMD traits) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD paths.
+Pipelines live in `backend/artefact-core/pipeline/{scalar,simd}` — `scalar` is the frozen reference, `simd` is the production default and dispatches adaptively between x8/x16/x32/x64 per row. The `simd` feature selects `pipeline::simd`; without it, `pipeline::scalar` is used. Shared logic (FISTA, projection, step orchestration, DCT, boxing, SIMD traits, cache-aligned buffers) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD path.
 
-To toggle specific SIMD features when building the CLI, modify [artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and add the desired features to the `[dependencies.artefact-core]` features list.
-
-Example:
+[artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and [artefact-wasm's Cargo.toml](./backend/artefact-wasm/Cargo.toml) already enable `simd`, so both shipped binaries use the SIMD pipeline. Enable it manually for ad-hoc builds with `--features simd`.
 
 ```toml
 [dependencies.artefact-core]
 path = "../artefact-core"
-features = [
-"simd", # enable SIMD via `std::simd`
-"simd_adaptive", # dynamically switch between x8, x16, x32 and x64
-"native", # use LLVM "mul_add" intrinsic for more accurate rounding, requires "-Ctarget-cpu=native" or else it'll most likely be slower
-]
+features = ["simd"] # adaptive x8/x16/x32/x64 dispatch via `std::simd`
 ```
 
 ## Sample images & regression
@@ -91,11 +85,11 @@ Full-solve timing and allocation stats live in `backend/artefact-core/benches/` 
 ```bash
 # criterion: end-to-end solver time (assets/sample.420.input.jpg)
 RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-  cargo bench -p artefact-core --features bench,simd,simd_adaptive --bench bench -- solve
+  cargo bench -p artefact-core --features bench,simd --bench bench -- solve
 
 # allocations + wall time for one solve
 RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-  cargo bench -p artefact-core --features simd,simd_adaptive --bench alloc_stats
+  cargo bench -p artefact-core --features simd --bench alloc_stats
 ```
 
 `benches/solve.rs` and `benches/alloc_stats.rs` document the recorded before/after numbers (allocation churn removal in `32b9a12`, 64-byte-aligned `Aux` buffers in `1ef9465`); reproduce older revisions with `git worktree add <dir> <revision>`. Keep `RAYON_NUM_THREADS` fixed when comparing.

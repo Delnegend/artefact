@@ -20,9 +20,6 @@ path = "lib.rs"
 
 [features]
 simd = []
-simd_std = []
-simd_adaptive = []
-native = []
 bench = []
 
 [[bench]]

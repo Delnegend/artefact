@@ -1,4 +1,6 @@
-use std::{ops::Mul, simd::f32x8};
+use std::{ops::Mul, simd::f32x64};
+
+use zune_jpeg::sample_factor::SampleFactor;
 
 use crate::{
     jpeg::Coefficient,
@@ -8,10 +10,9 @@ use crate::{
         traits::{FromSlice, WriteTo},
     },
 };
-use zune_jpeg::sample_factor::SampleFactor;
 
 #[derive(Debug, Clone, Default)]
-pub struct SIMD8Coef {
+pub struct SIMDCoef {
     pub rounded_px_w: u32,
     pub rounded_px_h: u32,
     pub rounded_px_count: u32,
@@ -23,34 +24,26 @@ pub struct SIMD8Coef {
     pub horizontal_samp_factor: SampleFactor,
     pub vertical_samp_factor: SampleFactor,
 
-    pub dct_coefs: Vec<f32x8>,
-    pub quant_table: [f32x8; 8],
-    pub quant_table_squared: [f32x8; 8],
+    pub dct_coefs: Vec<f32x64>,
+    pub quant_table: f32x64,
+    pub quant_table_squared: f32x64,
 
-    pub dequant_dct_coefs_min: Vec<f32x8>,
-    pub dequant_dct_coefs_max: Vec<f32x8>,
+    pub dequant_dct_coefs_min: Vec<f32x64>,
+    pub dequant_dct_coefs_max: Vec<f32x64>,
     pub image_data: Vec<f32>,
 }
 
-impl From<Coefficient> for SIMD8Coef {
+impl From<Coefficient> for SIMDCoef {
     fn from(c: Coefficient) -> Self {
         let dct_coefs = c
             .dct_coefs
-            .as_chunks::<8>()
+            .as_chunks::<64>()
             .0
             .iter()
-            .map(|c| f32x8::from_slc(c))
-            .collect::<Vec<f32x8>>();
+            .map(|c| f32x64::from_slc(c))
+            .collect::<Vec<f32x64>>();
 
-        let quant_table: [f32x8; 8] = c
-            .quant_table
-            .as_chunks::<8>()
-            .0
-            .iter()
-            .map(|c| f32x8::from_slc(c))
-            .collect::<Vec<f32x8>>()
-            .try_into()
-            .expect("Invalid quant_table length");
+        let quant_table = f32x64::from_array(c.quant_table);
 
         Self {
             rounded_px_w: c.rounded_px_w,
@@ -62,29 +55,16 @@ impl From<Coefficient> for SIMD8Coef {
             horizontal_samp_factor: c.horizontal_samp_factor,
             vertical_samp_factor: c.vertical_samp_factor,
 
-            quant_table_squared: quant_table
-                .iter()
-                .map(|&x| x * x)
-                .collect::<Vec<f32x8>>()
-                .try_into()
-                .expect("Invalid quant_table_squared length"),
+            quant_table_squared: quant_table * quant_table,
 
             dequant_dct_coefs_min: dct_coefs
                 .iter()
-                .enumerate()
-                .map(|(idx, dct_coefs)| {
-                    let quant_table = quant_table[idx % 8];
-                    (*dct_coefs - f32x8::splat(0.5)) * quant_table
-                })
+                .map(|dct_coefs| (*dct_coefs - f32x64::splat(0.5)) * quant_table)
                 .collect(),
 
             dequant_dct_coefs_max: dct_coefs
                 .iter()
-                .enumerate()
-                .map(|(idx, dct_coefs)| {
-                    let quant_table = quant_table[idx % 8];
-                    (*dct_coefs + f32x8::splat(0.5)) * quant_table
-                })
+                .map(|dct_coefs| (*dct_coefs + f32x64::splat(0.5)) * quant_table)
                 .collect(),
 
             image_data: {
@@ -92,12 +72,9 @@ impl From<Coefficient> for SIMD8Coef {
                 let block_w = c.block_w as usize;
                 let rounded_px_w = c.rounded_px_w as usize;
 
-                for i in 0..(c.block_count as usize) {
+                for (i, dct) in dct_coefs.iter().enumerate() {
                     let mut block = [0.0_f32; 64];
-                    for j in 0..8 {
-                        let result = dct_coefs[i * 8 + j] * quant_table[j];
-                        result.write_to(&mut block[j * 8..j * 8 + 8]);
-                    }
+                    (*dct * quant_table).write_to(&mut block);
 
                     idct8x8s(&mut block);
 
@@ -121,7 +98,7 @@ impl From<Coefficient> for SIMD8Coef {
     }
 }
 
-impl AuxTraits for SIMD8Coef {
+impl AuxTraits for SIMDCoef {
     fn cos_count(&self) -> usize {
         self.rounded_px_count as usize
     }
@@ -141,19 +118,14 @@ impl AuxTraits for SIMD8Coef {
 
     fn get_cos(&self, out: &mut [f32]) {
         for i in 0..self.block_count as usize {
-            for j in 0..8 {
-                let a = i * 64 + j * 8;
-                let b = a + 8;
-
-                self.dct_coefs[i * 8 + j]
-                    .mul(self.quant_table[j])
-                    .write_to(&mut out[a..b]);
-            }
+            self.dct_coefs[i]
+                .mul(self.quant_table)
+                .write_to(&mut out[i * 64..(i + 1) * 64]);
         }
     }
 }
 
-impl crate::utils::coef::Coef for SIMD8Coef {
+impl crate::utils::coef::Coef for SIMDCoef {
     fn rounded_px_w(&self) -> u32 {
         self.rounded_px_w
     }
@@ -178,13 +150,8 @@ impl crate::utils::coef::Coef for SIMD8Coef {
     fn clamp_block(&self, block_idx: usize, data: &mut [f32]) {
         use crate::utils::traits::WriteTo;
         use std::simd::num::SimdFloat;
-        for j in 0..8 {
-            let a = j * 8;
-            let b = a + 7;
-            let old = &mut data[a..=b];
-            let max = self.dequant_dct_coefs_max[block_idx * 8 + j];
-            let min = self.dequant_dct_coefs_min[block_idx * 8 + j];
-            f32x8::from_slice(old).simd_clamp(min, max).write_to(old);
-        }
+        let max = self.dequant_dct_coefs_max[block_idx];
+        let min = self.dequant_dct_coefs_min[block_idx];
+        f32x64::from_slice(data).simd_clamp(min, max).write_to(data);
     }
 }

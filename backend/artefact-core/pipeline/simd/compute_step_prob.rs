@@ -3,7 +3,7 @@ use std::{
     simd::f32x64,
 };
 
-use super::coef::SIMDAdaptiveCoef;
+use super::coef::SIMDCoef;
 use crate::utils::{dct::idct8x8s, traits::WriteTo};
 
 // Gradient of the distance between the current DCT coefficients and the
@@ -12,7 +12,7 @@ pub fn compute_step_prob(
     max_rounded_px_w: u32,    // Maximum width after rounding to block size
     _max_rounded_px_h: u32,   // Maximum height after rounding to block size
     alpha: f32,               // Learning rate parameter
-    coef: &SIMDAdaptiveCoef,  // JPEG coefficient data
+    coef: &SIMDCoef,          // JPEG coefficient data
     cos: &[f32],              // Cosine transform data
     obj_gradient: &mut [f32], // Output gradient buffer
 ) {

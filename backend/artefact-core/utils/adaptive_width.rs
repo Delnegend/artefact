@@ -10,6 +10,7 @@ pub enum AdaptiveWidth {
 /// Greedy 64 > 32 > 16 > 8 tiling of a row, largest-first.
 ///
 /// Assumes `max_rounded_px_w` is a multiple of 8 (JPEG guarantees this).
+#[must_use]
 pub fn get_adaptive_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     let mut out = Vec::new();
     let mut idx = 0;
@@ -30,7 +31,8 @@ pub fn get_adaptive_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     out
 }
 
-/// All-8-wide tiling, used by the fixed-width `simd8` reference pipeline.
+/// All-8-wide tiling, used by benches/tests as the fixed-width counterpart to
+/// [`get_adaptive_widths`].
 pub fn uniform_widths(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     (0..max_rounded_px_w)
         .step_by(8)

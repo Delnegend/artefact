@@ -98,9 +98,9 @@ fn corrupt_input_is_an_error_not_a_panic() {
 /// components (4:4:4 / grayscale) where upsampling does not differ.
 ///
 /// Skipped when `djpeg` is not installed (e.g. CI). Only compiled for the
-/// production `simd_adaptive` pipeline: the scalar reference's `From` scrambles
+/// production `simd` pipeline: the scalar reference's `From` scrambles
 /// its init (see `pipeline/tests.rs`), so it cannot be compared directly.
-#[cfg(all(feature = "simd", feature = "simd_adaptive"))]
+#[cfg(feature = "simd")]
 #[test]
 fn matches_libjpeg_reference_when_available() {
     use std::process::Command;

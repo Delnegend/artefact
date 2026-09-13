@@ -16,8 +16,9 @@ use crate::utils::{
 /// TGV regularization, normalized descent, then projection.
 ///
 /// `prob_fn`/`proj_fn` are width-agnostic (`&[f32]`); `tv_fn`/`tv2_fn` are
-/// closures so callers can pass their width tiling (uniform for simd8, adaptive
-/// for the adaptive pipeline). Scalar keeps its own `compute_step` as reference.
+/// closures so callers can pass their width tiling (uniform x8 for benchmarks,
+/// adaptive 64/32/16/8 for the production pipeline). Scalar keeps its own
+/// `compute_step` as reference.
 #[allow(clippy::too_many_arguments)]
 pub fn step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
     max_w: u32,

@@ -5,7 +5,7 @@
 
 use std::hint::black_box;
 
-use artefact_core::pipeline::simd8::{
+use artefact_core::pipeline::simd::{
     AdaptiveWidth, compute_step_tv, compute_step_tv2, uniform_widths,
 };
 use artefact_core::{AlignedF32, Aux, PixelDifference};

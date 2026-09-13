@@ -18,9 +18,9 @@
 //! (the older rows were measured through `artefact-cli`, so wall time can vary
 //! a few percent with the profile).
 //!
-//! Run with the production pipeline (adaptive):
+//! Run with the production pipeline (`simd`):
 //!   RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-//!     cargo bench -p artefact-core --features simd,simd_adaptive --bench alloc_stats
+//!     cargo bench -p artefact-core --features simd --bench alloc_stats
 //!
 //! `ARTEFACT_BENCH_INPUT` overrides the input path, `ARTEFACT_BENCH_RUNS` the
 //! number of timed runs (default 15). Skipped when the sample asset is absent

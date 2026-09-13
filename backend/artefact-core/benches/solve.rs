@@ -13,9 +13,9 @@
 //! command there (they were measured through `artefact-cli`, so criterion's
 //! bench profile can read a few percent slower).
 //!
-//! Run with the production pipeline (adaptive):
+//! Run with the production pipeline (`simd`):
 //!   RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-//!     cargo bench -p artefact-core --features bench,simd,simd_adaptive \
+//!     cargo bench -p artefact-core --features bench,simd \
 //!     --bench bench -- solve
 //!
 //! Skipped when `assets/sample.420.input.jpg` is absent (`just sample`); set

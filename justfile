@@ -21,12 +21,14 @@ check kind="all":
 
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "rust" ]]; then
 		cargo fmt -- --check
-		# always-buildable: scalar / simd8 / adaptive are all compiled
+		# always-buildable: scalar / simd are both compiled
 		cargo check --workspace
 		cargo check --workspace --all-features
-		# wasm — std::simd must build for wasm32 (wide removed)
+		# native scalar dispatch (workspace feature-unification otherwise selects simd)
+		cargo check -p artefact-core
+		# wasm — std::simd must build for wasm32
 		cargo check -p artefact-core --target wasm32-unknown-unknown
-		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,simd_adaptive
+		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd
 		cargo clippy --workspace --all-features
 		# decode/fixture regression tests (zune-jpeg + pipelines + verify)
 		cargo test --workspace --all-features

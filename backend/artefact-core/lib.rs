@@ -26,13 +26,11 @@ use jpeg::Jpeg;
 pub use jpeg::JpegSource;
 use utils::macros::mul_add;
 
-// New single-crate dispatch — always buildable, no bloat via features
-#[cfg(all(feature = "simd", feature = "simd_adaptive"))]
-use pipeline::adaptive::compute;
+// Single-crate dispatch — always buildable, no bloat via features
 #[cfg(not(feature = "simd"))]
 use pipeline::scalar::compute;
-#[cfg(all(feature = "simd", not(feature = "simd_adaptive")))]
-use pipeline::simd8::compute;
+#[cfg(feature = "simd")]
+use pipeline::simd::compute;
 
 #[derive(Debug)]
 pub enum ArtefactError {
