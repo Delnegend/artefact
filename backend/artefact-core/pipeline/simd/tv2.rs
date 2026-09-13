@@ -95,22 +95,23 @@ fn tv2_inner<const N: usize>(
         let g_yx = if group_at_left_edge {
             let a = curr_group_idx + 1;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_range_slc(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
+            let curr_group =
+                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
 
             let a = curr_group_idx;
             let b = curr_group_idx + 6 + pad;
             let shift_left_1px_group =
-                Simd::<f32, N>::from_range_slc(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
+                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.y[a..=b], 1..=7 + pad);
 
             curr_group - shift_left_1px_group
         } else {
             let a = curr_group_idx;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.y[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
 
             let a = curr_group_idx - 1;
             let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.y[a..=b]);
+            let shift_left_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
 
             curr_group - shift_left_1px_group
         };
@@ -121,11 +122,11 @@ fn tv2_inner<const N: usize>(
         } else {
             let a = curr_group_idx;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.x[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
 
             let a = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
             let b = a + 7 + pad;
-            let shift_up_1px_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.x[a..=b]);
+            let shift_up_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
 
             curr_group - shift_up_1px_group
         };
@@ -134,22 +135,23 @@ fn tv2_inner<const N: usize>(
         g_xxs[c] = if group_at_left_edge {
             let a = curr_group_idx + 1;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_range_slc(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
+            let curr_group =
+                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
 
             let a = curr_group_idx;
             let b = curr_group_idx + 6 + pad;
             let shift_left_1px_group =
-                Simd::<f32, N>::from_range_slc(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
+                Simd::<f32, N>::from_range_slice(&aux.pixel_diff.x[a..=b], 1..=7 + pad);
 
             curr_group - shift_left_1px_group
         } else {
             let a = curr_group_idx;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.x[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
 
             let a = curr_group_idx - 1;
             let b = curr_group_idx + 6 + pad;
-            let shift_left_1px_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.x[a..=b]);
+            let shift_left_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.x[a..=b]);
 
             curr_group - shift_left_1px_group
         };
@@ -160,11 +162,11 @@ fn tv2_inner<const N: usize>(
         } else {
             let a = curr_group_idx;
             let b = curr_group_idx + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.y[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
 
             let a = ((curr_row - 1) * max_rounded_px_w + curr_row_px_idx) as usize;
             let b = a + 7 + pad;
-            let shift_up_1px_group = Simd::<f32, N>::from_slc(&aux.pixel_diff.y[a..=b]);
+            let shift_up_1px_group = Simd::<f32, N>::from_slice(&aux.pixel_diff.y[a..=b]);
 
             curr_group - shift_up_1px_group
         };

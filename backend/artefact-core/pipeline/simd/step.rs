@@ -5,10 +5,7 @@ use std::{
 
 use rayon::prelude::*;
 
-use super::{
-    coef::Coef,
-    traits::{FromSlice, WriteTo},
-};
+use super::{coef::Coef, traits::WriteTo};
 use crate::utils::{auxiliary::Aux, macros::mul_add};
 
 /// One solver step shared by the SIMD pipelines: DCT-distance gradient, TV +
@@ -71,10 +68,10 @@ pub fn step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
             // chunks are always exact.
             for i in (0..max_count).step_by(8) {
                 let target = &mut aux.fdata[i..i + 8];
-                let update = f32x8::from_slc(&aux.obj_gradient[i..i + 8])
+                let update = f32x8::from_slice(&aux.obj_gradient[i..i + 8])
                     .div(f32x8::splat(norm))
                     .mul(f32x8::splat(step_size));
-                f32x8::from_slc(target).sub(update).write_to(target);
+                f32x8::from_slice(target).sub(update).write_to(target);
             }
         }
 

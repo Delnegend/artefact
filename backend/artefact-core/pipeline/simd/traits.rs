@@ -9,9 +9,7 @@ pub trait WriteTo {
 }
 
 pub trait FromSlice {
-    fn from_slc(slc: &[f32]) -> Self;
-    fn from_short_slc(slc: &[f32]) -> Self;
-    fn from_range_slc(slc: &[f32], range: RangeInclusive<usize>) -> Self;
+    fn from_range_slice(slc: &[f32], range: RangeInclusive<usize>) -> Self;
 }
 
 pub trait SafeDiv {
@@ -42,15 +40,7 @@ impl<const N: usize> WriteTo for Simd<f32, N> {
 }
 
 impl<const N: usize> FromSlice for Simd<f32, N> {
-    fn from_slc(slice: &[f32]) -> Self {
-        Self::from_slice(slice)
-    }
-
-    fn from_short_slc(slice: &[f32]) -> Self {
-        Self::load_or_default(slice)
-    }
-
-    fn from_range_slc(slice: &[f32], range: RangeInclusive<usize>) -> Self {
+    fn from_range_slice(slice: &[f32], range: RangeInclusive<usize>) -> Self {
         let mut tmp = Self::splat(0.0);
         tmp[range].copy_from_slice(slice);
         tmp
@@ -68,14 +58,14 @@ impl<const N: usize> SafeDiv for Simd<f32, N> {
 
 impl<const N: usize> AddSlice for Simd<f32, N> {
     fn add_slice(&self, slice: &[f32]) -> Self {
-        *self + Self::from_slc(slice)
+        *self + Self::from_slice(slice)
     }
 
     fn add_short_slice(&self, slice: &[f32]) -> Self {
-        *self + Self::from_short_slc(slice)
+        *self + Self::load_or_default(slice)
     }
 
     fn add_range_slice(&self, slice: &[f32], range: RangeInclusive<usize>) -> Self {
-        *self + Self::from_range_slc(slice, range)
+        *self + Self::from_range_slice(slice, range)
     }
 }

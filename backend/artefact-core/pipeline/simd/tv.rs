@@ -5,7 +5,7 @@ use std::{
 
 use super::{
     adaptive_width::AdaptiveWidth,
-    traits::{AddSlice, FromSlice, WriteTo},
+    traits::{AddSlice, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
 
@@ -84,21 +84,21 @@ fn tv_inner<const N: usize>(
         g_xs[c] = if group_at_right_edge {
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 6 + pad;
-            let curr_group = Simd::<f32, N>::from_short_slc(&aux.fdata[a..=b]);
+            let curr_group = Simd::<f32, N>::load_or_default(&aux.fdata[a..=b]);
 
             let a = px_idx_start_of_group + 1;
             let b = px_idx_start_of_group + 7 + pad;
-            let shift_right_1px_group = Simd::<f32, N>::from_short_slc(&aux.fdata[a..=b]);
+            let shift_right_1px_group = Simd::<f32, N>::load_or_default(&aux.fdata[a..=b]);
 
             shift_right_1px_group - curr_group
         } else {
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.fdata[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
 
             let a = px_idx_start_of_group + 1;
             let b = px_idx_start_of_group + 8 + pad;
-            let shift_right_1px_group = Simd::<f32, N>::from_slc(&aux.fdata[a..=b]);
+            let shift_right_1px_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
 
             shift_right_1px_group - curr_group
         };
@@ -107,11 +107,11 @@ fn tv_inner<const N: usize>(
         if !group_at_bottom_edge {
             let a = px_idx_start_of_group;
             let b = px_idx_start_of_group + 7 + pad;
-            let curr_group = Simd::<f32, N>::from_slc(&aux.fdata[a..=b]);
+            let curr_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
 
             let a = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
             let b = a + 7 + pad;
-            let shift_down_1px_group = Simd::<f32, N>::from_slc(&aux.fdata[a..=b]);
+            let shift_down_1px_group = Simd::<f32, N>::from_slice(&aux.fdata[a..=b]);
 
             g_ys[c] = shift_down_1px_group - curr_group;
         }

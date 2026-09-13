@@ -2,7 +2,7 @@ use std::{ops::Mul, simd::f32x64};
 
 use zune_jpeg::sample_factor::SampleFactor;
 
-use super::traits::{FromSlice, WriteTo};
+use super::traits::WriteTo;
 use crate::{
     jpeg::Coefficient,
     utils::{auxiliary::AuxTraits, dct::idct8x8s},
@@ -50,7 +50,7 @@ impl From<Coefficient> for SIMDCoef {
             .as_chunks::<64>()
             .0
             .iter()
-            .map(|c| f32x64::from_slc(c))
+            .map(|c| f32x64::from_slice(c))
             .collect::<Vec<f32x64>>();
 
         let quant_table = f32x64::from_array(c.quant_table);

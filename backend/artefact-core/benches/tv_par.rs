@@ -2,7 +2,7 @@ use std::simd::{StdFloat, f32x8};
 
 use rayon::prelude::*;
 
-use artefact_core::{Aux, FromSlice, SafeDiv, WriteTo};
+use artefact_core::{Aux, SafeDiv, WriteTo};
 
 /// A slower version (for some reason) of [`compute_step_tv_simd`] with
 /// [`rayon`] parallelization.
@@ -101,10 +101,10 @@ fn compute_forward_differents(
         // edge, and there's no more pixel to the right for us to calculate
         // the difference with
 
-        let curr_group = f32x8::from_short_slc(
+        let curr_group = f32x8::load_or_default(
             &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 6],
         );
-        let shift_right_1px_group = f32x8::from_short_slc(
+        let shift_right_1px_group = f32x8::load_or_default(
             &aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 7],
         );
 
@@ -112,10 +112,10 @@ fn compute_forward_differents(
     } else {
         // 8 pixels
 
-        let curr_group = f32x8::from_slc(
+        let curr_group = f32x8::from_slice(
             &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
         );
-        let shift_right_1px_group = f32x8::from_slc(
+        let shift_right_1px_group = f32x8::from_slice(
             &aux.fdata[curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 8],
         );
 
@@ -124,14 +124,14 @@ fn compute_forward_differents(
 
     // forward difference y
     if !group_at_bottom_edge {
-        let curr_group = f32x8::from_slc(
+        let curr_group = f32x8::from_slice(
             &aux.fdata[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7],
         );
 
         let shift_down_1px_group_idx =
             ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
         let shift_down_1px_group =
-            f32x8::from_slc(&aux.fdata[shift_down_1px_group_idx..=shift_down_1px_group_idx + 7]);
+            f32x8::from_slice(&aux.fdata[shift_down_1px_group_idx..=shift_down_1px_group_idx + 7]);
 
         chan_g_ys[group_idx] = shift_down_1px_group - curr_group;
     }
@@ -156,7 +156,7 @@ fn compute_derivatives(
     '_for_current_group: {
         let target =
             &mut aux.obj_gradient[curr_px_idx_start_of_group..=curr_px_idx_start_of_group + 7];
-        let original = f32x8::from_slc(target);
+        let original = f32x8::from_slice(target);
         let update = (alpha * -(g_xs + g_ys)).safe_div(*g_norm);
 
         (original + update).write_to(target);
@@ -171,13 +171,13 @@ fn compute_derivatives(
 
             let target = &mut aux.obj_gradient
                 [curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 7];
-            let original = f32x8::from_short_slc(target);
+            let original = f32x8::load_or_default(target);
 
             (original + update).write_partial_to(target, 0..=6);
         } else {
             let target = &mut aux.obj_gradient
                 [curr_px_idx_start_of_group + 1..=curr_px_idx_start_of_group + 8];
-            let original = f32x8::from_slc(target);
+            let original = f32x8::from_slice(target);
 
             (original + update).write_to(target);
         }
@@ -188,7 +188,7 @@ fn compute_derivatives(
         let start = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
 
         let target = aux.obj_gradient[start..=start + 7].as_mut();
-        let original = f32x8::from_slc(target);
+        let original = f32x8::from_slice(target);
         let update = (alpha * g_ys).safe_div(*g_norm);
 
         (original + update).write_to(target);
