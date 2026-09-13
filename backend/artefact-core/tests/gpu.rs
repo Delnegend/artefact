@@ -5,6 +5,8 @@
 //! lavapipe (`mesa-vulkan-drivers`).
 
 use artefact_core::pipeline::gpu::{GpuContext, bytemuck, wgpu};
+#[cfg(feature = "simd")]
+use artefact_core::{Artefact, JpegSource, ValueCollection};
 use wgpu::util::DeviceExt;
 
 #[test]
@@ -99,4 +101,55 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let mapped = slice.get_mapped_range().expect("mapped range");
     let output: Vec<f32> = bytemuck::cast_slice(&mapped).to_vec();
     assert_eq!(output, [2.0, 4.0, 6.0, 8.0], "doubling kernel output");
+}
+
+/// End-to-end: the GPU pipeline (`Artefact::process_gpu`) must produce an image
+/// close to the CPU pipeline on a real fixture. Requires the `simd` feature so
+/// the CPU reference is the production pipeline (the scalar one has a known
+/// init discrepancy).
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_process_matches_cpu() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../assets/sample.420.input.jpg"
+    );
+    if !std::path::Path::new(path).exists() {
+        eprintln!("skipping gpu_process_matches_cpu: no fixture");
+        return;
+    }
+    if let Err(e) = pollster::block_on(GpuContext::new()) {
+        eprintln!("skipping gpu_process_matches_cpu: {e}");
+        return;
+    }
+
+    let make = || {
+        Artefact::default()
+            .source(JpegSource::File(path.into()))
+            .iterations(ValueCollection::ForAll(3))
+    };
+    let cpu = make().process().expect("cpu pipeline");
+    let gpu = match pollster::block_on(make().process_gpu()) {
+        Ok(image) => image,
+        Err(e) => {
+            eprintln!("skipping gpu_process_matches_cpu: {e}");
+            return;
+        }
+    };
+
+    let mut max = 0i32;
+    let mut sum = 0u64;
+    let mut count = 0u64;
+    for (a, b) in cpu.pixels().zip(gpu.pixels()) {
+        for k in 0..3 {
+            let d = (i32::from(a[k]) - i32::from(b[k])).abs();
+            max = max.max(d);
+            sum += d as u64;
+            count += 1;
+        }
+    }
+    let mean = sum as f64 / count as f64;
+    eprintln!("gpu_process_matches_cpu: max={max} mean={mean:.3}");
+    assert!(max <= 8, "max channel diff {max}");
+    assert!(mean < 1.0, "mean channel diff {mean}");
 }

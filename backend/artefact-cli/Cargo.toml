@@ -4,8 +4,9 @@ version = "1.0.4"
 edition = "2024"
 
 [dependencies]
-artefact-core = { workspace = true, features = ["simd"] }
+artefact-core = { workspace = true, features = ["simd", "gpu"] }
 clap = { workspace = true }
+pollster = { workspace = true }
 
 [[bin]]
 name = "artefact-cli"

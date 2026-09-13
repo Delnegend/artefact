@@ -48,6 +48,10 @@ struct Args {
     /// Benchmark mode, do not save output image
     #[arg(short, long, default_value = "false")]
     benchmark: bool,
+
+    /// Use the GPU pipeline, falling back to CPU when no adapter is available
+    #[arg(short, long, default_value = "false")]
+    gpu: bool,
 }
 
 const POSSIBLE_FORMATS: [&str; 4] = ["png", "webp", "tiff", "bmp"];
@@ -145,14 +149,19 @@ fn run(args: Args) -> Result<(), String> {
         return Err("output file already exists, use -y to overwrite".into());
     }
 
-    let result = Artefact::default()
+    let artefact = Artefact::default()
         .source(JpegSource::File(args.input.clone()))
         .weight(parse_values::<f32>(&args.weight, "weight")?)
         .pweight(parse_values::<f32>(&args.pweight, "pweight")?)
         .iterations(parse_values::<usize>(&args.iterations, "iterations")?)
         .benchmark(args.benchmark)
-        .separate_components(args.separate_components)
-        .process();
+        .separate_components(args.separate_components);
+
+    let result = if args.gpu {
+        pollster::block_on(artefact.process_auto())
+    } else {
+        artefact.process()
+    };
 
     match result {
         Ok(img) => img

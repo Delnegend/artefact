@@ -129,30 +129,50 @@ impl Artefact {
     /// # Errors
     /// Returns [`ArtefactError::Message`] if the source is not set or the JPEG
     /// fails to decode, and [`ArtefactError::Benchmark`] when benchmarking.
-    pub fn process(self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+    pub fn process(&self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
+        let output = self.solve_cpu(
+            &jpeg,
+            max_rounded_px_w,
+            max_rounded_px_h,
+            max_rounded_px_count,
+        );
+        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+    }
+
+    /// Decode the source and compute the padded block-grid dimensions.
+    fn decode(&self) -> Result<(Jpeg, u32, u32, usize), ArtefactError> {
         let jpeg = Jpeg::from(
             self.source
+                .clone()
                 .ok_or_else(|| ArtefactError::Message("source is not set".into()))?,
         )
         .map_err(|e| ArtefactError::Message(format!("failed to read JPEG: {e}")))?;
-        let (max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = {
-            let mut w = 0;
-            let mut h = 0;
-            for coef in &jpeg.coefs {
-                w = w.max(coef.rounded_px_w);
-                h = h.max(coef.rounded_px_h);
-            }
-            (w, h, (w * h) as usize)
-        };
 
+        let (mut w, mut h) = (0, 0);
+        for coef in &jpeg.coefs {
+            w = w.max(coef.rounded_px_w);
+            h = h.max(coef.rounded_px_h);
+        }
+        Ok((jpeg, w, h, (w * h) as usize))
+    }
+
+    /// Run the CPU pipeline for the requested component split.
+    fn solve_cpu(
+        &self,
+        jpeg: &Jpeg,
+        max_rounded_px_w: u32,
+        max_rounded_px_h: u32,
+        max_rounded_px_count: usize,
+    ) -> Vec<AlignedF32> {
         let weight = self.weight.to_slice();
         let pweight = self.pweight.to_slice();
         let iterations = self.iterations.to_slice();
 
-        let mut output = if jpeg.nchannel == 3 && !self.separate_components {
+        if jpeg.nchannel == 3 && !self.separate_components {
             solve(
                 3,
-                jpeg.coefs,
+                jpeg.coefs.clone(),
                 weight[0],
                 pweight,
                 iterations[0],
@@ -163,7 +183,8 @@ impl Artefact {
         } else {
             // Process channels separately
             jpeg.coefs
-                .into_par_iter()
+                .par_iter()
+                .cloned()
                 .enumerate()
                 .map(|(c, coef)| {
                     std::mem::take(
@@ -180,8 +201,17 @@ impl Artefact {
                     )
                 })
                 .collect::<Vec<_>>()
-        };
+        }
+    }
 
+    /// Turn the per-channel solved rasters into an RGB image.
+    fn finish(
+        &self,
+        jpeg: &Jpeg,
+        mut output: Vec<AlignedF32>,
+        max_rounded_px_w: u32,
+        max_rounded_px_count: usize,
+    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
         if self.benchmark {
             return Err(ArtefactError::Benchmark);
         }
@@ -226,5 +256,103 @@ impl Artefact {
                 image::Rgb([v, v, v])
             },
         ))
+    }
+}
+
+#[cfg(feature = "gpu")]
+impl Artefact {
+    /// Solve on the GPU and return an RGB image buffer.
+    ///
+    /// # Errors
+    /// Returns [`ArtefactError::Message`] if no GPU adapter is available, the
+    /// JPEG fails to decode, or the GPU solver fails.
+    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is too.
+    #[allow(clippy::future_not_send)]
+    pub async fn process_gpu(
+        &self,
+    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        let ctx = pipeline::gpu::GpuContext::new()
+            .await
+            .map_err(|e| ArtefactError::Message(e.to_string()))?;
+        let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
+        let output = self
+            .solve_gpu(
+                &ctx,
+                &jpeg,
+                max_rounded_px_w,
+                max_rounded_px_h,
+                max_rounded_px_count,
+            )
+            .await?;
+        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+    }
+
+    /// Try the GPU solver, falling back to the CPU pipeline when no adapter is
+    /// available or the GPU path fails.
+    ///
+    /// # Errors
+    /// Returns the CPU pipeline's error if both paths fail.
+    #[allow(clippy::future_not_send)]
+    pub async fn process_auto(
+        &self,
+    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        if let Ok(ctx) = pipeline::gpu::GpuContext::new().await
+            && let Ok((jpeg, w, h, count)) = self.decode()
+            && let Ok(output) = self.solve_gpu(&ctx, &jpeg, w, h, count).await
+            && let Ok(image) = self.finish(&jpeg, output, w, count)
+        {
+            return Ok(image);
+        }
+        self.process()
+    }
+
+    /// Run the GPU pipeline for the requested component split.
+    async fn solve_gpu(
+        &self,
+        ctx: &pipeline::gpu::GpuContext,
+        jpeg: &Jpeg,
+        max_rounded_px_w: u32,
+        max_rounded_px_h: u32,
+        max_rounded_px_count: usize,
+    ) -> Result<Vec<AlignedF32>, ArtefactError> {
+        let weight = self.weight.to_slice();
+        let pweight = self.pweight.to_slice();
+        let iterations = self.iterations.to_slice();
+        let to_error = |e: pipeline::gpu::GpuError| ArtefactError::Message(e.to_string());
+
+        if jpeg.nchannel == 3 && !self.separate_components {
+            pipeline::gpu::solve(
+                ctx,
+                &jpeg.coefs,
+                weight[0],
+                &pweight,
+                iterations[0],
+                max_rounded_px_w,
+                max_rounded_px_h,
+                max_rounded_px_count,
+            )
+            .await
+            .map_err(to_error)
+        } else {
+            let mut output = Vec::with_capacity(jpeg.coefs.len());
+            for (c, coef) in jpeg.coefs.iter().enumerate() {
+                let mut solved = pipeline::gpu::solve(
+                    ctx,
+                    std::slice::from_ref(coef),
+                    weight[c],
+                    &pweight,
+                    iterations[c],
+                    max_rounded_px_w,
+                    max_rounded_px_h,
+                    max_rounded_px_count,
+                )
+                .await
+                .map_err(to_error)?;
+                output.push(solved.pop().ok_or_else(|| {
+                    ArtefactError::Message("GPU solver returned no output".into())
+                })?);
+            }
+            Ok(output)
+        }
     }
 }
