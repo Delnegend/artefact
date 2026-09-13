@@ -5,6 +5,9 @@ mod step;
 mod tgv;
 mod tv;
 
+#[cfg(test)]
+pub(crate) use tgv::tgv_gradient;
+
 use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::pipeline::scalar::coef::ScalarCoef;

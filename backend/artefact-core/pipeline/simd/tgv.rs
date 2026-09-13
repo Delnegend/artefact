@@ -191,17 +191,19 @@ fn tgv_run<const N: usize>(
                 .store_select(target, mask);
         }
 
-        // for the group up right 1px
+        // up-right diagonal (x + 1, y - 1)
         if !group_at_top_edge {
+            let base = idx + 1 - max_rounded_px_w as usize;
             if group_at_right_edge {
-                let target = run_mut(&mut aux.obj_gradient, idx + 1, N - 1);
+                // the last lane (x = w - 1) has no x + 1
+                let target = run_mut(&mut aux.obj_gradient, base, N - 1);
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
                     .add_short_slice(target)
                     .store_select(target, mask);
             } else {
-                let target = run_mut(&mut aux.obj_gradient, idx + 1, N);
+                let target = run_mut(&mut aux.obj_gradient, base, N);
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)
@@ -210,14 +212,23 @@ fn tgv_run<const N: usize>(
             }
         }
 
-        // for the group down left 1px
+        // down-left diagonal (x - 1, y + 1)
         if !group_at_bottom_edge {
             if group_at_left_edge {
-                let target = run_mut(&mut aux.obj_gradient, idx, N - 1);
+                // the first lane (x = 0) has no x - 1
+                let target = run_mut(
+                    &mut aux.obj_gradient,
+                    idx + max_rounded_px_w as usize,
+                    N - 1,
+                );
 
                 add_shifted_left::<N>(target, (alpha * -g_xy_sym).safe_div(g2_norm));
             } else {
-                let target = run_mut(&mut aux.obj_gradient, idx - 1, N);
+                let target = run_mut(
+                    &mut aux.obj_gradient,
+                    idx + max_rounded_px_w as usize - 1,
+                    N,
+                );
 
                 (alpha * -g_xy_sym)
                     .div(g2_norm)

@@ -92,3 +92,55 @@ fn scalar_matches_simd() {
         eprintln!("skipped: no assets/sample.*.input.jpg fixtures (run `just sample`)");
     }
 }
+
+/// The SIMD TGV kernel must scatter its diagonal contributions to the same
+/// cells as the scalar reference `(x + 1, y - 1)` / `(x - 1, y + 1)`.
+#[test]
+fn tgv_matches_scalar() {
+    use crate::{
+        pipeline::simd::{tgv_gradient, uniform_runs},
+        utils::{
+            aligned::AlignedF32,
+            auxiliary::{Aux, PixelDifference},
+        },
+    };
+
+    const W: u32 = 32;
+    const H: u32 = 8;
+    const NCH: usize = 3;
+
+    fn make() -> Vec<Aux> {
+        let count = (W * H) as usize;
+        (0..NCH)
+            .map(|c| Aux {
+                cos: AlignedF32::zeros(count),
+                obj_gradient: AlignedF32::zeros(count),
+                pixel_diff: PixelDifference {
+                    x: (0..count)
+                        .map(|i| (((i + c) * 7) % 13) as f32 - 6.0)
+                        .collect(),
+                    y: (0..count)
+                        .map(|i| (((i + c) * 5) % 11) as f32 - 5.0)
+                        .collect(),
+                },
+                fdata: AlignedF32::zeros(count),
+                fista: AlignedF32::zeros(count),
+            })
+            .collect()
+    }
+
+    let mut simd = make();
+    tgv_gradient(W, H, NCH, &mut simd, 0.3, &uniform_runs(W));
+
+    let mut scalar = make();
+    crate::pipeline::scalar::tgv_gradient(W, H, NCH, &mut scalar, 0.3);
+
+    let mut max = 0.0_f32;
+    for (a, b) in simd.iter().zip(&scalar) {
+        for (x, y) in a.obj_gradient.iter().zip(b.obj_gradient.iter()) {
+            max = max.max((x - y).abs());
+        }
+    }
+    println!("max|simd tgv - scalar tgv| = {max:.3e}");
+    assert!(max < 1e-3, "simd TGV diverged from scalar by {max}");
+}
