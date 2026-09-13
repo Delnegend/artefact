@@ -9,15 +9,18 @@
 		"--hostname=artefact",
 		"--cap-add",
 		"PERFMON",
-		// NVIDIA GPUs (requires the NVIDIA Container Toolkit on the host)
-		"--gpus=all",
-		// AMD/Intel GPUs via DRM render nodes (Mesa RADV/ANV/lavapipe in the image)
+		// AMD/Intel GPUs via DRM render nodes (Mesa RADV/ANV/lavapipe in the image).
+		// NOTE: no `--gpus=all` here — that's Docker/NVIDIA syntax. VS Code's
+		// devcontainer CLI probes it via `podman info -f {{.Runtimes.nvidia}}`,
+		// which fails on Podman 5 (`can't evaluate field Runtimes`) and aborts
+		// open even when hostRequirements.gpu is only "optional". NVIDIA hosts
+		// should re-add it locally; this repo's hosts (Bazzite/AMD) use /dev/dri.
 		"--device=/dev/dri",
 		"-v",
 		"cargo-cache:/usr/local/cargo"
 	],
 	"hostRequirements": {
-		"gpu": "optional"
+		"gpu": false
 	},
 	"customizations": {
 		"vscode": {
