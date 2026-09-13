@@ -17,11 +17,10 @@ pub fn from_blocks(
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                for in_x in 0..8 {
-                    output[((block_y * 8 + in_y) * rounded_px_w + (block_x * 8 + in_x)) as usize] =
-                        input[index];
-                    index += 1;
-                }
+                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
+
+                output[row_start..row_start + 8].copy_from_slice(&input[index..index + 8]);
+                index += 8;
             }
         }
     }
@@ -46,11 +45,10 @@ pub fn to_blocks(
     for block_y in 0..block_h {
         for block_x in 0..block_w {
             for in_y in 0..8 {
-                for in_x in 0..8 {
-                    output[index] = input
-                        [((block_y * 8 + in_y) * rounded_px_w + (block_x * 8 + in_x)) as usize];
-                    index += 1;
-                }
+                let row_start = ((block_y * 8 + in_y) * rounded_px_w + (block_x * 8)) as usize;
+
+                output[index..index + 8].copy_from_slice(&input[row_start..row_start + 8]);
+                index += 8;
             }
         }
     }
