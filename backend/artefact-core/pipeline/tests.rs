@@ -130,7 +130,8 @@ fn tgv_matches_scalar() {
     }
 
     let mut simd = make();
-    tgv_gradient(W, H, NCH, &mut simd, 0.3, &uniform_runs(W));
+    let mut norm = vec![0.0f32; (W * H) as usize];
+    tgv_gradient(W, H, NCH, &mut simd, 0.3, &uniform_runs(W), &mut norm);
 
     let mut scalar = make();
     crate::pipeline::scalar::tgv_gradient(W, H, NCH, &mut scalar, 0.3);

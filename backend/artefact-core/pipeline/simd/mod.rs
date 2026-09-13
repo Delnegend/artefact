@@ -46,6 +46,8 @@ pub fn solve(
     );
     let radius = fista::box_radius(max_rounded_px_count);
     let widths = adaptive_runs(max_rounded_px_w);
+    // Shared per-pixel norm scratch for the TV/TGV kernels (reused for both).
+    let mut norm = AlignedF32::zeros(max_rounded_px_count);
     fista::run_fista(
         &mut auxs,
         &coefs,
@@ -60,12 +62,13 @@ pub fn solve(
                 nchannel,
                 coefs,
                 auxs,
+                &mut norm,
                 step_size,
                 weight,
                 &pweight,
                 dct_gradient,
-                |w, h, nch, auxs| tv_gradient(w, h, nch, auxs, &widths),
-                |w, h, nch, auxs, alpha| tgv_gradient(w, h, nch, auxs, alpha, &widths),
+                |w, h, nch, auxs, norm| tv_gradient(w, h, nch, auxs, &widths, norm),
+                |w, h, nch, auxs, alpha, norm| tgv_gradient(w, h, nch, auxs, alpha, &widths, norm),
                 projection::project_onto_box,
             );
         },

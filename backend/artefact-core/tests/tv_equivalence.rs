@@ -74,8 +74,9 @@ fn tv_implementations_match() {
     let base = make_auxs();
 
     let widths = uniform_runs(W);
+    let mut norm = vec![0.0f32; (W * H) as usize];
     let mut a = clone_auxs(&base);
-    tv_gradient(W, H, NCH, &mut a, &widths);
+    tv_gradient(W, H, NCH, &mut a, &widths, &mut norm);
 
     let mut b = clone_auxs(&base);
     tv_par::tv_gradient_par(W, H, NCH, &mut b);
@@ -106,17 +107,18 @@ fn mixed_widths_match_uniform() {
     let base = make_auxs();
     let uniform = uniform_runs(W);
     let mixed = adaptive_runs(W);
+    let mut norm = vec![0.0f32; (W * H) as usize];
 
     let mut uni_tv = clone_auxs(&base);
-    tv_gradient(W, H, NCH, &mut uni_tv, &uniform);
+    tv_gradient(W, H, NCH, &mut uni_tv, &uniform, &mut norm);
     let mut mix_tv = clone_auxs(&base);
-    tv_gradient(W, H, NCH, &mut mix_tv, &mixed);
+    tv_gradient(W, H, NCH, &mut mix_tv, &mixed, &mut norm);
     let tv_diff = max_diff(&uni_tv, &mix_tv);
 
     let mut uni_tv2 = clone_auxs(&base);
-    tgv_gradient(W, H, NCH, &mut uni_tv2, 0.3, &uniform);
+    tgv_gradient(W, H, NCH, &mut uni_tv2, 0.3, &uniform, &mut norm);
     let mut mix_tv2 = clone_auxs(&base);
-    tgv_gradient(W, H, NCH, &mut mix_tv2, 0.3, &mixed);
+    tgv_gradient(W, H, NCH, &mut mix_tv2, 0.3, &mixed, &mut norm);
     let tv2_diff = max_diff(&uni_tv2, &mix_tv2);
 
     println!("tv  uniform vs mixed: max diff = {tv_diff:.3e}");

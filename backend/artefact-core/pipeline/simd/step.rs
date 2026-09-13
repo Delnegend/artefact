@@ -26,6 +26,7 @@ pub fn solver_step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
     nchannel: usize,
     coefs: &[C],
     auxs: &mut [Aux],
+    norm: &mut [f32],
     step_size: f32,
     weight: f32,
     pweight: &[f32; 3],
@@ -36,13 +37,15 @@ pub fn solver_step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
 ) where
     C: Coef + Sync,
     ProbFn: Fn(u32, u32, f32, &C, &[f32], &mut [f32]) + Sync,
-    TvFn: FnMut(u32, u32, usize, &mut [Aux]),
-    Tv2Fn: FnMut(u32, u32, usize, &mut [Aux], f32),
+    TvFn: FnMut(u32, u32, usize, &mut [Aux], &mut [f32]),
+    Tv2Fn: FnMut(u32, u32, usize, &mut [Aux], f32, &mut [f32]),
     ProjFn: Fn(u32, u32, &mut Aux, &C) + Sync,
 {
-    // DCT coefficient distance gradient
+    // TV initialises `obj_gradient` (writes it), so no zero-fill is needed.
+    tv_gradient_fn(max_w, max_h, nchannel, auxs, norm);
+
+    // DCT coefficient distance gradient (adds on top of TV)
     auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
-        aux.obj_gradient.fill(0.0);
         if pweight[c] != 0.0 {
             dct_gradient_fn(
                 max_w,
@@ -55,8 +58,7 @@ pub fn solver_step<C, ProbFn, TvFn, Tv2Fn, ProjFn>(
         }
     });
 
-    tv_gradient_fn(max_w, max_h, nchannel, auxs);
-    tgv_gradient_fn(max_w, max_h, nchannel, auxs, weight / 2.0_f32.sqrt());
+    tgv_gradient_fn(max_w, max_h, nchannel, auxs, weight / 2.0_f32.sqrt(), norm);
 
     auxs.par_iter_mut().enumerate().for_each(|(c, aux)| {
         let norm = aux

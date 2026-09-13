@@ -19,6 +19,7 @@ pub fn tgv_gradient(
     auxs: &mut [Aux],
     alpha: f32,
     adaptive_widths: &[AdaptiveWidth],
+    _norm: &mut [f32],
 ) {
     let alpha = alpha / (nchannel as f32).sqrt();
 

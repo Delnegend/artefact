@@ -78,26 +78,53 @@ pub fn tv_benches(c: &mut Criterion) {
     let widths = uniform_runs(W);
     let mixed = mixed_widths(WM);
 
+    let mut norm_tv = vec![0.0f32; (W * H) as usize];
+    let mut norm_tv_mixed = vec![0.0f32; (WM * H) as usize];
+    let mut norm_tgv = vec![0.0f32; (W * H) as usize];
+    let mut norm_tgv_mixed = vec![0.0f32; (WM * H) as usize];
+
     let mut group = c.benchmark_group("tv");
 
     group.bench_function("f32x8 (tv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            tv_gradient(W, H, NCH, black_box(&mut auxs), black_box(&widths));
+            tv_gradient(
+                W,
+                H,
+                NCH,
+                black_box(&mut auxs),
+                black_box(&widths),
+                black_box(&mut norm_tv),
+            );
         })
     });
 
     group.bench_function("mixed widths (tv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs_mixed));
-            tv_gradient(WM, H, NCH, black_box(&mut auxs_mixed), black_box(&mixed));
+            tv_gradient(
+                WM,
+                H,
+                NCH,
+                black_box(&mut auxs_mixed),
+                black_box(&mixed),
+                black_box(&mut norm_tv_mixed),
+            );
         })
     });
 
     group.bench_function("f32x8 (tgv_gradient)", |b| {
         b.iter(|| {
             reset(black_box(&mut auxs));
-            tgv_gradient(W, H, NCH, black_box(&mut auxs), 0.3, black_box(&widths));
+            tgv_gradient(
+                W,
+                H,
+                NCH,
+                black_box(&mut auxs),
+                0.3,
+                black_box(&widths),
+                black_box(&mut norm_tgv),
+            );
         })
     });
 
@@ -111,6 +138,7 @@ pub fn tv_benches(c: &mut Criterion) {
                 black_box(&mut auxs_mixed),
                 0.3,
                 black_box(&mixed),
+                black_box(&mut norm_tgv_mixed),
             );
         })
     });
