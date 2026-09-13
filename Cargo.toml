@@ -14,6 +14,7 @@ rand = { version = "0.9.2" }
 rand_core = { version = "0.9.3" }
 rayon = { version = "1.11.0" }
 wasm-bindgen = { version = "0.2.104" }
+wasm-bindgen-futures = { version = "0.4.54" }
 wgpu = "=30.0.0"
 zune-core = { version = "0.5.0-rc2" }
 zune-jpeg = { path = "backend/zune-jpeg" }

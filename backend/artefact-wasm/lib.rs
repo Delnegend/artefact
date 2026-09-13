@@ -12,7 +12,7 @@ pub enum OutputFormat {
 }
 
 #[wasm_bindgen]
-pub fn compute(
+pub async fn compute(
     buffer: Vec<u8>,
     output_format: OutputFormat,
     weight: f32,
@@ -37,7 +37,8 @@ pub fn compute(
         .pweight(ValueCollection::ForAll(pweight))
         .iterations(ValueCollection::ForAll(iterations))
         .separate_components(separate_components)
-        .process()
+        .process_auto()
+        .await
         .map_err(|e| e.to_string())?
         .write_to(&mut cursor, output_format)
         .map_err(|e| format!("Can't write image to buffer: {e:?}",))?;

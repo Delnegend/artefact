@@ -82,12 +82,12 @@ export default defineNuxtConfig({
 					display: 'standalone'
 				},
 				workbox: {
-					globPatterns: ['**/*.{js,css,html,svg,png,svg,ico}'],
+					globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm}'],
 					cleanupOutdatedCaches: true,
 					clientsClaim: true
 				},
 				injectManifest: {
-					globPatterns: ['**/*.{js,css,html,svg,png,svg,ico}']
+					globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm}']
 				},
 				devOptions: {
 					enabled: true,

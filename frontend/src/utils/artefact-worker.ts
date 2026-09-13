@@ -46,7 +46,7 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 			let outputImgDataArray: Uint8Array
 			let timer = Date.now()
 			try {
-				outputImgDataArray = compute(
+				outputImgDataArray = await compute(
 					new Uint8Array(imageInDB.jpegArrayBuffer),
 					format,
 					config.weight,

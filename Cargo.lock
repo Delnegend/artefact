@@ -125,6 +125,7 @@ dependencies = [
  "artefact-core",
  "console_error_panic_hook",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
