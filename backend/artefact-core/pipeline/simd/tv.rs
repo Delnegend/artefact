@@ -3,11 +3,11 @@ use std::{
     simd::{Simd, StdFloat, cmp::SimdPartialEq},
 };
 
-use crate::utils::{
+use super::{
     adaptive_width::AdaptiveWidth,
-    auxiliary::Aux,
     traits::{AddSlice, FromSlice, WriteTo},
 };
+use crate::utils::auxiliary::Aux;
 
 /// First-order TV gradient: each run in `adaptive_widths` is processed with the
 /// matching `Simd<f32, N>` lane width.

@@ -2,14 +2,24 @@ use std::{ops::Mul, simd::f32x64};
 
 use zune_jpeg::sample_factor::SampleFactor;
 
+use super::traits::{FromSlice, WriteTo};
 use crate::{
     jpeg::Coefficient,
-    utils::{
-        auxiliary::AuxTraits,
-        dct::idct8x8s,
-        traits::{FromSlice, WriteTo},
-    },
+    utils::{auxiliary::AuxTraits, dct::idct8x8s},
 };
+
+pub trait Coef: AuxTraits {
+    fn rounded_px_w(&self) -> u32;
+    fn rounded_px_h(&self) -> u32;
+    fn block_w(&self) -> u32;
+    fn block_h(&self) -> u32;
+    fn block_count(&self) -> u32;
+    fn horiz_factor(&self) -> u32;
+    fn vert_factor(&self) -> u32;
+
+    /// Clamp one dequantized 8x8 block (64 values) into its quantized box.
+    fn clamp_block(&self, block_idx: usize, data: &mut [f32]);
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct SIMDCoef {
@@ -125,7 +135,7 @@ impl AuxTraits for SIMDCoef {
     }
 }
 
-impl crate::utils::coef::Coef for SIMDCoef {
+impl Coef for SIMDCoef {
     fn rounded_px_w(&self) -> u32 {
         self.rounded_px_w
     }
@@ -148,7 +158,6 @@ impl crate::utils::coef::Coef for SIMDCoef {
         self.vertical_samp_factor.u32()
     }
     fn clamp_block(&self, block_idx: usize, data: &mut [f32]) {
-        use crate::utils::traits::WriteTo;
         use std::simd::num::SimdFloat;
         let max = self.dequant_dct_coefs_max[block_idx];
         let min = self.dequant_dct_coefs_min[block_idx];

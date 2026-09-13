@@ -1,7 +1,7 @@
+use super::coef::Coef;
 use crate::utils::{
     auxiliary::Aux,
     boxing::{boxing, unboxing},
-    coef::Coef,
     dct::{dct8x8s, idct8x8s},
 };
 

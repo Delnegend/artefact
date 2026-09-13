@@ -1,6 +1,7 @@
 use rayon::prelude::*;
 
-use crate::utils::{auxiliary::Aux, coef::Coef, macros::mul_add};
+use super::coef::Coef;
+use crate::utils::{auxiliary::Aux, macros::mul_add};
 
 pub fn fista_loop<C, F>(
     auxs: &mut [Aux],

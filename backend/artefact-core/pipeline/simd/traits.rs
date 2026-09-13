@@ -21,8 +21,11 @@ pub trait SafeDiv {
 }
 
 pub trait AddSlice {
+    #[must_use]
     fn add_slice(&self, slice: &[f32]) -> Self;
+    #[must_use]
     fn add_short_slice(&self, slice: &[f32]) -> Self;
+    #[must_use]
     fn add_range_slice(&self, slice: &[f32], range: RangeInclusive<usize>) -> Self;
 }
 

@@ -5,12 +5,11 @@ use std::{
 
 use rayon::prelude::*;
 
-use crate::utils::{
-    auxiliary::Aux,
+use super::{
     coef::Coef,
-    macros::mul_add,
     traits::{FromSlice, WriteTo},
 };
+use crate::utils::{auxiliary::Aux, macros::mul_add};
 
 /// One solver step shared by the SIMD pipelines: DCT-distance gradient, TV +
 /// TGV regularization, normalized descent, then projection.

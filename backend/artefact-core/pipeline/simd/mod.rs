@@ -1,21 +1,25 @@
+mod adaptive_width;
 mod coef;
 mod compute_step_prob;
+mod fista;
+mod projection;
+mod step;
+pub mod traits;
+mod tv;
+mod tv2;
 
 use rayon::prelude::*;
 
 use crate::{
-    jpeg::Coefficient,
-    pipeline::simd::compute_step_prob::compute_step_prob,
-    utils::{aligned::AlignedF32, fista, projection::projection, step},
+    jpeg::Coefficient, pipeline::simd::compute_step_prob::compute_step_prob,
+    utils::aligned::AlignedF32,
 };
 use coef::SIMDCoef;
 
 // Public entry points for the reference TV kernels + widths (used by benches/tests).
-pub use crate::utils::{
-    adaptive_width::{AdaptiveWidth, get_adaptive_widths, uniform_widths},
-    tv::compute_step_tv,
-    tv2::compute_step_tv2,
-};
+pub use adaptive_width::{AdaptiveWidth, get_adaptive_widths, uniform_widths};
+pub use tv::compute_step_tv;
+pub use tv2::compute_step_tv2;
 
 #[allow(unused)]
 pub fn compute(
@@ -60,7 +64,7 @@ pub fn compute(
                 compute_step_prob,
                 |w, h, nch, auxs| compute_step_tv(w, h, nch, auxs, &widths),
                 |w, h, nch, auxs, alpha| compute_step_tv2(w, h, nch, auxs, alpha, &widths),
-                projection,
+                projection::projection,
             );
         },
     );

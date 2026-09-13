@@ -3,8 +3,8 @@ use std::{
     simd::f32x64,
 };
 
-use super::coef::SIMDCoef;
-use crate::utils::{dct::idct8x8s, traits::WriteTo};
+use super::{coef::SIMDCoef, traits::WriteTo};
+use crate::utils::dct::idct8x8s;
 
 // Gradient of the distance between the current DCT coefficients and the
 // quantized originals, back-projected to the pixel domain.
