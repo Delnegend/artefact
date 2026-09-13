@@ -99,9 +99,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            platform: linux/x64-musl
-            artifact: linux-x64-musl
+            target: x86_64-unknown-linux-gnu
+            platform: linux/x64
+            artifact: linux-x64
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             platform: windows/x64
@@ -123,12 +123,6 @@ jobs:
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
-
-      - name: Install musl-tools (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq musl-tools
 
       - name: Build
         run: cargo build --bin artefact-cli --release --target ${{ matrix.target }}
@@ -201,7 +195,7 @@ jobs:
               echo
             fi
             echo "**Downloads**"
-            echo "- **Linux x64 musl**: \`.tar.gz\` (extract with \`tar -xzf\`)"
+            echo "- **Linux x64**: \`.tar.gz\` (extract with \`tar -xzf\`)"
             echo "- **Windows x64**: \`.zip\` (contains \`artefact-cli.exe\`)"
             echo "- **macOS Apple Silicon**: \`.tar.gz\` (\`aarch64-apple-darwin\`, extract with \`tar -xzf\`)"
             if [ -n "$COMPARE" ]; then

@@ -57,7 +57,7 @@ cd artefact
 cargo build --bin artefact-cli --release
 # or: just build
 
-# cross-compiled (linux x64 musl, windows x64, macOS arm64)
+# cross-compiled (linux x64, windows x64, macOS arm64)
 # built on GitHub Actions via .github/workflows/release.yml — see Development
 ```
 
@@ -113,7 +113,7 @@ Toolchain is baked into the image (Rust `nightly` + `rust-analyzer`, `mold` 2.40
 
 - [Rust](https://www.rust-lang.org) via `rustup` (`nightly`, `minimal` profile)
 - [`just`](https://github.com/casey/just), [`bun`](https://bun.sh), [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
-- `zip`/`tar` only if manually archiving — releases (linux x64 musl, windows x64, macOS arm64) are built on GitHub Actions via `.github/workflows/release.yml`. `ffmpeg` only for sample image generation (not in devcontainer by default).
+- `zip`/`tar` only if manually archiving — releases (linux x64, windows x64, macOS arm64) are built on GitHub Actions via `.github/workflows/release.yml`. `ffmpeg` only for sample image generation (not in devcontainer by default).
 
 See [docs/development.md](docs/development.md) for full prerequisites and sample-image helpers.
 
@@ -152,7 +152,7 @@ just build web
 just build            # -> target/release/artefact-cli
 # or: cargo build --bin artefact-cli --release
 
-# cross-compiled releases (linux x64 musl, windows x64, macOS arm64)
+# cross-compiled releases (linux x64, windows x64, macOS arm64)
 # built on GitHub Actions via .github/workflows/release.yml
 # trigger: workflow_dispatch (release_version + create_release) or merged PR
 ```

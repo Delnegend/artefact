@@ -19,7 +19,7 @@ These will be automatically installed if you choose to run this project inside a
 -   [`just`](https://github.com/casey/just).
 -   [`bun`](https://bun.sh/) for building and running the frontend.
 -   [`wasm-pack`](https://github.com/rustwasm/wasm-pack) to build the WASM library version of artefact.
--   `zip`, `tar` only if manually archiving (releases for linux x64 musl, windows x64, macOS arm64 are built on GitHub Actions via `.github/workflows/release.yml`).
+-   `zip`, `tar` only if manually archiving (releases for linux x64, windows x64, macOS arm64 are built on GitHub Actions via `.github/workflows/release.yml`).
 
 <!-- -   `cargo-flamegraph`, `perf` are optional, used for performance profiling. -->
 
@@ -46,7 +46,7 @@ just decode 420  # reads assets/sample.420.input.jpg → assets/sample.420.decod
 
 ## Cross-compiling / Releases
 
-Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64 musl`, `windows x64`, `macOS arm64`.
+Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`, `windows x64`, `macOS arm64`.
 
 Trigger: `workflow_dispatch` (`release_version`, `create_release`) or auto on `PR → main` with `dependencies` label (patch bump).
 
@@ -57,7 +57,7 @@ just build
 # or
 cargo build --bin artefact-cli --release
 # manual cross (if toolchain installed):
-# cargo build --bin artefact-cli --release --target x86_64-unknown-linux-musl
+# cargo build --bin artefact-cli --release --target x86_64-unknown-linux-gnu
 # cargo build --bin artefact-cli --release --target x86_64-pc-windows-gnu
 # cargo build --bin artefact-cli --release --target aarch64-apple-darwin
 ```
