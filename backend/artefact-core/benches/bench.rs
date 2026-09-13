@@ -5,6 +5,7 @@ mod boxing;
 mod casting;
 mod dct;
 mod init_slice;
+mod solve;
 mod tv;
 mod tv_par;
 mod tv_simd64;
@@ -18,5 +19,6 @@ criterion_group!(
     casting::casting_benches,
     dct::dct_benches,
     tv::tv_benches,
+    solve::solve_benches,
 );
 criterion_main!(benches);

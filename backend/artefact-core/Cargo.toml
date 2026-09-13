@@ -29,6 +29,10 @@ bench = []
 name = "bench"
 harness = false
 
+[[bench]]
+name = "alloc_stats"
+harness = false
+
 [[test]]
 name = "tv_equivalence"
 required-features = ["bench"]

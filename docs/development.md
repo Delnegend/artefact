@@ -84,6 +84,22 @@ features = [
 
 `scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). Decoding regressions are covered by native Rust tests (`cargo test --workspace`, run as part of `just check`): `backend/zune-jpeg/tests/decode.rs` decodes committed `cjpeg` fixtures (4:4:4/4:2:2/4:2:0/4:1:1, progressive, restart intervals, grayscale, arithmetic-rejected) and `backend/artefact-core/tests/verify.rs` checks reconstructed color blocks end-to-end. `just sample` regenerates the large sample inputs.
 
+## Benchmarks
+
+Full-solve timing and allocation stats live in `backend/artefact-core/benches/` and require the generated sample (`just sample`):
+
+```bash
+# criterion: end-to-end solver time (assets/sample.420.input.jpg)
+RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+  cargo bench -p artefact-core --features bench,simd,simd_adaptive --bench bench -- solve
+
+# allocations + wall time for one solve
+RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+  cargo bench -p artefact-core --features simd,simd_adaptive --bench alloc_stats
+```
+
+`benches/solve.rs` and `benches/alloc_stats.rs` document the recorded before/after numbers (allocation churn removal in `32b9a12`, 64-byte-aligned `Aux` buffers in `1ef9465`); reproduce older revisions with `git worktree add <dir> <revision>`. Keep `RAYON_NUM_THREADS` fixed when comparing.
+
 ## Building the WASM library and web UI
 
 Build the WASM library if it has not already been built or if there are changes.
