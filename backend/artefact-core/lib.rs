@@ -296,12 +296,13 @@ impl Artefact {
     pub async fn process_auto(
         &self,
     ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        // Only fall back when the GPU device or solve is unavailable; errors from
+        // `finish` (e.g. benchmark mode) are propagated as-is.
         if let Ok(ctx) = pipeline::gpu::GpuContext::new().await
             && let Ok((jpeg, w, h, count)) = self.decode()
             && let Ok(output) = self.solve_gpu(&ctx, &jpeg, w, h, count).await
-            && let Ok(image) = self.finish(&jpeg, output, w, count)
         {
-            return Ok(image);
+            return self.finish(&jpeg, output, w, count);
         }
         self.process()
     }
