@@ -186,7 +186,7 @@ graph TD
     F -. upload .-> W
 ```
 
-`artefact-core` is feature-gated: default scalar, `simd` enables `std::simd`, `simd_adaptive` adds runtime dispatch, `native` uses LLVM `mul_add` (`-Ctarget-cpu=native`). Decoding always goes through the vendored `zune-jpeg` fork.
+`artefact-core` is feature-gated: default scalar, `simd` selects the SIMD pipeline (adaptive x8/x16/x32/x64 dispatch over `std::simd`). Decoding always goes through the vendored `zune-jpeg` fork.
 
 ## CLI reference
 
