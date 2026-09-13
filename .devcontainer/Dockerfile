@@ -1,6 +1,6 @@
 FROM debian:13-slim
 
-ARG MOLD_VERSION=2.40.4
+ARG MOLD_VERSION=2.42.1
 
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
@@ -36,7 +36,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 
 # mold — pinned to keep linker fast/reproducible; also configure cargo to use it
 RUN curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz" && \
-    echo "4c999e19ffa31afa5aa429c679b665d5e2ca5a6b6832ad4b79668e8dcf3d8ec1  /tmp/mold.tar.gz" | sha256sum -c - && \
+    echo "6ff270c9bf07d2bec5c98aa324eb7c4daf6a1a4d815c05ff1708049616047855  /tmp/mold.tar.gz" | sha256sum -c - && \
     tar -xf /tmp/mold.tar.gz -C /usr/local/cargo "mold-${MOLD_VERSION}-x86_64-linux" && \
     rm /tmp/mold.tar.gz && \
     printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-C", "link-arg=-fuse-ld=/usr/local/cargo/mold-%s-x86_64-linux/bin/mold"]\n' "$MOLD_VERSION" > /usr/local/cargo/config.toml
