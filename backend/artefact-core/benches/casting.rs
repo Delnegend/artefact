@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 
 fn safe_cast(input: Vec<u16>) -> Vec<f32> {
     input.into_iter().map(|x| x as f32).collect()

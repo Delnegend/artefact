@@ -1,7 +1,7 @@
 use std::simd::f32x8;
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 
 fn init_with_copy(target: [f32; 64]) -> f32x8 {
     f32x8::from_array({

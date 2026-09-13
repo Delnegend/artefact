@@ -6,7 +6,7 @@
 use std::simd::f32x8;
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 
 pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
 pub const C8_1I: f32 = 0.097_545_161_008_064_133_92;

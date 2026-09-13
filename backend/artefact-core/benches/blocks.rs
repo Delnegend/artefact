@@ -1,7 +1,7 @@
 use std::{hint::black_box, simd::f32x8};
 
 use criterion::Criterion;
-use rand::Rng;
+use rand::RngExt;
 
 fn to_blocks(
     input: &[f32],
