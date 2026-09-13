@@ -8,9 +8,12 @@ autobenches = false
 image = { workspace = true }
 zune-jpeg = { workspace = true }
 rayon = { workspace = true }
+wgpu = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+pollster = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 
@@ -20,6 +23,7 @@ path = "lib.rs"
 
 [features]
 simd = []
+gpu = ["dep:wgpu", "dep:bytemuck"]
 bench = []
 
 [[bench]]

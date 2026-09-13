@@ -1,5 +1,8 @@
 #![feature(portable_simd)]
 #![warn(clippy::perf, clippy::pedantic, clippy::nursery, clippy::unwrap_used)]
+// wgpu's `Surface` auto-trait cycle overflows trait solving when the compiler
+// computes `Send` for async fns that capture wgpu request descriptors.
+#![allow(recursion_depth_exceeding_limit)]
 #![allow(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,

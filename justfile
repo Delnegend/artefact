@@ -29,6 +29,8 @@ check kind="all":
 		# wasm — std::simd must build for wasm32
 		cargo check -p artefact-core --target wasm32-unknown-unknown
 		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd
+		# wasm — wgpu's WebGPU backend must build too
+		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,gpu
 		cargo clippy --workspace --all-features
 		# decode/fixture regression tests (zune-jpeg + pipelines + verify)
 		cargo test --workspace --all-features
