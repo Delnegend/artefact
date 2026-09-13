@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::{
-    adaptive_width::AdaptiveWidth,
+    adaptive_width::{AdaptiveWidth, dispatch_width},
     traits::{AddSlice, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
@@ -19,41 +19,16 @@ pub fn compute_step_tv(
     adaptive_widths: &[AdaptiveWidth],
 ) {
     for curr_row in 0..max_rounded_px_h {
-        for adaptive_width in adaptive_widths {
-            match adaptive_width {
-                AdaptiveWidth::X8(x) => tv_inner::<8>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X16(x) => tv_inner::<16>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X32(x) => tv_inner::<32>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X64(x) => tv_inner::<64>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    *x,
-                    curr_row,
-                ),
-            }
+        for &adaptive_width in adaptive_widths {
+            dispatch_width!(
+                adaptive_width,
+                tv_inner,
+                max_rounded_px_w,
+                max_rounded_px_h,
+                nchannel,
+                auxs;
+                curr_row
+            );
         }
     }
 }

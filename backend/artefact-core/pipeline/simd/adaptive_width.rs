@@ -7,6 +7,30 @@ pub enum AdaptiveWidth {
     X64(u32),
 }
 
+/// Calls `$f::<N>(...$arg, run_start, $last)` with the lane width matching `$width`.
+///
+/// Keeps the direct, monomorphized calls (a `fn`-pointer dispatch loses them)
+/// while letting callers pass their argument list only once.
+macro_rules! dispatch_width {
+    ($width:expr, $f:ident $(, $arg:expr)*; $last:expr) => {
+        match $width {
+            $crate::pipeline::simd::adaptive_width::AdaptiveWidth::X8(x) => {
+                $f::<8>($($arg,)* x, $last)
+            }
+            $crate::pipeline::simd::adaptive_width::AdaptiveWidth::X16(x) => {
+                $f::<16>($($arg,)* x, $last)
+            }
+            $crate::pipeline::simd::adaptive_width::AdaptiveWidth::X32(x) => {
+                $f::<32>($($arg,)* x, $last)
+            }
+            $crate::pipeline::simd::adaptive_width::AdaptiveWidth::X64(x) => {
+                $f::<64>($($arg,)* x, $last)
+            }
+        }
+    };
+}
+pub(crate) use dispatch_width;
+
 /// Greedy 64 > 32 > 16 > 8 tiling of a row, largest-first.
 ///
 /// Assumes `max_rounded_px_w` is a multiple of 8 (JPEG guarantees this).

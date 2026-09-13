@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::{
-    adaptive_width::AdaptiveWidth,
+    adaptive_width::{AdaptiveWidth, dispatch_width},
     traits::{AddSlice, FromSlice, SafeDiv, WriteTo},
 };
 use crate::utils::auxiliary::Aux;
@@ -22,45 +22,17 @@ pub fn compute_step_tv2(
     let alpha = alpha / (nchannel as f32).sqrt();
 
     for curr_row in 0..max_rounded_px_h {
-        for adaptive_width in adaptive_widths {
-            match adaptive_width {
-                AdaptiveWidth::X8(x) => tv2_inner::<8>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    alpha,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X16(x) => tv2_inner::<16>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    alpha,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X32(x) => tv2_inner::<32>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    alpha,
-                    *x,
-                    curr_row,
-                ),
-                AdaptiveWidth::X64(x) => tv2_inner::<64>(
-                    max_rounded_px_w,
-                    max_rounded_px_h,
-                    nchannel,
-                    auxs,
-                    alpha,
-                    *x,
-                    curr_row,
-                ),
-            }
+        for &adaptive_width in adaptive_widths {
+            dispatch_width!(
+                adaptive_width,
+                tv2_inner,
+                max_rounded_px_w,
+                max_rounded_px_h,
+                nchannel,
+                auxs,
+                alpha;
+                curr_row
+            );
         }
     }
 }
