@@ -131,6 +131,7 @@ impl Artefact {
     /// fails to decode, and [`ArtefactError::Benchmark`] when benchmarking.
     pub fn process(&self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
+        tracing::info!("solving on CPU pipeline");
         let output = self.solve_cpu(
             &jpeg,
             max_rounded_px_w,
@@ -275,6 +276,7 @@ impl Artefact {
             .await
             .map_err(|e| ArtefactError::Message(e.to_string()))?;
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
+        tracing::info!("solving on GPU");
         let output = self
             .solve_gpu(
                 &ctx,
@@ -298,13 +300,24 @@ impl Artefact {
     ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
         // Only fall back when the GPU device or solve is unavailable; errors from
         // `finish` (e.g. benchmark mode) are propagated as-is.
-        if let Ok(ctx) = pipeline::gpu::GpuContext::new().await
-            && let Ok((jpeg, w, h, count)) = self.decode()
-            && let Ok(output) = self.solve_gpu(&ctx, &jpeg, w, h, count).await
-        {
-            return self.finish(&jpeg, output, w, count);
+        let ctx = match pipeline::gpu::GpuContext::new().await {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                tracing::warn!(error = %e, "no GPU adapter; falling back to CPU");
+                return self.process();
+            }
+        };
+        let (jpeg, w, h, count) = self.decode()?;
+        match self.solve_gpu(&ctx, &jpeg, w, h, count).await {
+            Ok(output) => {
+                tracing::info!("solving on GPU");
+                self.finish(&jpeg, output, w, count)
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "GPU solve failed; falling back to CPU");
+                self.process()
+            }
         }
-        self.process()
     }
 
     /// Run the GPU pipeline for the requested component split.

@@ -13,6 +13,8 @@ pollster = "1.0"
 rand = { version = "0.10.2" }
 rand_core = { version = "0.10.1" }
 rayon = { version = "1.11.0" }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 wasm-bindgen = { version = "0.2.104" }
 wasm-bindgen-futures = { version = "0.4.54" }
 wgpu = "=30.0.1"

@@ -7,6 +7,8 @@ edition = "2024"
 artefact-core = { workspace = true, features = ["simd", "gpu"] }
 clap = { workspace = true }
 pollster = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [[bin]]
 name = "artefact-cli"

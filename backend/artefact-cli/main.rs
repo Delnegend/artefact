@@ -133,6 +133,7 @@ fn resolve_output(args: &Args) -> Result<(PathBuf, String), String> {
 }
 
 fn main() -> ExitCode {
+    init_tracing();
     match run(Args::parse()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
@@ -140,6 +141,18 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// Initialise `tracing` (honours `RUST_LOG`, defaults to `info`).
+fn init_tracing() {
+    use tracing_subscriber::{EnvFilter, fmt};
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .without_time()
+        .init();
 }
 
 fn run(args: Args) -> Result<(), String> {

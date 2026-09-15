@@ -8,6 +8,7 @@ autobenches = false
 image = { workspace = true }
 zune-jpeg = { workspace = true }
 rayon = { workspace = true }
+tracing = { workspace = true }
 wgpu = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 

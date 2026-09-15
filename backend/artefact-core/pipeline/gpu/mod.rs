@@ -80,6 +80,13 @@ impl GpuContext {
             .map_err(|e| GpuError::Unavailable(e.to_string()))?;
 
         let info = adapter.get_info();
+        tracing::info!(
+            name = %info.name,
+            backend = ?info.backend,
+            device_type = ?info.device_type,
+            driver = %info.driver,
+            "GPU adapter selected"
+        );
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
