@@ -2,6 +2,29 @@ import init, { compute, type OutputFormat } from './artefact-wasm/artefact_wasm'
 import { getFileInDb, putFilesInDb } from './db'
 import { OutputImgFormat, type WorkerInput, type WorkerOutput } from './types'
 
+/// WebGPU can expose `navigator.gpu` yet resolve `requestAdapter()` to `null`
+/// (e.g. WebGPU disabled or blocklisted). wgpu 30 dereferences that `null`, and
+/// also expects `GPUAdapter.info`; probe both and fall back to the CPU pipeline
+/// otherwise.
+async function canUseGpu(): Promise<boolean> {
+	const gpu = (
+		navigator as Navigator & {
+			gpu?: { requestAdapter(): Promise<unknown> }
+		}
+	).gpu
+	if (!gpu) {
+		return false
+	}
+	try {
+		const adapter = (await gpu.requestAdapter()) as {
+			info?: unknown
+		} | null
+		return adapter != null && adapter.info != null
+	} catch {
+		return false
+	}
+}
+
 self.onerror = (event): boolean => {
 	console.error(event)
 	self.postMessage({
@@ -46,13 +69,20 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 			let outputImgDataArray: Uint8Array
 			let timer = Date.now()
 			try {
+				const useGpu = await canUseGpu()
+				console.info(
+					useGpu
+						? 'artefact: solving on GPU'
+						: 'artefact: WebGPU unavailable, solving on CPU'
+				)
 				outputImgDataArray = await compute(
 					new Uint8Array(imageInDB.jpegArrayBuffer),
 					format,
 					config.weight,
 					config.pWeight,
 					config.iterations,
-					config.separateComponents
+					config.separateComponents,
+					useGpu
 				)
 				timer = Date.now() - timer
 
