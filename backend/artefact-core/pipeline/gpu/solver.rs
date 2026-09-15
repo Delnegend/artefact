@@ -423,19 +423,11 @@ pub async fn solve(
         queue.submit(Some(encoder.finish()));
 
         let slice = staging.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
+        let (tx, rx) = futures_channel::oneshot::channel();
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        device
-            .poll(wgpu::PollType::Wait {
-                submission_index: None,
-                timeout: None,
-            })
-            .map_err(|e| GpuError::Runtime(e.to_string()))?;
-        rx.recv()
-            .map_err(|e| GpuError::Runtime(e.to_string()))?
-            .map_err(|e| GpuError::Runtime(e.to_string()))?;
+        await_map(device, rx).await?;
 
         let mapped = slice
             .get_mapped_range()
@@ -448,6 +440,41 @@ pub async fn solve(
     }
 
     Ok(out)
+}
+
+/// Wait for a `map_async` callback.
+///
+/// On native the device must be polled to drive the callback, so we block on
+/// `poll(Wait)`. On wasm `poll` is a no-op and the callback runs as a task, so
+/// blocking would deadlock the single thread; there we await the channel.
+#[cfg(not(target_arch = "wasm32"))]
+async fn await_map(
+    device: &wgpu::Device,
+    mut rx: futures_channel::oneshot::Receiver<Result<(), wgpu::BufferAsyncError>>,
+) -> Result<(), GpuError> {
+    loop {
+        device
+            .poll(wgpu::PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .map_err(|e| GpuError::Runtime(e.to_string()))?;
+        match rx.try_recv() {
+            Ok(Some(result)) => return result.map_err(|e| GpuError::Runtime(e.to_string())),
+            Ok(None) => continue,
+            Err(e) => return Err(GpuError::Runtime(e.to_string())),
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn await_map(
+    _device: &wgpu::Device,
+    rx: futures_channel::oneshot::Receiver<Result<(), wgpu::BufferAsyncError>>,
+) -> Result<(), GpuError> {
+    rx.await
+        .map_err(|e| GpuError::Runtime(e.to_string()))?
+        .map_err(|e| GpuError::Runtime(e.to_string()))
 }
 
 fn dispatch(pass: &mut wgpu::ComputePass<'_>, pipeline: &wgpu::ComputePipeline, workgroups: u32) {
