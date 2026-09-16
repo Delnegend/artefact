@@ -275,11 +275,28 @@ impl Artefact {
         let ctx = pipeline::gpu::GpuContext::new()
             .await
             .map_err(|e| ArtefactError::Message(e.to_string()))?;
+        self.process_gpu_with(&ctx).await
+    }
+
+    /// Solve with an existing GPU context and return an RGB image buffer.
+    ///
+    /// This keeps one GPU device, queue, and adapter selection outside the
+    /// timed region for repeated solves or benchmarks.
+    ///
+    /// # Errors
+    /// Returns [`ArtefactError::Message`] if the JPEG fails to decode or the
+    /// GPU solver fails, and [`ArtefactError::Benchmark`] when benchmarking.
+    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is too.
+    #[allow(clippy::future_not_send)]
+    pub async fn process_gpu_with(
+        &self,
+        ctx: &pipeline::gpu::GpuContext,
+    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
         tracing::info!("solving on GPU");
         let output = self
             .solve_gpu(
-                &ctx,
+                ctx,
                 &jpeg,
                 max_rounded_px_w,
                 max_rounded_px_h,
