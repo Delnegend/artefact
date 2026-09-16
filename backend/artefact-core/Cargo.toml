@@ -36,6 +36,11 @@ harness = false
 name = "alloc_stats"
 harness = false
 
+[[bench]]
+name = "gpu"
+harness = false
+required-features = ["gpu", "simd"]
+
 [[test]]
 name = "tv_equivalence"
 required-features = ["bench"]
