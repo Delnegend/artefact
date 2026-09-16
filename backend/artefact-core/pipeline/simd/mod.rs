@@ -45,9 +45,9 @@ pub fn solve(
         &coefs,
     );
     let radius = fista::box_radius(max_rounded_px_count);
-    // `adaptive_runs` emits 64/32/16-lane `std::simd` vectors, which miscompile
-    // under wasm-simd128 (they produce NaN that poisons the whole channel);
-    // wasm uses the uniform 8-lane tiling instead.
+    // `adaptive_runs` emits 64/32/16-lane `std::simd` vectors, which are
+    // miscompiled under wasm-simd128 (they produce NaN that poisons the whole
+    // channel); wasm uses the uniform 8-lane tiling instead.
     #[cfg(target_arch = "wasm32")]
     let widths = uniform_runs(max_rounded_px_w);
     #[cfg(not(target_arch = "wasm32"))]

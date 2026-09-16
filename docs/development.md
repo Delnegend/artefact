@@ -62,11 +62,14 @@ cargo build --bin artefact-cli --release
 # cargo build --bin artefact-cli --release --target aarch64-apple-darwin
 ```
 
-## SIMD implementation
+## Solver pipelines
 
-Pipelines live in `backend/artefact-core/pipeline/{scalar,simd}` — `scalar` is the frozen reference, `simd` is the production default and dispatches adaptively between x8/x16/x32/x64 per row. The `simd` feature selects `pipeline::simd`; without it, `pipeline::scalar` is used. Shared logic (FISTA, projection onto the DCT box, the solver step, DCT, block reordering, SIMD traits, cache-aligned buffers) lives in `backend/artefact-core/utils/`. `std::simd` is used everywhere (no `wide`); `scalar` keeps its own scalar loops so it can be diffed against the SIMD path.
+- CPU scalar (`pipeline::scalar`) is the frozen reference.
+- CPU SIMD (`pipeline::simd`) is the production default. Native uses adaptive x8/x16/x32/x64 dispatch; wasm32 uses uniform x8 because wider `std::simd` vectors miscompiled there.
+- GPU (`pipeline::gpu`, optional `gpu` feature) solves with one storage buffer per channel, `aux` scratch, `meta` metadata, and uniform `params`. It uses gather-only compute kernels, two submits per iteration, and reusable `GpuContext`; `process_gpu_with` allows repeated solves without recreating the device/queue.
+- Feature selection: `simd` selects the CPU SIMD pipeline (or scalar without it); `gpu` adds `process_gpu`, `process_gpu_with`, and `process_auto`, which falls back to CPU when no adapter/solver is available.
 
-[artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and [artefact-wasm's Cargo.toml](./backend/artefact-wasm/Cargo.toml) already enable `simd`, so both shipped binaries use the SIMD pipeline. Enable it manually for ad-hoc builds with `--features simd`.
+[artefact-cli's Cargo.toml](./backend/artefact-cli/Cargo.toml) and [artefact-wasm's Cargo.toml](./backend/artefact-wasm/Cargo.toml) enable `simd,gpu`, so both shipped binaries can use SIMD and the GPU backend. Enable them manually for ad-hoc builds with `--features simd,gpu`.
 
 ```toml
 [dependencies.artefact-core]
@@ -76,17 +79,33 @@ features = ["simd"] # adaptive x8/x16/x32/x64 dispatch via `std::simd`
 
 ## Sample images & regression
 
-`scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). Decoding regressions are covered by native Rust tests (`cargo test --workspace`, run as part of `just check`): `backend/zune-jpeg/tests/decode.rs` decodes committed `cjpeg` fixtures (4:4:4/4:2:2/4:2:0/4:1:1, progressive, restart intervals, grayscale, arithmetic-rejected) and `backend/artefact-core/tests/verify.rs` checks reconstructed color blocks end-to-end. `just sample` regenerates the large sample inputs.
+`scripts/generate-sample.sh` builds the synthetic `assets/sample.png` (1600×1200, gradients/color blocks/patterns/text) and encodes all 6 chroma-subsampled JPGs (`j444/j422/j420/444/422/420`). Decoding regressions are covered by native Rust tests (`cargo test --workspace`, run as part of `just check`): `backend/zune-jpeg/tests/decode.rs` decodes committed `cjpeg` fixtures (4:4:4/4:2:2/4:2:0/4:1:1, progressive, restart intervals, grayscale, arithmetic-rejected) and `backend/artefact-core/tests/verify.rs` checks reconstructed color blocks end-to-end. `just sample` regenerates the large sample inputs. `just check` sets `ARTEFACT_REQUIRE_GPU=1` so GPU smoke/equivalence tests and the committed `odd_420.jpg` edge case must really run there; plain `cargo test` still skips gracefully when no adapter is present.
 
 ## Benchmarks
 
-Full-solve timing and allocation stats live in `backend/artefact-core/benches/` and require the generated sample (`just sample`):
+Full-solve timing and allocation stats live in `backend/artefact-core/benches/` and smoke cases use committed fixtures; full 1600x1200 cases require the generated sample (`just sample`):
 
 ```bash
-# criterion: end-to-end solver time (assets/sample.420.input.jpg)
+# criterion: end-to-end CPU solver time (assets/sample.420.input.jpg)
 RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
   cargo bench -p artefact-core --features bench,simd --bench bench -- solve
 
+# CPU-vs-GPU production solves over smoke and/or full fixtures
+RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+  cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+```
+
+Select the benchmark matrix without editing code:
+
+```bash
+ARTEFACT_BENCH_MATRIX=smoke cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+ARTEFACT_BENCH_MATRIX=full ARTEFACT_BENCH_CASE=sample-422 cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+ARTEFACT_BENCH_INPUT=/tmp/input.jpg cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+```
+
+Benchmarks do not assert timings. Reused `GpuContext` setup stays outside the measurement, while each GPU measurement includes decode, upload, pipeline/bind-group setup, dispatch, readback, and finalization. CI’s lavapipe driver is correctness coverage only. Record fixture, chroma, iterations, CPU threads, compiler flags, adapter/backend/driver with any reported number.
+
+```bash
 # allocations + wall time for one solve
 RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
   cargo bench -p artefact-core --features simd --bench alloc_stats
@@ -107,6 +126,8 @@ Then build the frontend.
 ```bash
 just build web
 ```
+
+The async wasm `compute` API takes `use_gpu`; the worker probes for a usable WebGPU adapter (including `GPUAdapter.info`) and requests CPU otherwise. PWA precache includes `wasm`.
 
 ## Other recipes
 
