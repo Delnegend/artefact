@@ -4,8 +4,17 @@ use std::process::ExitCode;
 use artefact_core::{Artefact, ArtefactError, JpegSource, ValueCollection};
 use clap::Parser;
 
+/// Version reported by `--version`.
+///
+/// The release workflow (and the Homebrew formula) inject
+/// `ARTEFACT_BUILD_VERSION`; local builds fall back to the crate version.
+const VERSION: &str = match option_env!("ARTEFACT_BUILD_VERSION") {
+    Some(version) => version,
+    None => env!("CARGO_PKG_VERSION"),
+};
+
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(version = VERSION, about)]
 struct Args {
     /// The input jpeg file
     #[arg(index = 1)]

@@ -125,7 +125,14 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --bin artefact-cli --release --target ${{ matrix.target }}
+        env:
+          ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.release_version }}
+        run: |
+          # `option_env!` is not fingerprint-tracked by cargo, so force a
+          # rebuild to pick up the injected version even when rust-cache
+          # restores a previously-built binary.
+          touch backend/artefact-cli/main.rs
+          cargo build --bin artefact-cli --release --target ${{ matrix.target }}
 
       - name: Compress binaries
         shell: bash

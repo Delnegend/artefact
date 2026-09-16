@@ -448,6 +448,7 @@ pub async fn solve(
 /// `poll(Wait)`. On wasm `poll` is a no-op and the callback runs as a task, so
 /// blocking would deadlock the single thread; there we await the channel.
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::unused_async)]
 async fn await_map(
     device: &wgpu::Device,
     mut rx: futures_channel::oneshot::Receiver<Result<(), wgpu::BufferAsyncError>>,
@@ -461,7 +462,7 @@ async fn await_map(
             .map_err(|e| GpuError::Runtime(e.to_string()))?;
         match rx.try_recv() {
             Ok(Some(result)) => return result.map_err(|e| GpuError::Runtime(e.to_string())),
-            Ok(None) => continue,
+            Ok(None) => {}
             Err(e) => return Err(GpuError::Runtime(e.to_string())),
         }
     }
