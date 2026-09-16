@@ -30,7 +30,8 @@ JPEG compression discards data and regular decoders "fill in" the gaps with nois
 ## Features
 
 - **Rust core** — port of `jpeg2png` from C++ to Rust (`backend/artefact-core`)
-- **~3× faster** — `rayon` parallelism + optional SIMD (`std::simd`, adaptive x8/x16/x32/x64 dispatch via the `simd` feature)
+- **~3× faster** — `rayon` parallelism + optional SIMD (`std::simd`, adaptive x8/x16/x32/x64 dispatch via the `simd` feature; wasm uses uniform x8)
+- **GPU acceleration** — optional `wgpu` backend for native and browser solves, with tolerance-checked equivalence and explicit CPU fallback
 - **WASM-ready** — `backend/artefact-wasm` via `wasm-pack`, runs 100% client-side at [artefact.delnegend.com](https://artefact.delnegend.com) (no upload)
 - **CLI + Web** — same solver for native binary (`artefact-cli`) and browser (`frontend` Nuxt + `vite-plugin-wasm`)
 - **Flexible I/O** — input `.jpg`/`.jpeg`, output `png`/`webp`/`tiff`/`bmp` (auto by extension)
@@ -83,8 +84,23 @@ artefact-cli input.jpg --weight 0.3,0.2,0.3 --iterations 50,30,50
 # benchmark without writing file
 artefact-cli input.jpg --benchmark
 
+# use the GPU when available, otherwise fall back to the CPU
+artefact-cli input.jpg --gpu
+
 # help
 artefact-cli --help
+```
+
+Solver backends: `process()` always uses the CPU pipeline. The CLI’s `--gpu`
+uses `process_auto()`: it logs the selected `wgpu` adapter and `solving on GPU`
+when usable, otherwise warns and returns to `solving on CPU pipeline`. Set
+`RUST_LOG=debug` for lower-level selection diagnostics.
+
+To compare production solves without asserting benchmark timings:
+
+```bash
+RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+  cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
 ```
 
 **2. The convenience way — browser:**
@@ -93,7 +109,7 @@ artefact-cli --help
 2. Drop a JPEG
 3. Compare input/output with the slider and download PNG
 
-> WASM is slower than native but stays fully client-side.
+> WASM is slower than native but stays fully client-side. The browser worker probes for a usable WebGPU adapter (including `GPUAdapter.info`) and passes that decision to the async `compute` API: GPU when available, CPU otherwise.
 
 ## Development
 
@@ -122,7 +138,7 @@ See [docs/development.md](docs/development.md) for full prerequisites and sample
 ```
 .
 ├── backend/
-│   ├── artefact-core/    # core solver — pipeline/{scalar,simd} + shared utils
+│   ├── artefact-core/    # core solver — pipeline/{scalar,simd,gpu} + shared utils
 │   ├── artefact-cli/     # native binary (clap)
 │   ├── artefact-wasm/    # wasm-pack cdylib for frontend
 │   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
@@ -157,7 +173,7 @@ just build            # -> target/release/artefact-cli
 # trigger: workflow_dispatch (release_version + create_release) or merged PR
 ```
 
-SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`) and enabled in dependent crates — see [docs/development.md#simd-implementation](docs/development.md#simd-implementation). Pipelines live in `pipeline/{scalar,simd}` with shared logic in `utils/` (scalar is the frozen reference, `simd` is the default for the CLI and wasm).
+SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`) and enabled in dependent crates — see [docs/development.md#solver-pipelines](docs/development.md#solver-pipelines). Pipelines live in `pipeline/{scalar,simd,gpu}` with shared logic in `utils/` (scalar is the frozen reference, `simd` is the default for the CLI and wasm).
 
 ### Checks
 
@@ -166,6 +182,10 @@ just check          # fmt + clippy + tests + oxlint + prettier (all)
 just check rust     # Rust only
 just check js       # frontend only (oxlint + prettier)
 ```
+
+`just check rust` sets `ARTEFACT_REQUIRE_GPU=1`, so GPU tests cannot pass by
+skipping missing adapters or required fixtures. Plain `cargo test` keeps the
+lenient skips for machines without a GPU.
 
 Sample images with chroma subsampling:
 
@@ -179,14 +199,14 @@ just flame 420           # flamegraph for profiling
 
 ```mermaid
 graph TD
-    Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>pipeline/{scalar,simd}<br/>rayon]
-    L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp]
-    L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib]
+    Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>pipeline/{scalar,simd,gpu}<br/>rayon]
+    L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp<br/>--gpu optional]
+    L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib<br/>process_auto/process]
     W --> F[frontend<br/>Nuxt 4 / Vue / Vite<br/>vite-plugin-wasm + PWA<br/>artefact.delnegend.com]
     F -. upload .-> W
 ```
 
-`artefact-core` is feature-gated: default scalar, `simd` selects the SIMD pipeline (adaptive x8/x16/x32/x64 dispatch over `std::simd`). Decoding always goes through the vendored `zune-jpeg` fork.
+`artefact-core` is feature-gated: without `simd`, `pipeline::scalar` is used; `simd` selects the SIMD pipeline. Native uses adaptive x8/x16/x32/x64 dispatch over `std::simd`; wasm uses uniform x8. `gpu` adds the `pipeline::gpu` backend with `process_gpu`, `process_gpu_with`, and `process_auto`. Decoding always goes through the vendored `zune-jpeg` fork.
 
 ## CLI reference
 
@@ -199,10 +219,11 @@ graph TD
 | `--pweight <f32>` | `-p` | `0.001` | Fidelity weight — higher = closer to source JPEG |
 | `--iterations <n>` | `-i` | `50` | Solver iterations — higher = better but slower. Single or `Y,Cb,Cr` |
 | `--separate-components` | `-s` | `false` | Optimize Y/Cb/Cr separately instead of jointly |
+| `--gpu` | `-g` | `false` | Use the GPU when available (`process_auto`), otherwise fall back to CPU |
 | `--benchmark` | `-b` | `false` | Run solver but don't write output |
 | `--overwrite` | `-y` | `false` | Overwrite existing output |
 
-Defined in `backend/artefact-cli/main.rs:6` and `backend/artefact-core/lib.rs:50`.
+Defined in `backend/artefact-cli/main.rs:18` and `backend/artefact-core/lib.rs:63`.
 
 ## Contributing
 
