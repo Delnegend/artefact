@@ -33,7 +33,9 @@ check kind="all":
 		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,gpu
 		cargo clippy --workspace --all-features
 		# decode/fixture regression tests (zune-jpeg + pipelines + verify)
-		cargo test --workspace --all-features
+		# GPU smoke/equivalence tests really run on CI's lavapipe; plain
+		# `cargo test` elsewhere may still skip when no adapter is present.
+		ARTEFACT_REQUIRE_GPU=1 cargo test --workspace --all-features
 	fi
 
 # build: native CLI, wasm, or web
