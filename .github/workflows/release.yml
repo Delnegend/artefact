@@ -1,18 +1,18 @@
 name: Release
 
+# Weekly batched release: dependency and feature/fix updates accumulate on
+# `main` and ship as one patch release. Also dispatchable manually with an
+# explicit version.
 on:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC
   workflow_dispatch:
     inputs:
       release_version:
-        description: Release version (e.g. 0.1.0) - leave empty for auto patch bump
+        description: 'Explicit version (e.g. 0.1.0) - leave empty for auto patch bump'
         required: false
         type: string
         default: ""
-      create_release:
-        description: Push to GitHub Releases
-        required: true
-        type: boolean
-        default: false
 
 env:
   BINARY_NAME: artefact-cli
@@ -20,28 +20,43 @@ env:
 permissions:
   contents: read
 
-# Serialise release runs so rapid merges cannot tag the same version twice; the
-# queued run recomputes the next patch from the tag the first run created.
+# Serialise releases so tag creation cannot collide.
 concurrency:
-  group: release
+  group: release-main
   cancel-in-progress: false
 
 jobs:
   prepare:
     name: Prepare
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     outputs:
       release_version: ${{ steps.version.outputs.version }}
-      create_release: ${{ steps.version.outputs.create_release }}
+      skip: ${{ steps.commits.outputs.skip }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Check for new commits since last release
+        id: commits
+        run: |
+          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo '')"
+          if [ -n "$LATEST_TAG" ]; then
+            COUNT="$(git rev-list "${LATEST_TAG}..HEAD" --count)"
+            echo "Commits since $LATEST_TAG: $COUNT"
+            if [ "$COUNT" -eq 0 ] && [ -z "${{ inputs.release_version }}" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "No new commits since $LATEST_TAG; skipping release."
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
       - name: Determine version
+        if: steps.commits.outputs.skip != 'true'
         id: version
         run: |
           if [ -n "${{ inputs.release_version }}" ]; then
@@ -61,11 +76,11 @@ jobs:
             echo "Latest tag: $LATEST_TAG, next version: $NEXT_VERSION"
           fi
           echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "create_release=${{ inputs.create_release }}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build (${{ matrix.platform }})
     needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -134,8 +149,8 @@ jobs:
   release:
     name: Release
     needs: [prepare, build]
-    if: needs.prepare.outputs.create_release == 'true'
-    runs-on: ubuntu-latest
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-slim
     permissions:
       contents: write
     env:
