@@ -74,16 +74,8 @@ fn scalar_matches_simd() {
             h,
             count,
         );
-        let simd = crate::pipeline::simd::solve(
-            nch,
-            jpeg.coefs.clone(),
-            WEIGHT,
-            PWEIGHT,
-            ITERATIONS,
-            w,
-            h,
-            count,
-        );
+        let simd =
+            crate::pipeline::simd::solve(nch, jpeg.coefs, WEIGHT, PWEIGHT, ITERATIONS, w, h, count);
         let d = max_diff(&scalar, &simd);
         println!("{suffix}: max|scalar - simd| = {d:.3e}");
         assert!(d <= 1.0, "scalar diverged from simd on {suffix} by {d}");

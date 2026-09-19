@@ -193,7 +193,7 @@ fn read_pnm(data: &[u8]) -> (usize, usize, Vec<[u8; 3]>) {
             out.push([g, g, g]);
         }
     } else {
-        for px in data[pos..pos + w * h * 3].chunks_exact(3) {
+        for px in data[pos..pos + w * h * 3].as_chunks::<3>().0 {
             out.push([px[0], px[1], px[2]]);
         }
     }
