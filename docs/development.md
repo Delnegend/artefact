@@ -105,6 +105,21 @@ ARTEFACT_BENCH_INPUT=/tmp/input.jpg cargo bench -p artefact-core --features benc
 
 Benchmarks do not assert timings. Reused `GpuContext` setup stays outside the measurement, while each GPU measurement includes decode, upload, pipeline/bind-group setup, dispatch, readback, and finalization. CI’s lavapipe driver is correctness coverage only. Record fixture, chroma, iterations, CPU threads, compiler flags, adapter/backend/driver with any reported number.
 
+### Recorded CPU vs GPU numbers
+
+`benches/gpu.rs`, 1600x1200 sampled fixtures, 50 iterations, production settings, `RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8`, AMD Radeon (RADV GFX1200, discrete, Mesa 25.0.7), criterion medians:
+
+| Case | CPU | GPU | Speedup |
+|------|-----|-----|---------|
+| `sample-420`  | 962 ms  | 213 ms | 4.5× |
+| `sample-422`  | 1015 ms | 220 ms | 4.6× |
+| `sample-444`  | 1013 ms | 224 ms | 4.5× |
+| `sample-j420` | 963 ms  | 213 ms | 4.5× |
+| `sample-j422` | 1015 ms | 219 ms | 4.6× |
+| `sample-j444` | 1016 ms | 224 ms | 4.5× |
+
+The committed `smoke` fixtures are far below the GPU's fixed dispatch/readback cost (e.g. `tiny-420@1`: CPU ~164 µs vs GPU ~3.0 ms), which is why the harness keeps them for correctness/smoke, not speed comparisons. The equivalent CLI run (`artefact-cli --gpu --benchmark`) is ~0.28-0.32 s because it also pays process start and context creation.
+
 ```bash
 # allocations + wall time for one solve
 RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
