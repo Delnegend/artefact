@@ -3,8 +3,7 @@ updates:
   - package-ecosystem: cargo
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
       time: "02:00"
     labels:
       - dependencies
@@ -12,19 +11,27 @@ updates:
       - Delnegend
     commit-message:
       prefix: "chore(deps)"
-    groups:
-      all-dependencies:
-        patterns:
-          - "*"
+    # Supply-chain quarantine: hold newly published versions for 14 days.
     cooldown:
       default-days: 14
-    open-pull-requests-limit: 1
+    groups:
+      patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+    open-pull-requests-limit: 2
 
   - package-ecosystem: npm
     directory: "/frontend"
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
       time: "02:00"
     labels:
       - dependencies
@@ -32,13 +39,21 @@ updates:
       - Delnegend
     commit-message:
       prefix: "chore(deps)"
-    groups:
-      all-dependencies:
-        patterns:
-          - "*"
     cooldown:
       default-days: 14
-    open-pull-requests-limit: 1
+    groups:
+      patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+    open-pull-requests-limit: 2
     ignore:
       # TS 7 breaks `@vue/compiler-sfc` ("No fs option provided ... resolving
       # imported types") so `nuxt generate` fails; revisit once the Vue
