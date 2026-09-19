@@ -5,7 +5,7 @@ members = ["backend/artefact-cli", "backend/artefact-core", "backend/artefact-wa
 [workspace.dependencies]
 artefact-core = { path = "backend/artefact-core" }
 bytemuck = { version = "1", features = ["derive"] }
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive"] }
 console_error_panic_hook = { version = "0.1.7" }
 criterion = { version = "0.8.2" }
 futures-channel = { version = "0.3.31", default-features = false, features = ["std"] }
