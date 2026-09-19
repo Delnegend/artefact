@@ -15,6 +15,8 @@ Reconstructs lost JPEG detail for smoother, more pleasing images — Rust rewrit
 
 JPEG compression discards data and regular decoders "fill in" the gaps with noisy guesses that create visible artifacts. Instead of patching holes, artefact re-optimizes the DCT coefficients with a regularized solver to produce smoother gradients with less staircasing.
 
+> **Maintenance mode.** Feature work is complete. The project receives automated dependency and security updates only — Dependabot runs daily with a 14-day cooldown, batched into weekly releases. Bug reports are welcome; new features and large changes are unlikely to be accepted.
+
 ## Demos
 
 ![](assets/01.png)
@@ -227,7 +229,7 @@ Defined in `backend/artefact-cli/main.rs:18` and `backend/artefact-core/lib.rs:6
 
 ## Contributing
 
-PRs welcome. For large changes, please open an issue first.
+The project is in **maintenance mode**: bug fixes and dependency/security updates are welcome, but feature work is paused. Please open an issue before starting anything substantial.
 
 ```bash
 git clone https://github.com/Delnegend/artefact.git
