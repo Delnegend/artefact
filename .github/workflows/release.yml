@@ -13,10 +13,6 @@ on:
         required: true
         type: boolean
         default: false
-  pull_request:
-    types: [closed]
-    branches:
-      - main
 
 env:
   BINARY_NAME: artefact-cli
@@ -24,17 +20,18 @@ env:
 permissions:
   contents: read
 
+# Serialise release runs so rapid merges cannot tag the same version twice; the
+# queued run recomputes the next patch from the tag the first run created.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   prepare:
     name: Prepare
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.merged == true &&
-       contains(github.event.pull_request.labels.*.name, 'dependencies'))
     outputs:
       release_version: ${{ steps.version.outputs.version }}
       create_release: ${{ steps.version.outputs.create_release }}
@@ -47,30 +44,9 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ inputs.release_version }}" ]; then
-              echo "version=${{ inputs.release_version }}" >> "$GITHUB_OUTPUT"
-              echo "create_release=${{ inputs.create_release }}" >> "$GITHUB_OUTPUT"
-            else
-              # Auto patch bump when dispatched without explicit version (from dependabot-auto-merge)
-              LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
-              PLAIN_VERSION="${LATEST_TAG#v}"
-              IFS='.' read -r major minor patch <<< "$PLAIN_VERSION"
-              major="${major:-0}"
-              minor="${minor:-1}"
-              patch="${patch:-0}"
-              if [ "$LATEST_TAG" = "v0.0.0" ]; then
-                NEXT_VERSION="0.1.0"
-              else
-                NEXT_PATCH=$((patch + 1))
-                NEXT_VERSION="${major}.${minor}.${NEXT_PATCH}"
-              fi
-              echo "Latest tag: $LATEST_TAG, computed next patch version: $NEXT_VERSION"
-              echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-              echo "create_release=${{ inputs.create_release }}" >> "$GITHUB_OUTPUT"
-            fi
+          if [ -n "${{ inputs.release_version }}" ]; then
+            NEXT_VERSION="${{ inputs.release_version }}"
           else
-            # Calculate next patch version from latest tag (fallback for manual merge via PR close)
             LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
             PLAIN_VERSION="${LATEST_TAG#v}"
             IFS='.' read -r major minor patch <<< "$PLAIN_VERSION"
@@ -80,13 +56,12 @@ jobs:
             if [ "$LATEST_TAG" = "v0.0.0" ]; then
               NEXT_VERSION="0.1.0"
             else
-              NEXT_PATCH=$((patch + 1))
-              NEXT_VERSION="${major}.${minor}.${NEXT_PATCH}"
+              NEXT_VERSION="${major}.${minor}.$((patch + 1))"
             fi
-            echo "Latest tag: $LATEST_TAG, computed next patch version: $NEXT_VERSION"
-            echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-            echo "create_release=true" >> "$GITHUB_OUTPUT"
+            echo "Latest tag: $LATEST_TAG, next version: $NEXT_VERSION"
           fi
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "create_release=${{ inputs.create_release }}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build (${{ matrix.platform }})

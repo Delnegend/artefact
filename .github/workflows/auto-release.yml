@@ -1,0 +1,81 @@
+name: Auto release
+
+# Release automatically after CI succeeds on `main`, but only when the pushed
+# commits contain a `feat`/`fix`/`perf` change. Docs/chore/ci/test-only merges
+# ride along with the next qualifying release.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch release
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Decide whether to release
+        id: decide
+        run: |
+          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -n "$LATEST_TAG" ]; then
+            RANGE="${LATEST_TAG}..HEAD"
+            CURRENT="${LATEST_TAG#v}"
+          else
+            RANGE="$(git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
+            CURRENT=""
+          fi
+
+          SUBJECTS="$(git log --pretty=format:%s "$RANGE")"
+          echo "Commits in $RANGE:"
+          printf '%s\n' "$SUBJECTS"
+
+          if ! printf '%s\n' "$SUBJECTS" | grep -Eq '^(feat|fix|perf)(\([^)]*\))?: '; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "No feat/fix/perf commits; skipping release."
+            exit 0
+          fi
+
+          if [ -z "$CURRENT" ]; then
+            NEXT="0.1.0"
+          else
+            IFS='.' read -r MA MI PA <<< "$CURRENT"
+            NEXT="${MA:-0}.${MI:-1}.$(( ${PA:-0} + 1 ))"
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v${NEXT}" >/dev/null; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "Tag v${NEXT} already exists; skipping release."
+            exit 0
+          fi
+
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "Next release: v${NEXT}"
+
+      - name: Dispatch release workflow
+        if: steps.decide.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run release.yml \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            -f "release_version=${{ steps.decide.outputs.version }}" \
+            -f create_release=true
