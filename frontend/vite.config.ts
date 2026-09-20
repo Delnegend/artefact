@@ -57,7 +57,13 @@ export default defineConfig({
 	],
 	resolve: {
 		alias: {
-			'~': fileURLToPath(new URL('./src', import.meta.url))
+			'~': fileURLToPath(new URL('./src', import.meta.url)),
+			'artefact-wasm': fileURLToPath(
+				new URL(
+					'./src/utils/artefact-wasm/artefact_wasm.js',
+					import.meta.url
+				)
+			)
 		}
 	},
 	build: { target: 'esnext' },
