@@ -4,7 +4,7 @@
 
 The project contains 2 main components/directories:
 
--   [frontend/](./frontend/): the web UI built with Nuxt.js
+-   [frontend/](./frontend/): the web UI built with Vue 3 + Vite
 -   [backend/](./backend/):
     -   [artefact-core/](./backend/artefact-core/): the core library that does the image processing
     -   [artefact-cli/](./backend/artefact-cli/): the command-line interface that uses artefact-core

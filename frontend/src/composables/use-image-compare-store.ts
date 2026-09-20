@@ -1,5 +1,4 @@
-import { useState } from 'nuxt/app'
-import type { Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
 interface Internal {
 	jpegBlobUrl: string | undefined
@@ -7,10 +6,12 @@ interface Internal {
 	compareMode: 'side-by-side' | 'overlay'
 }
 
+const store = ref<Internal>({
+	jpegBlobUrl: undefined,
+	outputImgBlobUrl: undefined,
+	compareMode: 'overlay'
+})
+
 export function useImageCompareStore(): Ref<Internal> {
-	return useState<Internal>('image-compare', () => ({
-		jpegBlobUrl: undefined,
-		outputImgBlobUrl: undefined,
-		compareMode: 'overlay'
-	}))
+	return store
 }

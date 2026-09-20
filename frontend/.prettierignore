@@ -1,7 +1,5 @@
-.nuxt/
-.output/
 dist/
 node_modules/
-src/dev-dist/
+dev-dist/
 **/*.d.ts
 src/utils/artefact-wasm/

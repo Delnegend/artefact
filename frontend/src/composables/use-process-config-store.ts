@@ -1,16 +1,17 @@
-import { clamp } from '@vueuse/core'
-import { useState } from 'nuxt/app'
-import { computed, watchEffect, type Ref } from 'vue'
+import { computed, ref, watchEffect, type Ref } from 'vue'
+import { clamp } from '~/utils/clamp'
 import { OutputImgFormat, type ProcessingConfig } from '~/utils/types'
 
+const store = ref<ProcessingConfig>({
+	outputFormat: OutputImgFormat.PNG,
+	iterations: 50,
+	weight: 0.3,
+	pWeight: 0.001,
+	separateComponents: false
+})
+
 export function useProcessConfigStore(): Ref<ProcessingConfig> {
-	return useState<ProcessingConfig>('processing-config', () => ({
-		outputFormat: OutputImgFormat.PNG,
-		iterations: 50,
-		weight: 0.3,
-		pWeight: 0.001,
-		separateComponents: false
-	}))
+	return store
 }
 
 export const processConfigStoreOps = {

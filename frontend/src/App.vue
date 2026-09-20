@@ -42,7 +42,6 @@ onMounted(() => {
 	<div class="h-dvh max-h-dvh w-full">
 		<Toaster />
 		<AppHeader />
-		<NuxtPwaManifest />
 		<ResizablePanelGroup
 			:direction="displayMode"
 			class="h-full max-h-[calc(100vh-4rem)]"
