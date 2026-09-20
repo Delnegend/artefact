@@ -1,4 +1,4 @@
-import init, { compute, type OutputFormat } from './artefact-wasm/artefact_wasm'
+import init, { compute, type OutputFormat } from 'artefact-wasm'
 import { getFileInDb, putFilesInDb } from './db'
 import { OutputImgFormat, type WorkerInput, type WorkerOutput } from './types'
 
