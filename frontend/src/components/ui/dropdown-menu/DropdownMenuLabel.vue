@@ -3,7 +3,7 @@ import {
 	DropdownMenuLabel,
 	type DropdownMenuLabelProps,
 	useForwardProps
-} from 'radix-vue'
+} from 'reka-ui'
 import { computed, type HTMLAttributes } from 'vue'
 import { cn } from '~/utils/cn'
 
