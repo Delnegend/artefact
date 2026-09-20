@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { sheetBaseClass, sheetSide } from '.'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import {
 	DialogClose,
 	DialogContent,

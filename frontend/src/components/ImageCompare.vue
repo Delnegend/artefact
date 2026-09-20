@@ -9,7 +9,7 @@ import {
 	PanelTopClose,
 	PanelTopOpen,
 	SquareSplitHorizontal
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import Button from '~/components/ui/button/Button.vue'
 import {
