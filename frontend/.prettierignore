@@ -1,5 +1,0 @@
-dist/
-node_modules/
-dev-dist/
-**/*.d.ts
-src/utils/artefact-wasm/

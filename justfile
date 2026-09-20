@@ -15,7 +15,7 @@ check kind="all":
 		bun x oxlint --import-plugin -D correctness -D perf \
 			--ignore-pattern dev-dist/**/*.* \
 			--ignore-pattern src/utils/artefact-wasm/**/*.*
-		bun x prettier -l -w "**/*.{js,ts,vue,json,css}"
+		bun x oxfmt
 		# type-check the Vue SFCs and TS (requires node; runs under bun)
 		bun x vue-tsc --build
 		cd -

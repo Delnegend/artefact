@@ -179,9 +179,9 @@ SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (
 ### Checks
 
 ```bash
-just check          # fmt + clippy + tests + oxlint + prettier (all)
+just check          # fmt + clippy + tests + oxlint + oxfmt (all)
 just check rust     # Rust only
-just check js       # frontend only (oxlint + prettier)
+just check js       # frontend only (oxlint + oxfmt)
 ```
 
 `just check rust` sets `ARTEFACT_REQUIRE_GPU=1`, so GPU tests cannot pass by

@@ -1,0 +1,15 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"printWidth": 80,
+	"useTabs": true,
+	"tabWidth": 4,
+	"semi": false,
+	"singleQuote": true,
+	"trailingComma": "none",
+	"sortPackageJson": false,
+	"sortTailwindcss": {
+		"stylesheet": "./src/assets/css/main.css",
+		"functions": ["cn"]
+	},
+	"ignorePatterns": ["dist/**", "dev-dist/**", "src/utils/artefact-wasm/**"]
+}
