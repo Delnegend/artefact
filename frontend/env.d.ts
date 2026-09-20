@@ -24,4 +24,3 @@ declare module 'artefact-wasm' {
 
 	export default function init(): Promise<unknown>
 }
-
