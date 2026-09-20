@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Columns2, Moon, Rows2, Settings, Sun } from 'lucide-vue-next'
+import { Columns2, Moon, Rows2, Settings, Sun } from '@lucide/vue'
 import { onBeforeMount, watch } from 'vue'
 import AppDrawer from '~/components/AppDrawer.vue'
 import Button from '~/components/ui/button/Button.vue'

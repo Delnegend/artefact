@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Button from './ui/button/Button.vue'
-import { LoaderCircle } from 'lucide-vue-next'
+import { LoaderCircle } from '@lucide/vue'
 import { h, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import Badge from '~/components/ui/badge/Badge.vue'
