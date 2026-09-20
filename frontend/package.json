@@ -22,7 +22,7 @@
 		"@vueuse/core": "^14.4.0",
 		"clsx": "^2.1.1",
 		"nuxt": "^4.5.2",
-		"radix-vue": "^1.9.17",
+		"reka-ui": "^2.10.4",
 		"tailwind-merge": "^3.7.0",
 		"tailwindcss-animate": "^1.0.7",
 		"vue": "^3.5.43",
