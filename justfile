@@ -2,7 +2,7 @@
 	just --choose
 
 dev:
-	cd frontend && bun x nuxt dev  --no-fork
+	cd frontend && bun x vite
 
 # check code for: rust (backend), js (frontend)
 # default: all — rust checks ensure all pipelines always buildable (no silent regression)
@@ -13,9 +13,11 @@ check kind="all":
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "js" ]]; then
 		cd frontend
 		bun x oxlint --import-plugin -D correctness -D perf \
-			--ignore-pattern src/dev-dist/**/*.* \
+			--ignore-pattern dev-dist/**/*.* \
 			--ignore-pattern src/utils/artefact-wasm/**/*.*
 		bun x prettier -l -w "**/*.{js,ts,vue,json,css}"
+		# type-check the Vue SFCs and TS (requires node; runs under bun)
+		bun x vue-tsc --build
 		cd -
 	fi
 
@@ -51,8 +53,7 @@ build target="native":
 
 	if [[ "{{target}}" = "web" ]]; then
 		cd frontend
-		bun x nuxt generate
-		cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+		bun x vite build
 		exit 0
 	fi
 

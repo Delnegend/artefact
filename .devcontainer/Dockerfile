@@ -8,7 +8,7 @@ ENV SHELL=/bin/bash
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates curl git just fzf \
+    build-essential ca-certificates curl git just fzf nodejs \
     clang sudo unzip zip xz-utils linux-perf pkg-config \
     libvulkan1 mesa-vulkan-drivers vulkan-tools && \
     rm -rf /var/lib/apt/lists/*

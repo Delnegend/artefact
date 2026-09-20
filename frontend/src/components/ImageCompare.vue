@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { clamp } from '@vueuse/core'
+import { clamp } from '~/utils/clamp'
 import {
 	ChevronsLeftRight,
 	ChevronUp,

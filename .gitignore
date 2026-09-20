@@ -3,11 +3,8 @@ fuzz/
 gopt/
 notes/
 ooura/
-.nuxt/
 node_modules/
 .pnpm-store/
-.output/
-src/dev-dist
 releases/
 
 dist
@@ -18,7 +15,7 @@ dist
 *.jpg
 *.png
 !assets/*.png
-!src/public/*.png
+!frontend/public/*.png
 !backend/zune-jpeg/tests/fixtures/*.jpg
 !backend/artefact-core/tests/fixtures/*.jpg
 assets/sample*
@@ -28,6 +25,6 @@ perf.*
 sw.*
 
 jpeg2png
-frontend/src/dev-dist/
+frontend/dev-dist/
 frontend/src/utils/artefact-wasm/
 PROGRESS.md

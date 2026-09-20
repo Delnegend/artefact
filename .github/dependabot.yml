@@ -56,7 +56,7 @@ updates:
     open-pull-requests-limit: 2
     ignore:
       # TS 7 breaks `@vue/compiler-sfc` ("No fs option provided ... resolving
-      # imported types") so `nuxt generate` fails; revisit once the Vue
+      # imported types") so the Vite build/`vue-tsc` fails; revisit once the Vue
       # toolchain supports it. Ignoring it also keeps the grouped PR non-major
       # so the other minor/patch updates can auto-merge.
       - dependency-name: "typescript"

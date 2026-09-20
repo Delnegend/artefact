@@ -1,14 +1,12 @@
 import { hashArrayBuffer } from '../utils/hash-array-buffer'
-import { useState } from 'nuxt/app'
-import type { Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { deleteFileInDb, getAllFilesInDb, putFilesInDb } from '~/utils/db'
 import type { ImageItemForDisplay } from '~/utils/types'
 
+const store = ref<Record<string, ImageItemForDisplay>>({})
+
 export function useImageListStore(): Ref<Record<string, ImageItemForDisplay>> {
-	return useState<Record<string, ImageItemForDisplay>>(
-		'image-list',
-		() => ({})
-	)
+	return store
 }
 
 export const imageListStoreOps = {

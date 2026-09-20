@@ -2,7 +2,6 @@
 
 [![Rust](https://img.shields.io/badge/Rust-nightly-dea584?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![WASM](https://img.shields.io/badge/WASM-ready-654FF0?style=flat&logo=webassembly&logoColor=white)](https://webassembly.org)
-[![Nuxt](https://img.shields.io/badge/Nuxt-4.2-00DC82?style=flat&logo=nuxt&logoColor=white)](https://nuxt.com)
 [![Vue](https://img.shields.io/badge/Vue-3-42b883?style=flat&logo=vue.js&logoColor=white)](https://vuejs.org)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev)
 [![Bun](https://img.shields.io/badge/Bun-1.x-000?style=flat&logo=bun&logoColor=white)](https://bun.sh)
@@ -35,7 +34,7 @@ JPEG compression discards data and regular decoders "fill in" the gaps with nois
 - **~3× faster** — `rayon` parallelism + optional SIMD (`std::simd`, adaptive x8/x16/x32/x64 dispatch via the `simd` feature; wasm uses uniform x8)
 - **GPU acceleration** — optional `wgpu` backend for native and browser solves, with tolerance-checked equivalence and explicit CPU fallback
 - **WASM-ready** — `backend/artefact-wasm` via `wasm-pack`, runs 100% client-side at [artefact.delnegend.com](https://artefact.delnegend.com) (no upload)
-- **CLI + Web** — same solver for native binary (`artefact-cli`) and browser (`frontend` Nuxt + `vite-plugin-wasm`)
+- **CLI + Web** — same solver for native binary (`artefact-cli`) and browser (`frontend` Vue 3 + Vite)
 - **Flexible I/O** — input `.jpg`/`.jpeg`, output `png`/`webp`/`tiff`/`bmp` (auto by extension)
 - **Tunable solver** — per-channel `weight` / `pweight` / `iterations`, `separate_components` for YCbCr
 
@@ -125,7 +124,7 @@ RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
 devcontainer up --workspace-folder .
 ```
 
-Toolchain is baked into the image (Rust `nightly` + `rust-analyzer`, `mold` 2.40.4, `cargo-binstall`/`flamegraph`/`wasm-pack`, `just`, `fzf`, `bun`) for cache and for editors that skip `postCreateCommand` (e.g. Zed). `postinstall.sh` only runs `bun i` in `frontend`.
+Toolchain is baked into the image (Rust `nightly` + `rust-analyzer`, `mold` 2.42.1, `cargo-binstall`/`flamegraph`/`wasm-pack`, `just`, `fzf`, `bun`, `node`) for cache and for editors that skip `postCreateCommand` (e.g. Zed). `postinstall.sh` only runs `bun i` in `frontend`.
 
 **Without devcontainer:**
 
@@ -144,7 +143,7 @@ See [docs/development.md](docs/development.md) for full prerequisites and sample
 │   ├── artefact-cli/     # native binary (clap)
 │   ├── artefact-wasm/    # wasm-pack cdylib for frontend
 │   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
-├── frontend/             # Nuxt 4 + Vue + Vite + Tailwind — src/utils/artefact-wasm is generated
+├── frontend/             # Vue 3 + Vite + Tailwind — src/utils/artefact-wasm is generated
 ├── assets/               # demo images (01.png-04.png)
 └── docs/development.md   # directory structure, SIMD flags, cross-compile, WASM/web builds
 ```
@@ -156,15 +155,15 @@ Workspace versions are centralized in `[workspace.dependencies]` at the root `Ca
 ```bash
 # frontend dev (hot reload)
 just dev
-# or: cd frontend && bun x nuxt dev --no-fork
+# or: cd frontend && bun x vite
 
 # WASM lib (generates frontend/src/utils/artefact-wasm)
 just build wasm
 # or: wasm-pack build backend/artefact-wasm --target web --out-dir frontend/src/utils/artefact-wasm
 
-# web (static generate for GitHub Pages)
+# web (static build for GitHub Pages -> frontend/dist)
 just build web
-# or: cd frontend && bun x nuxt generate
+# or: cd frontend && bun x vite build
 
 # native CLI (release, LTO)
 just build            # -> target/release/artefact-cli
@@ -204,7 +203,7 @@ graph TD
     Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>pipeline/{scalar,simd,gpu}<br/>rayon]
     L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp<br/>--gpu optional]
     L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib<br/>process_auto/process]
-    W --> F[frontend<br/>Nuxt 4 / Vue / Vite<br/>vite-plugin-wasm + PWA<br/>artefact.delnegend.com]
+    W --> F[frontend<br/>Vue 3 / Vite<br/>Tailwind + PWA<br/>artefact.delnegend.com]
     F -. upload .-> W
 ```
 
@@ -250,4 +249,4 @@ at your option.
 
 ## Acknowledgements
 
-Based on [jpeg2png](https://github.com/victorvde/jpeg2png) by Victor van der Elst. Thanks to `zune-jpeg` / `zune-image` and the Rust / WASM / Nuxt communities.
+Based on [jpeg2png](https://github.com/victorvde/jpeg2png) by Victor van der Elst. Thanks to `zune-jpeg` / `zune-image` and the Rust / WASM / Vue / Vite communities.

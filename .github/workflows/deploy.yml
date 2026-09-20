@@ -1,4 +1,4 @@
-name: Deploy Nuxt site to Pages
+name: Deploy site to Pages
 
 on:
     push:
@@ -58,12 +58,12 @@ jobs:
               run: bun i
 
             - name: Generate static site
-              run: cd frontend && bun x nuxt generate && cp node_modules/.cache/nuxt/.nuxt/dist/client/manifest.webmanifest .output/public/manifest.webmanifest
+              run: cd frontend && bun x vite build
 
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
               with:
-                  path: ./frontend/.output/public
+                  path: ./frontend/dist
 
     deploy:
         environment:

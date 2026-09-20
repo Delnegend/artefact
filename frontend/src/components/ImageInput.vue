@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { buttonBaseClassTw, buttonVariantsTw } from './ui/button'
-import { useFileDialog } from '@vueuse/core'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { imageListStoreOps } from '~/composables/use-image-list-store'
@@ -37,19 +36,24 @@ function handleOnDrop(event: DragEvent): void {
 }
 
 // Click to select
-const fileDialog = useFileDialog({ accept: 'image/jpeg' })
-fileDialog.onChange(async (files) => {
-	await handleIncomingFiles(files)
-})
+function handleFileInput(event: Event): void {
+	const target = event.target as HTMLInputElement
+	void handleIncomingFiles(target.files)
+	// Reset so selecting the same file again still fires `change`.
+	target.value = ''
+}
 </script>
 
 <template>
 	<div class="relative">
 		<input
 			id="image-input"
-			class="absolute top-0 left-0 m-4 h-28 w-[calc(100%-2rem)] rounded-md bg-transparent"
+			type="file"
+			accept="image/jpeg"
+			multiple
+			class="hidden"
 			aria-label="image-input"
-			@click.prevent="fileDialog.open()"
+			@change="handleFileInput"
 		/>
 
 		<label
