@@ -5,6 +5,7 @@ dev:
 	cd frontend && bun x vite
 
 # check code for: rust (backend), js (frontend)
+# formatting is applied first (rustfmt + oxfmt), then linted/type-checked
 # default: all — rust checks ensure all pipelines always buildable (no silent regression)
 check kind="all":
 	#!/usr/bin/env bash
@@ -22,7 +23,7 @@ check kind="all":
 	fi
 
 	if [[ "{{kind}}" = "all" || "{{kind}}" = "rust" ]]; then
-		cargo fmt -- --check
+		cargo fmt
 		# always-buildable: scalar / simd are both compiled
 		cargo check --workspace
 		cargo check --workspace --all-features
