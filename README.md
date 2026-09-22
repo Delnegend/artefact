@@ -171,7 +171,7 @@ just build            # -> target/release/artefact-cli
 
 # cross-compiled releases (linux x64, windows x64, macOS arm64)
 # built on GitHub Actions via .github/workflows/release.yml
-# trigger: workflow_dispatch (release_version + create_release) or merged PR
+# trigger: weekly cron (Sunday 00:00 UTC) or workflow_dispatch
 ```
 
 SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`) and enabled in dependent crates — see [docs/development.md#solver-pipelines](docs/development.md#solver-pipelines). Pipelines live in `pipeline/{scalar,simd,gpu}` with shared logic in `utils/` (scalar is the frozen reference, `simd` is the default for the CLI and wasm).

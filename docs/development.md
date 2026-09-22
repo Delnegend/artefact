@@ -48,7 +48,7 @@ just decode 420  # reads assets/sample.420.input.jpg → assets/sample.420.decod
 
 Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`, `windows x64`, `macOS arm64`.
 
-Trigger: `workflow_dispatch` (`release_version`, `create_release`) or auto on `PR → main` with `dependencies` label (patch bump).
+Trigger: weekly cron (Sunday 00:00 UTC) or `workflow_dispatch`. Version comes from Conventional Commits since the latest tag via `ietf-tools/semver-action`.
 
 Locally, just build natively:
 

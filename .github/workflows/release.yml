@@ -1,18 +1,12 @@
 name: Release
 
-# Weekly batched release: dependency and feature/fix updates accumulate on
-# `main` and ship as one patch release. Also dispatchable manually with an
-# explicit version.
+# Weekly batched release: updates accumulate on `main` and ship as one
+# release. The next version comes from Conventional Commits since the latest
+# tag via ietf-tools/semver-action — no manual version input.
 on:
   schedule:
     - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC
   workflow_dispatch:
-    inputs:
-      release_version:
-        description: 'Explicit version (e.g. 0.1.0) - leave empty for auto patch bump'
-        required: false
-        type: string
-        default: ""
 
 env:
   BINARY_NAME: artefact-cli
@@ -32,50 +26,23 @@ jobs:
     permissions:
       contents: read
     outputs:
-      release_version: ${{ steps.version.outputs.version }}
-      skip: ${{ steps.commits.outputs.skip }}
+      version: ${{ steps.semver.outputs.next }}
+      version_strict: ${{ steps.semver.outputs.nextStrict }}
+      skip: ${{ steps.semver.outputs.bump == 'none' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check for new commits since last release
-        id: commits
-        run: |
-          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo '')"
-          if [ -n "$LATEST_TAG" ]; then
-            COUNT="$(git rev-list "${LATEST_TAG}..HEAD" --count)"
-            echo "Commits since $LATEST_TAG: $COUNT"
-            if [ "$COUNT" -eq 0 ] && [ -z "${{ inputs.release_version }}" ]; then
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "No new commits since $LATEST_TAG; skipping release."
-              exit 0
-            fi
-          fi
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-
-      - name: Determine version
-        if: steps.commits.outputs.skip != 'true'
-        id: version
-        run: |
-          if [ -n "${{ inputs.release_version }}" ]; then
-            NEXT_VERSION="${{ inputs.release_version }}"
-          else
-            LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
-            PLAIN_VERSION="${LATEST_TAG#v}"
-            IFS='.' read -r major minor patch <<< "$PLAIN_VERSION"
-            major="${major:-0}"
-            minor="${minor:-1}"
-            patch="${patch:-0}"
-            if [ "$LATEST_TAG" = "v0.0.0" ]; then
-              NEXT_VERSION="0.1.0"
-            else
-              NEXT_VERSION="${major}.${minor}.$((patch + 1))"
-            fi
-            echo "Latest tag: $LATEST_TAG, next version: $NEXT_VERSION"
-          fi
-          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Next version (Conventional Commits)
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          fallbackTag: v0.0.0
+          noNewCommitBehavior: silent
+          noVersionBumpBehavior: patch
 
   build:
     name: Build (${{ matrix.platform }})
@@ -116,7 +83,7 @@ jobs:
 
       - name: Build
         env:
-          ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.release_version }}
+          ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.version_strict }}
         run: |
           # `option_env!` is not fingerprint-tracked by cargo, so force a
           # rebuild to pick up the injected version even when rust-cache
@@ -127,7 +94,7 @@ jobs:
       - name: Compress binaries
         shell: bash
         run: |
-          VERSION="${{ needs.prepare.outputs.release_version }}"
+          VERSION="${{ needs.prepare.outputs.version_strict }}"
           BASE="${{ env.BINARY_NAME }}-${VERSION}-${{ matrix.artifact }}"
           mkdir -p "$BASE"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
@@ -147,74 +114,29 @@ jobs:
           path: ${{ env.BINARY_NAME }}-*
 
   release:
-    name: Release
+    name: Tag & Release
     needs: [prepare, build]
     if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-slim
     permissions:
       contents: write
-    env:
-      VERSION: ${{ needs.prepare.outputs.release_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Generate release notes from commits since the last tag
-        id: notes
-        run: |
-          PREV="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-          if [ -n "$PREV" ]; then
-            RANGE="$PREV..HEAD"
-            COMPARE="https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...v${VERSION}"
-          else
-            RANGE="$(git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
-            COMPARE=""
-          fi
-          echo "Generating notes for range $RANGE"
-          TMP="$(mktemp -d)"
-          git log --pretty=format:"%s" "$RANGE" > "$TMP/all"
-          {
-            echo "## What's Changed"
-            echo
-            for spec in "feat **Features**" "fix **Bug Fixes**" "docs **Documentation**" "ci **CI & Workflows**" "test **Tests**" "refactor **Refactoring**" "perf **Performance**" "chore **Chores**" "build **Build**"; do
-              type="${spec%% *}"
-              grep -E "^${type}(\([^)]*\))?: " "$TMP/all" > "$TMP/items" || continue
-              echo "${spec#* }"
-              sed -E "s/^${type}(\([^)]*\))?: +/  - /" "$TMP/items"
-              echo
-            done
-            grep -Ev "^[a-z]+(\([^)]*\))?: " "$TMP/all" > "$TMP/other" || true
-            if [ -s "$TMP/other" ]; then
-              echo "**Other**"
-              sed 's/^/  - /' "$TMP/other"
-              echo
-            fi
-            echo "**Downloads**"
-            echo "- **Linux x64**: \`.tar.gz\` (extract with \`tar -xzf\`)"
-            echo "- **Windows x64**: \`.zip\` (contains \`artefact-cli.exe\`)"
-            echo "- **macOS Apple Silicon**: \`.tar.gz\` (\`aarch64-apple-darwin\`, extract with \`tar -xzf\`)"
-            if [ -n "$COMPARE" ]; then
-              echo
-              echo "**Full Changelog**: $COMPARE"
-            fi
-          } > notes.md
-          echo "=== draft release notes ==="
-          cat notes.md
-          echo "notes=$PWD/notes.md" >> "$GITHUB_OUTPUT"
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create Release
+      - name: Publish Consolidated Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.prepare.outputs.release_version }}
-          name: v${{ needs.prepare.outputs.release_version }}
-          body_path: ${{ steps.notes.outputs.notes }}
+          tag_name: ${{ needs.prepare.outputs.version }}
+          name: ${{ needs.prepare.outputs.version }}
+          generate_release_notes: true
           draft: false
           prerelease: false
           files: |
