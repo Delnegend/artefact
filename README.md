@@ -42,34 +42,20 @@ JPEG compression discards data and regular decoders "fill in" the gaps with nois
 
 ### Installation
 
-Pre-built CLI (recommended):
-
-```bash
-# download from Releases (output: artefact-cli, .exe on Windows)
-# https://github.com/Delnegend/artefact/releases/latest
-```
+Pre-built CLI (recommended) — <https://github.com/Delnegend/artefact/releases/latest> (`artefact-cli`, `.exe` on Windows).
 
 Build from source:
 
 ```bash
 git clone https://github.com/Delnegend/artefact.git
 cd artefact
-
-# native CLI (release, uses mold + clang if in devcontainer)
-cargo build --bin artefact-cli --release
-# or: just build
-
-# cross-compiled (linux x64, windows x64, macOS arm64)
-# built on GitHub Actions via .github/workflows/release.yml — see Development
+cargo build --bin artefact-cli --release   # or: just build
 ```
 
-Web (no install):
-
-Open [artefact.delnegend.com](https://artefact.delnegend.com) — everything runs in your browser.
+Web (no install) — open [artefact.delnegend.com](https://artefact.delnegend.com), drop a JPEG,
+compare with the slider, download the PNG. Everything runs in your browser; nothing is uploaded.
 
 ### Usage
-
-**1. The performance way — CLI:**
 
 ```bash
 # basic: input.jpg -> input.png (same dir)
@@ -82,119 +68,16 @@ artefact-cli input.jpg -o output.webp --format webp -y
 artefact-cli input.jpg --weight 0.3 --pweight 0.001 --iterations 50
 artefact-cli input.jpg --weight 0.3,0.2,0.3 --iterations 50,30,50
 
-# benchmark without writing file
+# benchmark without writing a file
 artefact-cli input.jpg --benchmark
 
 # use the GPU when available, otherwise fall back to the CPU
 artefact-cli input.jpg --gpu
 
-# help
 artefact-cli --help
 ```
 
-Solver backends: `process()` always uses the CPU pipeline. The CLI’s `--gpu`
-uses `process_auto()`: it logs the selected `wgpu` adapter and `solving on GPU`
-when usable, otherwise warns and returns to `solving on CPU pipeline`. Set
-`RUST_LOG=debug` for lower-level selection diagnostics.
-
-To compare production solves without asserting benchmark timings:
-
-```bash
-RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-  cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
-```
-
-**2. The convenience way — browser:**
-
-1. Go to [artefact.delnegend.com](https://artefact.delnegend.com)
-2. Drop a JPEG
-3. Compare input/output with the slider and download PNG
-
-> WASM is slower than native but stays fully client-side. The browser worker probes for a usable WebGPU adapter (including `GPUAdapter.info`) and passes that decision to the async `compute` API: GPU when available, CPU otherwise.
-
-## Development
-
-### Prerequisites
-
-**Recommended: devcontainer** — no host toolchain needed:
-
-```
-# VS Code: Command Palette → Reopen in Container
-# CLI:
-devcontainer up --workspace-folder .
-```
-
-Toolchain is baked into the image (Rust `nightly` + `rust-analyzer`, `mold` 2.42.1, `cargo-binstall`/`flamegraph`/`wasm-pack`, `just`, `fzf`, `bun`, `node`) for cache and for editors that skip `postCreateCommand` (e.g. Zed). `postinstall.sh` only runs `bun i` in `frontend`.
-
-**Without devcontainer:**
-
-- [Rust](https://www.rust-lang.org) via `rustup` (`nightly`, `minimal` profile)
-- [`just`](https://github.com/casey/just), [`bun`](https://bun.sh), [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
-- `zip`/`tar` only if manually archiving — releases (linux x64, windows x64, macOS arm64) are built on GitHub Actions via `.github/workflows/release.yml`. `ffmpeg` only for sample image generation (not in devcontainer by default).
-
-See [docs/development.md](docs/development.md) for full prerequisites and sample-image helpers.
-
-### Repository overview
-
-```
-.
-├── backend/
-│   ├── artefact-core/    # core solver — pipeline/{scalar,simd,gpu} + shared utils
-│   ├── artefact-cli/     # native binary (clap)
-│   ├── artefact-wasm/    # wasm-pack cdylib for frontend
-│   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
-├── frontend/             # Vue 3 + Vite + Tailwind — src/utils/artefact-wasm is generated
-├── assets/               # demo images (01.png-04.png)
-└── docs/development.md   # directory structure, SIMD flags, cross-compile, WASM/web builds
-```
-
-Workspace versions are centralized in `[workspace.dependencies]` at the root `Cargo.toml:5` — bump once, inherited via `workspace = true` in each crate.
-
-### Build
-
-```bash
-# frontend dev (hot reload)
-just dev
-# or: cd frontend && bun x vite
-
-# WASM lib (generates frontend/src/utils/artefact-wasm)
-just build wasm
-# or: wasm-pack build backend/artefact-wasm --target web --out-dir frontend/src/utils/artefact-wasm
-
-# web (static build for GitHub Pages -> frontend/dist)
-just build web
-# or: cd frontend && bun x vite build
-
-# native CLI (release, LTO)
-just build            # -> target/release/artefact-cli
-# or: cargo build --bin artefact-cli --release
-
-# cross-compiled releases (linux x64, windows x64, macOS arm64)
-# built on GitHub Actions via .github/workflows/release.yml
-# trigger: weekly cron (Sunday 00:00 UTC) or workflow_dispatch
-```
-
-SIMD / solver flags are toggled in `backend/artefact-core/Cargo.toml` features (`simd`) and enabled in dependent crates — see [docs/development.md#solver-pipelines](docs/development.md#solver-pipelines). Pipelines live in `pipeline/{scalar,simd,gpu}` with shared logic in `utils/` (scalar is the frozen reference, `simd` is the default for the CLI and wasm).
-
-### Checks
-
-```bash
-just check          # fmt + clippy + tests + oxlint + oxfmt (all)
-just check rust     # Rust only
-just check js       # frontend only (oxlint + oxfmt)
-```
-
-`just check rust` sets `ARTEFACT_REQUIRE_GPU=1`, so GPU tests cannot pass by
-skipping missing adapters or required fixtures. Plain `cargo test` keeps the
-lenient skips for machines without a GPU.
-
-Sample images with chroma subsampling:
-
-```bash
-just encode              # assets/sample.png -> assets/sample.{j444,j422,j420,444,422,420}.input.jpg (needs ffmpeg)
-just decode 420          # -> assets/sample.420.decoded.png via artefact-cli
-just flame 420           # flamegraph for profiling
-```
+Full flag table and tuning notes: [docs/cli.md](docs/cli.md).
 
 ## Architecture
 
@@ -207,36 +90,35 @@ graph TD
     F -. upload .-> W
 ```
 
-`artefact-core` is feature-gated: without `simd`, `pipeline::scalar` is used; `simd` selects the SIMD pipeline. Native uses adaptive x8/x16/x32/x64 dispatch over `std::simd`; wasm uses uniform x8. `gpu` adds the `pipeline::gpu` backend with `process_gpu`, `process_gpu_with`, and `process_auto`. Decoding always goes through the vendored `zune-jpeg` fork.
+The vendored `zune-jpeg` fork exposes the raw DCT coefficients; `artefact-core` re-optimizes them
+with a feature-gated scalar/SIMD/GPU solver; the CLI and the wasm-pack bindings share that one
+core. Details: [docs/architecture.md](docs/architecture.md).
 
-## CLI reference
+## Documentation
 
-| Flag | Short | Default | Description |
-|---|---|---|---|
-| `<input>` | — | — | Input JPEG file |
-| `--output <path>` | `-o` | `<input>.png` | Output file (extension infers format when `--format auto`) |
-| `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp` |
-| `--weight <f32>` | `-w` | `0.3` | 2nd-order weight — higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
-| `--pweight <f32>` | `-p` | `0.001` | Fidelity weight — higher = closer to source JPEG |
-| `--iterations <n>` | `-i` | `50` | Solver iterations — higher = better but slower. Single or `Y,Cb,Cr` |
-| `--separate-components` | `-s` | `false` | Optimize Y/Cb/Cr separately instead of jointly |
-| `--gpu` | `-g` | `false` | Use the GPU when available (`process_auto`), otherwise fall back to CPU |
-| `--benchmark` | `-b` | `false` | Run solver but don't write output |
-| `--overwrite` | `-y` | `false` | Overwrite existing output |
+- [docs/architecture.md](docs/architecture.md) — repository layout, how a solve works, solver pipelines and features
+- [docs/cli.md](docs/cli.md) — every flag, tuning guidance, backend selection, reproducible benchmarks
+- [docs/development.md](docs/development.md) — prerequisites, builds, `just check`, sample images, benchmarks, releases
 
-Defined in `backend/artefact-cli/main.rs:18` and `backend/artefact-core/lib.rs:63`.
+## Development
+
+The devcontainer (VS Code → *Reopen in Container*, or `devcontainer up --workspace-folder .`) bakes
+in the whole toolchain. Without it you need Rust `nightly`, [`just`](https://github.com/casey/just),
+[`bun`](https://bun.sh), and [`wasm-pack`](https://rustwasm.github.io/wasm-pack/).
+
+```bash
+just check      # fmt + clippy + tests + oxlint + oxfmt (must pass before a PR)
+just dev        # frontend dev server
+just build      # release CLI -> target/release/artefact-cli
+```
 
 ## Contributing
 
-The project is in **maintenance mode**: bug fixes and dependency/security updates are welcome, but feature work is paused. Please open an issue before starting anything substantial.
+The project is in **maintenance mode**: bug fixes and dependency/security updates are welcome, but
+feature work is paused. Please open an issue before starting anything substantial.
 
-```bash
-git clone https://github.com/Delnegend/artefact.git
-# devcontainer recommended, else install prerequisites above
-just check   # must pass before PR
-```
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion shall be dual-licensed as below without additional terms (per Apache-2.0 §5).
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion shall
+be dual-licensed as below without additional terms (per Apache-2.0 §5).
 
 ## License
 
