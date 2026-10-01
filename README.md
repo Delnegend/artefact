@@ -122,12 +122,7 @@ be dual-licensed as below without additional terms (per Apache-2.0 §5).
 
 ## License
 
-Licensed under either of
-
-- Apache License, Version 2.0 ([LICENSE-Apache](LICENSE-Apache) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT)
-
-at your option.
+MIT or Apache-2.0, at your option.
 
 ## Acknowledgements
 
