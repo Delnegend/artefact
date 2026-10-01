@@ -200,7 +200,7 @@ just flame 420           # flamegraph for profiling
 
 ```mermaid
 graph TD
-    Z[zune-jpeg<br/>fork - DCT coeffs] --> L[artefact-core<br/>solver<br/>pipeline/{scalar,simd,gpu}<br/>rayon]
+    Z[zune-jpeg<br/>fork - DCT coeffs] --> L["artefact-core<br/>solver<br/>pipeline/{scalar,simd,gpu}<br/>rayon"]
     L --> C[artefact-cli<br/>clap - png/webp/tiff/bmp<br/>--gpu optional]
     L --> W[artefact-wasm<br/>wasm-bindgen<br/>cdylib<br/>process_auto/process]
     W --> F[frontend<br/>Vue 3 / Vite<br/>Tailwind + PWA<br/>artefact.delnegend.com]
