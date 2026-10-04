@@ -1,63 +1,12 @@
 version: 2
 updates:
-  - package-ecosystem: cargo
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: daily
+      interval: "weekly"
+      day: "monday"
       time: "02:00"
     labels:
-      - dependencies
-    assignees:
-      - Delnegend
+      - "dependencies"
     commit-message:
       prefix: "chore(deps)"
-    # Supply-chain quarantine: hold newly published versions for 14 days.
-    cooldown:
-      default-days: 14
-    groups:
-      patch-and-minor:
-        patterns:
-          - "*"
-        update-types:
-          - "patch"
-          - "minor"
-      major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-    open-pull-requests-limit: 2
-
-  - package-ecosystem: npm
-    directory: "/frontend"
-    schedule:
-      interval: daily
-      time: "02:00"
-    labels:
-      - dependencies
-    assignees:
-      - Delnegend
-    commit-message:
-      prefix: "chore(deps)"
-    cooldown:
-      default-days: 14
-    groups:
-      patch-and-minor:
-        patterns:
-          - "*"
-        update-types:
-          - "patch"
-          - "minor"
-      major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-    open-pull-requests-limit: 2
-    ignore:
-      # TS 7 breaks `@vue/compiler-sfc` ("No fs option provided ... resolving
-      # imported types") so the Vite build/`vue-tsc` fails; revisit once the Vue
-      # toolchain supports it. Ignoring it also keeps the grouped PR non-major
-      # so the other minor/patch updates can auto-merge.
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]

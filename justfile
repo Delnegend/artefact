@@ -41,6 +41,15 @@ check kind="all":
 		ARTEFACT_REQUIRE_GPU=1 cargo test --workspace --all-features
 	fi
 
+# bump package manifests to the specified semver version (e.g. `just bump 0.2.0`)
+bump version:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	VERSION="{{version}}"
+	sed -i -E "0,/^version = \".*\"/s//version = \"${VERSION}\"/" Cargo.toml
+	cargo check -p artefact-cli --quiet
+	cd frontend && npm version --no-git-tag-version "${VERSION}"
+
 # build: native CLI, wasm, or web
 build target="native":
 	#!/usr/bin/env bash

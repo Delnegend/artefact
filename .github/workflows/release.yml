@@ -1,41 +1,70 @@
-name: Release
+name: Release / Build Artifacts
 
-# Weekly batched release: updates accumulate on `main` and ship as one
-# release. The next version comes from Conventional Commits since the latest
-# tag via ietf-tools/semver-action — no manual version input.
 on:
-  schedule:
-    - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Release mode / build target"
+        required: true
+        type: choice
+        default: "new-tag"
+        options:
+          - new-tag  # Gate on CI -> bump version -> tag & push -> build & publish release
+          - tag      # Rebuild existing tag -> build & publish release
+          - commit   # Test build latest commit -> upload Actions artifacts only (no release)
+      ref:
+        description: "Custom tag or commit SHA (optional, defaults to latest)"
+        required: false
+        type: string
+  schedule:
+    - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC (defaults to target: new-tag)
 
-env:
-  BINARY_NAME: artefact-cli
-
-permissions:
-  contents: read
-
-# Serialise releases so tag creation cannot collide.
 concurrency:
   group: release-main
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   prepare:
-    name: Prepare
-    runs-on: ubuntu-slim
-    permissions:
-      contents: read
+    name: Prepare / Bump Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
-      version: ${{ steps.semver.outputs.next }}
-      version_strict: ${{ steps.semver.outputs.nextStrict }}
-      skip: ${{ steps.semver.outputs.bump == 'none' }}
+      ref: ${{ steps.resolve.outputs.ref }}
+      version: ${{ steps.resolve.outputs.version }}
+      publish: ${{ steps.resolve.outputs.publish }}
+      skip: ${{ steps.resolve.outputs.skip }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
+          token: ${{ github.token }}
+          persist_credentials: true
           fetch-depth: 0
+      - uses: extractions/setup-just@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Install Vulkan software driver (lavapipe)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mesa-vulkan-drivers
+      - uses: oven-sh/setup-bun@v2
+      - name: Install frontend dependencies
+        run: bun install
+        working-directory: ./frontend
 
-      - name: Next version (Conventional Commits)
+      # -----------------------------------------------------------------------
+      # Mode 1: new-tag (calculate semver -> CI gate -> just bump -> atomic push)
+      # -----------------------------------------------------------------------
+      - name: Calculate Next SemVer
+        if: (inputs.target || 'new-tag') == 'new-tag'
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
@@ -44,13 +73,82 @@ jobs:
           noNewCommitBehavior: silent
           noVersionBumpBehavior: patch
 
+      - name: CI Gate (verify code is green before bumping)
+        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
+        run: just check
+
+      - name: Bump package manager version
+        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
+        env:
+          NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
+        run: |
+          set -euo pipefail
+          just bump "$NEXT_STRICT"
+
+      - name: Commit, Tag, and Push atomically
+        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
+        env:
+          NEXT_TAG: ${{ steps.semver.outputs.next }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@users.noreply.github.com"
+
+          # Stage all modified tracked files (manifests and lockfiles)
+          git add -u
+          git diff --staged --quiet && { echo "::error::bump produced no change in package files"; exit 1; }
+          git commit -m "chore(release): ${NEXT_TAG}"
+
+          git rev-parse -q --verify "refs/tags/${NEXT_TAG}" >/dev/null && { echo "::error::tag ${NEXT_TAG} already exists"; exit 1; }
+          git tag -a "${NEXT_TAG}" -m "Release ${NEXT_TAG}"
+
+          # Atomic push: commit and tag land together on main
+          git push origin HEAD:main "refs/tags/${NEXT_TAG}"
+
+      # -----------------------------------------------------------------------
+      # Resolve outputs for Job 2 (build)
+      # -----------------------------------------------------------------------
+      - name: Resolve outputs
+        id: resolve
+        run: |
+          set -euo pipefail
+          TARGET="${{ inputs.target || 'new-tag' }}"
+          INPUT_REF="${{ inputs.ref || '' }}"
+
+          if [ "$TARGET" = "new-tag" ]; then
+            BUMP="${{ steps.semver.outputs.bump }}"
+            if [ "$BUMP" = "none" ]; then
+              echo "No version bump needed (current: ${{ steps.semver.outputs.current }})."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "ref=${{ steps.semver.outputs.next }}" >> "$GITHUB_OUTPUT"
+            echo "version=${{ steps.semver.outputs.nextStrict }}" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          elif [ "$TARGET" = "tag" ]; then
+            TAG="${INPUT_REF:-$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)}"
+            [ -n "$TAG" ] || { echo "::error::No release tag found"; exit 1; }
+            echo "ref=$TAG" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          elif [ "$TARGET" = "commit" ]; then
+            SHA="${INPUT_REF:-$(git rev-parse HEAD)}"
+            echo "ref=$SHA" >> "$GITHUB_OUTPUT"
+            echo "version=$SHA" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Running test build against commit $SHA (will not publish release)"
+          fi
+
   build:
     name: Build (${{ matrix.platform }})
     needs: prepare
     if: needs.prepare.outputs.skip != 'true'
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -70,7 +168,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@master
@@ -83,19 +183,16 @@ jobs:
 
       - name: Build
         env:
-          ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.version_strict }}
+          ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          # `option_env!` is not fingerprint-tracked by cargo, so force a
-          # rebuild to pick up the injected version even when rust-cache
-          # restores a previously-built binary.
           touch backend/artefact-cli/main.rs
           cargo build --bin artefact-cli --release --target ${{ matrix.target }}
 
       - name: Compress binaries
         shell: bash
         run: |
-          VERSION="${{ needs.prepare.outputs.version_strict }}"
-          BASE="${{ env.BINARY_NAME }}-${VERSION}-${{ matrix.artifact }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          BASE="artefact-cli-${VERSION}-${{ matrix.artifact }}"
           mkdir -p "$BASE"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp "target/${{ matrix.target }}/release/artefact-cli.exe" "$BASE/"
@@ -105,26 +202,35 @@ jobs:
             tar -czf "${BASE}.tar.gz" "$BASE"
           fi
           rm -rf "$BASE"
-          ls -lh "${BASE}".*
 
-      - name: Upload artifact
+      - name: Upload artifact (tar.gz)
+        if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BINARY_NAME }}-${{ matrix.artifact }}
-          path: ${{ env.BINARY_NAME }}-*
+          name: artefact-cli-${{ matrix.artifact }}
+          path: artefact-cli-*.tar.gz
+          if-no-files-found: ignore
+
+      - name: Upload artifact (zip)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: artefact-cli-${{ matrix.artifact }}
+          path: artefact-cli-*.zip
+          if-no-files-found: ignore
 
   release:
     name: Tag & Release
     needs: [prepare, build]
-    if: needs.prepare.outputs.skip != 'true'
+    if: needs.prepare.outputs.skip != 'true' && needs.prepare.outputs.publish == 'true'
     runs-on: ubuntu-slim
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -132,10 +238,10 @@ jobs:
           path: artifacts
 
       - name: Publish Consolidated Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ needs.prepare.outputs.version }}
-          name: ${{ needs.prepare.outputs.version }}
+          tag_name: ${{ needs.prepare.outputs.ref }}
+          name: ${{ needs.prepare.outputs.ref }}
           generate_release_notes: true
           draft: false
           prerelease: false

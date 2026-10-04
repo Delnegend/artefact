@@ -1,0 +1,63 @@
+name: Dependency updates
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Daily 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: deps-main
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Upgrade dependencies
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - name: Upgrade Cargo dependencies (cooldown in .cargo/config.toml)
+        run: cargo update
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Upgrade Bun dependencies (cooldown in bunfig.toml)
+        run: |
+          cd frontend
+          bun update
+
+      - name: Detect whether anything changed
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open upgrade PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B deps/automatic
+          git add -u
+          git commit -m "chore(deps): upgrade dependencies"
+          git push --force origin deps/automatic
+          gh pr create --base main --head deps/automatic \
+            --label dependencies \
+            --title "chore(deps): upgrade dependencies" \
+            --body "Automated daily upgrade. Versions published less than 14 days ago were filtered out by the package manager."
