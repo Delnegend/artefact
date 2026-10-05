@@ -43,7 +43,7 @@ jobs:
             - name: Install wasm-pack
               uses: taiki-e/install-action@wasm-pack
 
-            - uses: extractions/setup-just@v3
+            - uses: extractions/setup-just@v4
 
             - name: Build wasm
               run: just build wasm
