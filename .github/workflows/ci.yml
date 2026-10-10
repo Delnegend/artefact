@@ -75,7 +75,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run Trivy
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/src" aquasec/trivy fs /src --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 1
+        # -w /src: Trivy only reads .trivyignore from its working directory,
+        # not from the scan target, so run from inside the tree.
+        run: docker run --rm -w /src -v "${GITHUB_WORKSPACE}:/src" aquasec/trivy fs /src --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 1
 
   osv-scan:
     name: Dependencies (OSV-Scanner)
