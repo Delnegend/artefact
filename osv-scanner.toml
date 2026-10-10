@@ -1,0 +1,88 @@
+# OSV-Scanner ignores. Each entry below names a dependency the daily `deps.yml`
+# upgrade cannot fix by itself, with the reason and the expiry. Re-check on
+# every entry's review date: delete the entry if the upgrade fixed it.
+
+[[IgnoredVulns]]
+# source-map-js 1.2.1 — CVE-2026-93749 / GHSA-68fv-2mgg-jv7q (DoS, HIGH).
+# The fixed 1.2.2 was published 2026-09-30, inside the 14-day quarantine in
+# frontend/bunfig.toml, so `bun update` correctly refuses it until ~2026-10-14.
+# Transitive via @tailwindcss/node and @vue/compiler-*. No direct dependency.
+id = "GHSA-68fv-2mgg-jv7q"
+reason = "Fix 1.2.2 published 2026-09-30, quarantined until ~2026-10-14. Review: 2026-10-20."
+
+[[IgnoredVulns]]
+# brace-expansion 2.0.2 via ejs <- jake <- filelist, pinned by workbox-build's
+# abandoned @trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1 chain.
+# Upstream jake 10.9.4 hard-pins filelist 1.0.4; nothing in our tree can move it.
+id = "GHSA-f886-m6hf-6m8v"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-mh99-v99m-4gvg"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-q2hr-2g5m-vwhr"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-qhr7-859c-m2p7"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-rgw5-rvv9-x895"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# browserslist 4.26.2 — fixed upstream in 4.28.7, but @babel/helper-* ranges
+# in this lockfile still resolve the old copy. `bun update` already moved the
+# top-level copy to 4.29.1; these are stale nested copies under workbox's tree.
+id = "GHSA-73wf-gq98-2v4g"
+reason = "Stale nested copy under workbox tree; top-level already 4.29.1. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-c83g-rgw3-j3cx"
+reason = "Stale nested copy under workbox tree; top-level already 4.29.1. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# minimatch 5.1.6 via filelist 1.0.4 (jake's hard pin). Same workbox chain.
+id = "GHSA-23c5-xmqv-rm74"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-3ppc-4f35-3m26"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-7r86-cg39-jmmj"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# picomatch 4.0.3 via fdir's optional pin (glob <- workbox-build). fdir 6.5.0
+# hard-pins it; fixed 4.0.4 needs an fdir release that does not exist yet.
+id = "GHSA-3v7f-55p6-f55p"
+reason = "Pinned by fdir 6.5.0 optional dep; no fixed release to take. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-c2c7-rcm5-vvqj"
+reason = "Pinned by fdir 6.5.0 optional dep; no fixed release to take. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# @babel/core 7.28.4 — stale nested copy under workbox-build's tree (top-level
+# already 7.29.x via `bun update`). Fixed in 7.29.6; moves when workbox does.
+id = "GHSA-4x5r-pxfx-6jf8"
+reason = "Stale nested copy under workbox tree. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# baseline-browser-mapping 2.8.9 — same stale-copy story, fixed in 2.11.0.
+id = "GHSA-w5vr-8v7q-w6rv"
+reason = "Stale nested copy under workbox tree. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+# brace-expansion 2.0.2 — two more IDs on the same pinned filelist copy.
+id = "GHSA-3jxr-9vmj-r5cp"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."
+
+[[IgnoredVulns]]
+id = "GHSA-6j4f-fj2g-mc7p"
+reason = "Pinned transitive via workbox-build chain; no upgrade path. Review: 2026-11-10."

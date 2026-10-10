@@ -83,4 +83,4 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run OSV-Scanner
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/src" ghcr.io/google/osv-scanner:latest --recursive /src
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/src" ghcr.io/google/osv-scanner:latest --config=/src/osv-scanner.toml --recursive /src

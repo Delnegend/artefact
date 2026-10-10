@@ -45,8 +45,9 @@ RUN curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/down
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash && \
     cargo binstall -y flamegraph wasm-pack
 
-# bun — pre-installed for cache + non-interactive shells
-RUN curl -fsSL https://bun.sh/install | bash && sudo ln -sf /home/artefact/.bun/bin/bun /usr/local/bin/bun
+# bun — pre-installed for cache + non-interactive shells (the installer lands
+# the binary on PATH at ~/.bun/bin, so no symlink step is needed)
+RUN curl -fsSL https://bun.sh/install | bash
 
 # just completions for interactive shells (was in postinstall.sh, now in image for cache)
 RUN echo 'eval "$(just --completions bash)"' >> /home/artefact/.bashrc
