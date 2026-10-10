@@ -20,12 +20,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
+      # Resolution only: `cargo update` rewrites the lockfile, and the workspace
+      # manifest uses no nightly-only keys, so the build toolchains elsewhere in
+      # this repo keep their nightly pin. Stable is what makes the cooldown
+      # check below meaningful — the registry cooldown is unstable on nightly.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check that Cargo can enforce the cooldown
+        id: cargo-cooldown
+        run: |
+          set -euo pipefail
+          # `registry.global-min-publish-age` is stable from Cargo 1.100, and an
+          # older toolchain ignores the key silently. Upgrading anyway would pull
+          # versions with no quarantine at all, so skip instead of shipping that.
+          version="$(cargo --version | awk '{print $2}')"
+          major="${version%%.*}"
+          minor="${version#*.}"; minor="${minor%%.*}"
+          if [ "$major" -eq 1 ] && [ "$minor" -lt 100 ]; then
+            echo "enforced=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::cargo ${version} ignores registry.global-min-publish-age (stable from 1.100) — no Cargo upgrade was made, so nothing lands without the 14-day quarantine"
+          else
+            echo "enforced=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upgrade Cargo dependencies (cooldown in .cargo/config.toml)
+        if: steps.cargo-cooldown.outputs.enforced == 'true'
         run: cargo update
 
       - uses: oven-sh/setup-bun@v2
