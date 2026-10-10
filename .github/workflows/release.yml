@@ -37,25 +37,25 @@ jobs:
       publish: ${{ steps.resolve.outputs.publish }}
       skip: ${{ steps.resolve.outputs.skip }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           token: ${{ github.token }}
           persist_credentials: true
           fetch-depth: 0
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master
         with:
           toolchain: nightly
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
       - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       - name: Install Vulkan software driver (lavapipe)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq mesa-vulkan-drivers
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: Install frontend dependencies
         run: bun install
         working-directory: ./frontend
@@ -66,7 +66,7 @@ jobs:
       - name: Calculate Next SemVer
         if: (inputs.target || 'new-tag') == 'new-tag'
         id: semver
-        uses: ietf-tools/semver-action@v1
+        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1
         with:
           token: ${{ github.token }}
           fallbackTag: v0.0.0
@@ -110,37 +110,34 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Resolve outputs
         id: resolve
+        env:
+          TARGET: ${{ inputs.target || 'new-tag' }}
+          INPUT_REF: ${{ inputs.ref }}
+          BUMP: ${{ steps.semver.outputs.bump }}
+          CURRENT: ${{ steps.semver.outputs.current }}
+          NEXT: ${{ steps.semver.outputs.next }}
+          NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
         run: |
           set -euo pipefail
-          TARGET="${{ inputs.target || 'new-tag' }}"
-          INPUT_REF="${{ inputs.ref || '' }}"
-
           if [ "$TARGET" = "new-tag" ]; then
-            BUMP="${{ steps.semver.outputs.bump }}"
             if [ "$BUMP" = "none" ]; then
-              echo "No version bump needed (current: ${{ steps.semver.outputs.current }})."
+              echo "No version bump needed (current: ${CURRENT:-none})."
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "ref=${{ steps.semver.outputs.next }}" >> "$GITHUB_OUTPUT"
-            echo "version=${{ steps.semver.outputs.nextStrict }}" >> "$GITHUB_OUTPUT"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-
+            {
+              echo "ref=$NEXT"
+              echo "version=$NEXT_STRICT"
+              echo "publish=true"
+              echo "skip=false"
+            } >> "$GITHUB_OUTPUT"
           elif [ "$TARGET" = "tag" ]; then
             TAG="${INPUT_REF:-$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)}"
             [ -n "$TAG" ] || { echo "::error::No release tag found"; exit 1; }
-            echo "ref=$TAG" >> "$GITHUB_OUTPUT"
-            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-
-          elif [ "$TARGET" = "commit" ]; then
+            { echo "ref=$TAG"; echo "version=${TAG#v}"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
+          else
             SHA="${INPUT_REF:-$(git rev-parse HEAD)}"
-            echo "ref=$SHA" >> "$GITHUB_OUTPUT"
-            echo "version=$SHA" >> "$GITHUB_OUTPUT"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            { echo "ref=$SHA"; echo "version=$SHA"; echo "publish=false"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
             echo "Running test build against commit $SHA (will not publish release)"
           fi
 
@@ -168,18 +165,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master
         with:
           toolchain: nightly
           targets: ${{ matrix.target }}
 
       - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
 
       - name: Build
         env:
@@ -205,7 +202,7 @@ jobs:
 
       - name: Upload artifact (tar.gz)
         if: matrix.os != 'windows-latest'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: artefact-cli-${{ matrix.artifact }}
           path: artefact-cli-*.tar.gz
@@ -213,7 +210,7 @@ jobs:
 
       - name: Upload artifact (zip)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: artefact-cli-${{ matrix.artifact }}
           path: artefact-cli-*.zip
@@ -228,17 +225,17 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: artifacts
 
       - name: Publish Consolidated Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ needs.prepare.outputs.ref }}
           name: ${{ needs.prepare.outputs.ref }}

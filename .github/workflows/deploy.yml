@@ -27,31 +27,31 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v7
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
               with:
                   fetch-depth: 0
 
             - name: Setup Rust
-              uses: dtolnay/rust-toolchain@master
+              uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master
               with:
                   toolchain: nightly
                   targets: wasm32-unknown-unknown
 
             - name: Rust cache
-              uses: Swatinem/rust-cache@v2
+              uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
 
             - name: Install wasm-pack
-              uses: taiki-e/install-action@wasm-pack
+              uses: taiki-e/install-action@beda8a7e291cd4b2b176088ad5ca765328a991a5 # wasm-pack
 
-            - uses: extractions/setup-just@v4
+            - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
             - name: Build wasm
               run: just build wasm
 
-            - uses: oven-sh/setup-bun@v2
+            - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
             - name: Setup Pages
-              uses: actions/configure-pages@v6
+              uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
             - name: Install dependencies
               working-directory: ./frontend
@@ -61,7 +61,7 @@ jobs:
               run: cd frontend && bun x vite build
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v5
+              uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
               with:
                   path: ./frontend/dist
 
@@ -75,4 +75,4 @@ jobs:
         steps:
             - name: Deploy to GitHub Pages
               id: deployment
-              uses: actions/deploy-pages@v5
+              uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
