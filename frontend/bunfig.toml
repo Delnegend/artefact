@@ -1,3 +1,13 @@
 [install]
 minimumReleaseAge = 1209600 # 2 weeks in seconds
-minimumReleaseAgeExcludes = ["@types/node", "typescript"]
+# @trickfilm400/* + ejs: exempt so the package.json override can take the fork
+# at 4.0.0 now — it drops the ejs@3 -> jake chain carrying 14 OSV findings.
+# ejs 7.0.1 (2026-10-04) has no jake dependency, which is the whole point.
+# Scoped to these two packages, not the registry at large. Review: 2026-11-10
+# (delete once the override itself is removed after workbox-build ranges v4).
+minimumReleaseAgeExcludes = [
+	"@types/node",
+	"typescript",
+	"@trickfilm400/rollup-plugin-off-main-thread",
+	"ejs"
+]
