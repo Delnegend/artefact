@@ -1,6 +1,6 @@
 <div align="center">
 
-# artefact
+# Artefact
 
 **Reconstructs lost JPEG detail for smoother, cleaner images with reduced compression artifacts.**
 
