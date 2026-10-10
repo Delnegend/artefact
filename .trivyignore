@@ -1,0 +1,9 @@
+# Trivy ignores. Same contract as osv-scanner.toml: each entry names a finding
+# the daily `deps.yml` upgrade cannot fix by itself, with reason and review
+# date. Re-check on the review date; delete the entry if the upgrade fixed it.
+
+# CVE-2026-93749 (source-map-js 1.2.1, HIGH DoS). Fixed 1.2.2 published
+# 2026-09-30, inside the 14-day quarantine in frontend/bunfig.toml — `bun
+# update` correctly refuses it until ~2026-10-14. Mirrors the OSV entry for
+# GHSA-68fv-2mgg-jv7q. Review: 2026-10-20.
+CVE-2026-93749
