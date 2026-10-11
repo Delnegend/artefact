@@ -17,7 +17,12 @@ check kind="all":
 			--ignore-pattern dev-dist/**/*.* \
 			--ignore-pattern src/utils/artefact-wasm/**/*.*
 		bun x oxfmt
-		# type-check the Vue SFCs and TS (requires node; runs under bun)
+		# vue-tsc cannot run under bun (its Volar plugin silently fails to load,
+		# producing bogus TS2307 "Cannot find module './X.vue'" errors) — so fail
+		# fast with the real cause instead of 32 misleading type errors. Never
+		# shim this with a node -> bun symlink: a lying runtime is worse than a
+		# missing one.
+		command -v node >/dev/null || { echo "error: just check js needs node on PATH (vue-tsc cannot run under bun)" >&2; exit 1; }
 		bun x vue-tsc --build
 		cd -
 	fi
