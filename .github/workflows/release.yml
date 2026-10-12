@@ -9,8 +9,8 @@ on:
         type: choice
         default: "new-tag"
         options:
-          - new-tag  # Gate on CI -> bump version -> tag & push -> build & publish release
-          - tag      # Rebuild existing tag -> build & publish release
+          - new-tag  # Bump version -> open PR (merge it, then run target=tag to build)
+          - tag      # Tag HEAD if missing -> build & publish release
           - commit   # Test build latest commit -> upload Actions artifacts only (no release)
       ref:
         description: "Custom tag or commit SHA (optional, defaults to latest)"
@@ -25,6 +25,7 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   prepare:
@@ -40,7 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           token: ${{ github.token }}
-          persist_credentials: true
+          persist-credentials: true
           fetch-depth: 0
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       - name: Setup Rust
@@ -60,9 +61,9 @@ jobs:
         run: bun install
         working-directory: ./frontend
 
-      # -----------------------------------------------------------------------
-      # Mode 1: new-tag (calculate semver -> CI gate -> just bump -> atomic push)
-      # -----------------------------------------------------------------------
+      # ------------------------------------------------------------------
+      # Mode 1: new-tag (semver -> CI gate -> bump -> open PR for review)
+      # ------------------------------------------------------------------
       - name: Calculate Next SemVer
         if: (inputs.target || 'new-tag') == 'new-tag'
         id: semver
@@ -85,10 +86,12 @@ jobs:
           set -euo pipefail
           just bump "$NEXT_STRICT"
 
-      - name: Commit, Tag, and Push atomically
+      - name: Commit and open release PR
         if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
+        id: release-pr
         env:
           NEXT_TAG: ${{ steps.semver.outputs.next }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -99,11 +102,17 @@ jobs:
           git diff --staged --quiet && { echo "::error::bump produced no change in package files"; exit 1; }
           git commit -m "chore(release): ${NEXT_TAG}"
 
-          git rev-parse -q --verify "refs/tags/${NEXT_TAG}" >/dev/null && { echo "::error::tag ${NEXT_TAG} already exists"; exit 1; }
-          git tag -a "${NEXT_TAG}" -m "Release ${NEXT_TAG}"
+          # Branch protection blocks a direct push to main, so open a PR.
+          # The owner merges it (status checks run on the PR), then re-runs
+          # the workflow with target=tag to tag and publish.
+          BRANCH="release/${NEXT_TAG}"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
 
-          # Atomic push: commit and tag land together on main
-          git push origin HEAD:main "refs/tags/${NEXT_TAG}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          gh pr create --title "chore(release): ${NEXT_TAG}" \
+            --body "Automated version bump to \`${NEXT_TAG}\`. Merge this PR, then run the release workflow with \`target=tag\` to build and publish." \
+            --head "$BRANCH" --base main
 
       # -----------------------------------------------------------------------
       # Resolve outputs for Job 2 (build)
@@ -119,21 +128,38 @@ jobs:
           NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
         run: |
           set -euo pipefail
+          # new-tag only opens the release PR (branch protection blocks a
+          # direct push to main). Merge the PR, then re-run with target=tag.
           if [ "$TARGET" = "new-tag" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             if [ "$BUMP" = "none" ]; then
               echo "No version bump needed (current: ${CURRENT:-none})."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
+            else
+              echo "Release PR opened; merge it, then re-run with target=tag to build and publish."
             fi
-            {
-              echo "ref=$NEXT"
-              echo "version=$NEXT_STRICT"
-              echo "publish=true"
-              echo "skip=false"
-            } >> "$GITHUB_OUTPUT"
+            exit 0
           elif [ "$TARGET" = "tag" ]; then
-            TAG="${INPUT_REF:-$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)}"
-            [ -n "$TAG" ] || { echo "::error::No release tag found"; exit 1; }
+            if [ -n "$INPUT_REF" ]; then
+              # Re-run for an existing tag: build and publish it.
+              TAG="$INPUT_REF"
+            else
+              # Normal path: tag the merged release commit, then build it.
+              # The version comes from the manifests on main, which the
+              # release PR just bumped (workspace root + frontend).
+              MANIFEST_VER="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+              FRONTEND_VER="$(grep -m1 '"version"' frontend/package.json | cut -d'"' -f4)"
+              [ -n "$MANIFEST_VER" ] || { echo "::error::No version in Cargo.toml"; exit 1; }
+              [ "$MANIFEST_VER" = "$FRONTEND_VER" ] || { echo "::error::Cargo.toml ($MANIFEST_VER) != frontend/package.json ($FRONTEND_VER)"; exit 1; }
+              TAG="v$MANIFEST_VER"
+              if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+                echo "Tag $TAG already exists; building it."
+              else
+                git config user.name "github-actions[bot]"
+                git config user.email "actions@users.noreply.github.com"
+                git tag -a "$TAG" -m "Release $TAG"
+                git push origin "refs/tags/$TAG"
+              fi
+            fi
             { echo "ref=$TAG"; echo "version=${TAG#v}"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
           else
             SHA="${INPUT_REF:-$(git rev-parse HEAD)}"
