@@ -1,4 +1,4 @@
-name: Auto-merge dependencies
+name: Auto-merge dependencies and releases
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   automerge:
-    if: contains(github.event.pull_request.labels.*.name, 'dependencies')
+    if: contains(github.event.pull_request.labels.*.name, 'dependencies') || startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-slim
     steps:
       - name: Enable auto-merge and rebase
