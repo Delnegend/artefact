@@ -67,21 +67,66 @@ jobs:
         env:
           INPUT_REF: ${{ inputs.ref }}
           DRY_RUN: ${{ inputs.dry-run }}
+          GATE_SHA: ${{ github.sha }}
           BUMP: ${{ steps.semver.outputs.bump }}
           CURRENT: ${{ steps.semver.outputs.current }}
           NEXT: ${{ steps.semver.outputs.next }}
           NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
         run: |
           set -euo pipefail
-          # Test-build path: a SHA means build that commit with no publish.
-          if echo "$INPUT_REF" | grep -qE '^[0-9a-f]{4,64}$'; then
+          # TOCTOU guard: the gate ran on GATE_SHA. If main moved since,
+          # the checkout below is ungated code — refuse to ship it.
+          # (Ref paths pin their own commit, so they skip this check.)
+          if [ -z "$INPUT_REF" ]; then
+            HEAD_SHA="$(git rev-parse HEAD)"
+            if [ "$HEAD_SHA" != "$GATE_SHA" ]; then
+              echo "::error::main moved during the gate ($GATE_SHA -> $HEAD_SHA); re-run to gate the new HEAD."
+              exit 1
+            fi
+          fi
+          # Dispatch guide: empty = ship, SHA = test, tag = rebuild.
+          # Dry-run first: a preview must never mutate, on any path.
+          if [ "$DRY_RUN" = "true" ]; then
+            if echo "$INPUT_REF" | grep -qE '^[0-9a-f]{7,64}$'; then
+              echo "[dry-run] would test-build commit $INPUT_REF (no publish)"
+            elif [ -z "$INPUT_REF" ]; then
+              echo "[dry-run] would bump to $NEXT_STRICT, tag $NEXT, push, build, and publish"
+            elif echo "$INPUT_REF" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "[dry-run] would rebuild tag $INPUT_REF and publish it"
+            else
+              echo "::error::ref must be empty, a commit SHA (7-64 hex), or a version tag (vX.Y.Z); got '$INPUT_REF'."
+              exit 1
+            fi
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # SHA test-build: full hashes only (short SHAs misroute or collide).
+          if echo "$INPUT_REF" | grep -qE '^[0-9a-f]{7,64}$'; then
             echo "Test build against commit $INPUT_REF (will not publish)."
             { echo "ref=$INPUT_REF"; echo "version=$INPUT_REF"; echo "publish=false"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Tag rebuild: strict format, must already exist.
           if [ -n "$INPUT_REF" ]; then
+            echo "$INPUT_REF" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::ref must be a commit SHA or a version tag (vX.Y.Z); got '$INPUT_REF'."; exit 1; }
+            git rev-parse -q --verify "refs/tags/$INPUT_REF" >/dev/null || { echo "::error::tag $INPUT_REF does not exist."; exit 1; }
             echo "Rebuilding existing tag $INPUT_REF."
             { echo "ref=$INPUT_REF"; echo "version=${INPUT_REF#v}"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Recovery before the BUMP=none exit: a previous run may have pushed
+          # the bump commit but died before tagging. Both manifests must agree.
+          LATEST_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
+          MANIFEST_VER="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          FRONTEND_VER="$(grep -m1 '"version"' frontend/package.json | cut -d'"' -f4)"
+          if [ -n "$LATEST_TAG" ] && [ -n "$MANIFEST_VER" ] && [ "$MANIFEST_VER" = "$FRONTEND_VER" ] && [ "v$MANIFEST_VER" != "$LATEST_TAG" ] && [ "$(printf '%s\n%s\n' "v$MANIFEST_VER" "$LATEST_TAG" | sort -V | head -n1)" = "$LATEST_TAG" ]; then
+            echo "Manifests ($MANIFEST_VER) are ahead of latest tag ($LATEST_TAG); tagging the stranded commit."
+            git config user.name "github-actions[bot]"
+            git config user.email "actions@users.noreply.github.com"
+            TAG="v$MANIFEST_VER"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "refs/tags/$TAG"
+            { echo "ref=$TAG"; echo "version=$MANIFEST_VER"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # Nothing releasable since the last tag: clean exit, no noise.
@@ -91,42 +136,21 @@ jobs:
             exit 0
           fi
           # Refuse to re-ship: NEXT must sort after the latest tag.
-          # (Catches re-runs after a release already shipped this version.)
-          LATEST_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
           if [ -n "$LATEST_TAG" ]; then
             if [ "$NEXT" = "$LATEST_TAG" ] || [ "$(printf '%s\n%s\n' "$NEXT" "$LATEST_TAG" | sort -V | head -n1)" = "$NEXT" ]; then
               echo "::error::Calculated $NEXT is not ahead of latest tag $LATEST_TAG; nothing new to ship."
               exit 1
             fi
           fi
-          if [ "$DRY_RUN" = "true" ]; then
-            echo "[dry-run] would bump to $NEXT_STRICT, tag $NEXT, push, build, and publish"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "actions@users.noreply.github.com"
           just bump "$NEXT_STRICT"
           git add -u
-          if git diff --staged --quiet; then
-            # Recovery: the bump already landed on main (a previous run's
-            # push succeeded but tagging failed). Tag the existing commit
-            # and ship it. Both manifests must agree, else fail.
-            MANIFEST_VER="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-            FRONTEND_VER="$(grep -m1 '"version"' frontend/package.json | cut -d'"' -f4)"
-            [ -n "$MANIFEST_VER" ] || { echo "::error::No version in Cargo.toml"; exit 1; }
-            [ "$MANIFEST_VER" = "$FRONTEND_VER" ] || { echo "::error::Cargo.toml ($MANIFEST_VER) != frontend/package.json ($FRONTEND_VER)"; exit 1; }
-            if [ "v$MANIFEST_VER" != "$NEXT" ]; then
-              echo "::error::bump produced no change, and manifests ($MANIFEST_VER) disagree with calculated $NEXT_STRICT."
-              exit 1
-            fi
-            echo "Manifests already at $NEXT; tagging the existing commit."
-          else
-            git commit -m "chore(release): ${NEXT}"
-            # Push the commit first: if the tag push fails, main still has
-            # the bump and the next run recovers via the branch above.
-            git push origin HEAD:main
-          fi
+          git diff --staged --quiet && { echo "::error::bump produced no change in package files"; exit 1; }
+          git commit -m "chore(release): ${NEXT}"
+          # Push the commit first: if the tag push fails, the next run
+          # recovers via the manifest-ahead check above.
+          git push origin HEAD:main
           git rev-parse -q --verify "refs/tags/${NEXT}" >/dev/null && { echo "::error::tag ${NEXT} already exists"; exit 1; }
           git tag -a "${NEXT}" -m "Release ${NEXT}"
           git push origin "refs/tags/${NEXT}"
