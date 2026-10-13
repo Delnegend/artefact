@@ -1,23 +1,25 @@
 name: Release / Build Artifacts
 
+# Solo-dev maintenance flow: one run, zero clicks on the happy path.
+# Sunday cron (or a manual run) gates on all of CI, then bumps, tags,
+# pushes, builds, and ships. No PR, no second run, no PAT.
+#
+# Branch protection keeps force-push/deletion/linear-history guards but
+# requires no status checks, so the bot pushes the bump straight to main.
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: "Release mode / build target"
-        required: true
-        type: choice
-        default: "new-tag"
-        options:
-          - new-tag  # Bump version -> open PR (merge it, then run target=tag to build)
-          - tag      # Tag HEAD if missing -> build & publish release
-          - commit   # Test build latest commit -> upload Actions artifacts only (no release)
       ref:
-        description: "Custom tag or commit SHA (optional, defaults to latest)"
+        description: "Rebuild this existing tag instead of shipping a new version. Leave empty for a normal release."
         required: false
         type: string
+      dry-run:
+        description: "Preview only: print each action (gate, bump, tag, build, publish) without doing any of it."
+        required: false
+        type: boolean
+        default: false
   schedule:
-    - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC (defaults to target: new-tag)
+    - cron: '0 0 * * 0' # Weekly: Sunday 00:00 UTC
 
 concurrency:
   group: release-main
@@ -25,11 +27,16 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
+  # Every CI job must pass before anything ships.
+  gate:
+    name: Gate (all of CI)
+    uses: ./.github/workflows/ci.yml
+
   prepare:
-    name: Prepare / Bump Version
+    name: Prepare (bump, tag, push)
+    needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -43,29 +50,10 @@ jobs:
           token: ${{ github.token }}
           persist-credentials: true
           fetch-depth: 0
-      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master
-        with:
-          toolchain: nightly
-          components: rustfmt, clippy
-          targets: wasm32-unknown-unknown
-      - name: Rust cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
-      - name: Install Vulkan software driver (lavapipe)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq mesa-vulkan-drivers
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: Install frontend dependencies
-        run: bun install
-        working-directory: ./frontend
 
-      # ------------------------------------------------------------------
-      # Mode 1: new-tag (semver -> CI gate -> bump -> open PR for review)
-      # ------------------------------------------------------------------
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
       - name: Calculate Next SemVer
-        if: (inputs.target || 'new-tag') == 'new-tag'
         id: semver
         uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1
         with:
@@ -74,98 +62,70 @@ jobs:
           noNewCommitBehavior: silent
           noVersionBumpBehavior: patch
 
-      - name: CI Gate (verify code is green before bumping)
-        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
-        run: just check
-
-      - name: Bump package manager version
-        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
-        env:
-          NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
-        run: |
-          set -euo pipefail
-          just bump "$NEXT_STRICT"
-
-      - name: Commit and open release PR
-        if: (inputs.target || 'new-tag') == 'new-tag' && steps.semver.outputs.bump != 'none'
-        id: release-pr
-        env:
-          NEXT_TAG: ${{ steps.semver.outputs.next }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "actions@users.noreply.github.com"
-
-          # Stage all modified tracked files (manifests and lockfiles)
-          git add -u
-          git diff --staged --quiet && { echo "::error::bump produced no change in package files"; exit 1; }
-          git commit -m "chore(release): ${NEXT_TAG}"
-
-          # Branch protection blocks a direct push to main, so open a PR.
-          # The owner merges it (status checks run on the PR), then re-runs
-          # the workflow with target=tag to tag and publish.
-          BRANCH="release/${NEXT_TAG}"
-          git checkout -b "$BRANCH"
-          git push -u origin "$BRANCH"
-
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          gh pr create --title "chore(release): ${NEXT_TAG}" \
-            --body "Automated version bump to \`${NEXT_TAG}\`. Merge this PR, then run the release workflow with \`target=tag\` to build and publish." \
-            --head "$BRANCH" --base main
-
-      # -----------------------------------------------------------------------
-      # Resolve outputs for Job 2 (build)
-      # -----------------------------------------------------------------------
-      - name: Resolve outputs
+      - name: Bump, tag, and push
         id: resolve
         env:
-          TARGET: ${{ inputs.target || 'new-tag' }}
           INPUT_REF: ${{ inputs.ref }}
+          DRY_RUN: ${{ inputs.dry-run }}
           BUMP: ${{ steps.semver.outputs.bump }}
           CURRENT: ${{ steps.semver.outputs.current }}
           NEXT: ${{ steps.semver.outputs.next }}
           NEXT_STRICT: ${{ steps.semver.outputs.nextStrict }}
         run: |
           set -euo pipefail
-          # new-tag only opens the release PR (branch protection blocks a
-          # direct push to main). Merge the PR, then re-run with target=tag.
-          if [ "$TARGET" = "new-tag" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            if [ "$BUMP" = "none" ]; then
-              echo "No version bump needed (current: ${CURRENT:-none})."
-            else
-              echo "Release PR opened; merge it, then re-run with target=tag to build and publish."
-            fi
+          # Rebuild path: an explicit tag means ship exactly that, no bump.
+          if [ -n "$INPUT_REF" ]; then
+            echo "Rebuilding existing tag $INPUT_REF."
+            { echo "ref=$INPUT_REF"; echo "version=${INPUT_REF#v}"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
             exit 0
-          elif [ "$TARGET" = "tag" ]; then
-            if [ -n "$INPUT_REF" ]; then
-              # Re-run for an existing tag: build and publish it.
-              TAG="$INPUT_REF"
-            else
-              # Normal path: tag the merged release commit, then build it.
-              # The version comes from the manifests on main, which the
-              # release PR just bumped (workspace root + frontend).
-              MANIFEST_VER="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-              FRONTEND_VER="$(grep -m1 '"version"' frontend/package.json | cut -d'"' -f4)"
-              [ -n "$MANIFEST_VER" ] || { echo "::error::No version in Cargo.toml"; exit 1; }
-              [ "$MANIFEST_VER" = "$FRONTEND_VER" ] || { echo "::error::Cargo.toml ($MANIFEST_VER) != frontend/package.json ($FRONTEND_VER)"; exit 1; }
-              TAG="v$MANIFEST_VER"
-              if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-                echo "Tag $TAG already exists; building it."
-              else
-                git config user.name "github-actions[bot]"
-                git config user.email "actions@users.noreply.github.com"
-                git tag -a "$TAG" -m "Release $TAG"
-                git push origin "refs/tags/$TAG"
-              fi
-            fi
-            { echo "ref=$TAG"; echo "version=${TAG#v}"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
-          else
-            SHA="${INPUT_REF:-$(git rev-parse HEAD)}"
-            { echo "ref=$SHA"; echo "version=$SHA"; echo "publish=false"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
-            echo "Running test build against commit $SHA (will not publish release)"
           fi
+          # Nothing releasable since the last tag: clean exit, no noise.
+          if [ "$BUMP" = "none" ]; then
+            echo "No version bump needed (current: ${CURRENT:-none})."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Refuse to re-ship: NEXT must sort after the latest tag.
+          # (Catches re-runs after a release already shipped this version.)
+          LATEST_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
+          if [ -n "$LATEST_TAG" ]; then
+            if [ "$NEXT" = "$LATEST_TAG" ] || [ "$(printf '%s\n%s\n' "$NEXT" "$LATEST_TAG" | sort -V | head -n1)" = "$NEXT" ]; then
+              echo "::error::Calculated $NEXT is not ahead of latest tag $LATEST_TAG; nothing new to ship."
+              exit 1
+            fi
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would bump to $NEXT_STRICT, tag $NEXT, push, build, and publish"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          just bump "$NEXT_STRICT"
+          git add -u
+          if git diff --staged --quiet; then
+            # Recovery: the bump already landed on main (a previous run's
+            # push succeeded but tagging failed). Tag the existing commit
+            # and ship it. Both manifests must agree, else fail.
+            MANIFEST_VER="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+            FRONTEND_VER="$(grep -m1 '"version"' frontend/package.json | cut -d'"' -f4)"
+            [ -n "$MANIFEST_VER" ] || { echo "::error::No version in Cargo.toml"; exit 1; }
+            [ "$MANIFEST_VER" = "$FRONTEND_VER" ] || { echo "::error::Cargo.toml ($MANIFEST_VER) != frontend/package.json ($FRONTEND_VER)"; exit 1; }
+            if [ "v$MANIFEST_VER" != "$NEXT" ]; then
+              echo "::error::bump produced no change, and manifests ($MANIFEST_VER) disagree with calculated $NEXT_STRICT."
+              exit 1
+            fi
+            echo "Manifests already at $NEXT; tagging the existing commit."
+          else
+            git commit -m "chore(release): ${NEXT}"
+            # Push the commit first: if the tag push fails, main still has
+            # the bump and the next run recovers via the branch above.
+            git push origin HEAD:main
+          fi
+          git rev-parse -q --verify "refs/tags/${NEXT}" >/dev/null && { echo "::error::tag ${NEXT} already exists"; exit 1; }
+          git tag -a "${NEXT}" -m "Release ${NEXT}"
+          git push origin "refs/tags/${NEXT}"
+          { echo "ref=$NEXT"; echo "version=$NEXT_STRICT"; echo "publish=true"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
 
   build:
     name: Build (${{ matrix.platform }})
@@ -245,7 +205,7 @@ jobs:
   release:
     name: Tag & Release
     needs: [prepare, build]
-    if: needs.prepare.outputs.skip != 'true' && needs.prepare.outputs.publish == 'true'
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-slim
     permissions:
       contents: write
