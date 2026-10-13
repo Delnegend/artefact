@@ -172,21 +172,26 @@ jobs:
       - name: Build
         env:
           ARTEFACT_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          CARGO_TARGET: ${{ matrix.target }}
         run: |
           touch backend/artefact-cli/main.rs
-          cargo build --bin artefact-cli --release --target ${{ matrix.target }}
+          cargo build --bin artefact-cli --release --target "$CARGO_TARGET"
 
       - name: Compress binaries
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          ARTIFACT: ${{ matrix.artifact }}
+          MATRIX_OS: ${{ matrix.os }}
+          CARGO_TARGET: ${{ matrix.target }}
         run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
-          BASE="artefact-cli-${VERSION}-${{ matrix.artifact }}"
+          BASE="artefact-cli-${VERSION}-${ARTIFACT}"
           mkdir -p "$BASE"
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp "target/${{ matrix.target }}/release/artefact-cli.exe" "$BASE/"
+          if [ "$MATRIX_OS" = "windows-latest" ]; then
+            cp "target/${CARGO_TARGET}/release/artefact-cli.exe" "$BASE/"
             7z a -tzip "${BASE}.zip" "$BASE"
           else
-            cp "target/${{ matrix.target }}/release/artefact-cli" "$BASE/"
+            cp "target/${CARGO_TARGET}/release/artefact-cli" "$BASE/"
             tar -czf "${BASE}.tar.gz" "$BASE"
           fi
           rm -rf "$BASE"
