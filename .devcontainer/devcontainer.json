@@ -3,8 +3,8 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-	"containerUser": "artefact",
-	"remoteUser": "artefact",
+	"containerUser": "dev",
+	"remoteUser": "dev",
 	"runArgs": [
 		"--hostname=artefact",
 		"--cap-add",

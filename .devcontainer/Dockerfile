@@ -13,18 +13,18 @@ RUN --mount=type=cache,target=/var/cache/apt \
     libvulkan1 mesa-vulkan-drivers vulkan-tools && \
     rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -g 1000 artefact && \
-    useradd -m -u 1000 -g artefact -s /bin/bash artefact && \
-    echo "artefact ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/artefact && \
-    chmod 0440 /etc/sudoers.d/artefact && \
-    chsh -s /bin/bash artefact && \
-    mkdir -p /usr/local/cargo && chown -R artefact:artefact /usr/local/cargo
+RUN groupadd -g 1000 dev && \
+    useradd -m -u 1000 -g dev -s /bin/bash dev && \
+    echo "dev ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/dev && \
+    chmod 0440 /etc/sudoers.d/dev && \
+    chsh -s /bin/bash dev && \
+    mkdir -p /usr/local/cargo && chown -R dev:dev /usr/local/cargo
 
 SHELL ["/bin/bash", "-c"]
-USER artefact
+USER dev
 
 ENV CARGO_HOME=/usr/local/cargo
-ENV PATH="/usr/local/cargo/bin:/home/artefact/.bun/bin:${PATH}"
+ENV PATH="/usr/local/cargo/bin:/home/dev/.bun/bin:${PATH}"
 
 # Rust toolchain (nightly, minimal) + analyzer/fmt/clippy — pre-installed so container
 # works even if postCreateCommand is skipped (e.g. Zed); primary dev target is the host
@@ -50,7 +50,7 @@ RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ca
 RUN curl -fsSL https://bun.sh/install | bash
 
 # just completions for interactive shells (was in postinstall.sh, now in image for cache)
-RUN echo 'eval "$(just --completions bash)"' >> /home/artefact/.bashrc
+RUN echo 'eval "$(just --completions bash)"' >> /home/dev/.bashrc
 
 # Ensure bun/cargo are in PATH for non-interactive shells (Zed, `just build`)
-ENV PATH="/home/artefact/.bun/bin:/usr/local/cargo/bin:${PATH}"
+ENV PATH="/home/dev/.bun/bin:/usr/local/cargo/bin:${PATH}"
