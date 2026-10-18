@@ -105,7 +105,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "artefact-cli"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "artefact-core",
  "clap",
@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "artefact-core"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -133,7 +133,7 @@ dependencies = [
 
 [[package]]
 name = "artefact-wasm"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "artefact-core",
  "console_error_panic_hook",

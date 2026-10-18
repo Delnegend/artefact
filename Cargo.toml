@@ -3,7 +3,7 @@ resolver = "2"
 members = ["backend/artefact-cli", "backend/artefact-core", "backend/artefact-wasm", "backend/zune-jpeg"]
 
 [workspace.package]
-version = "1.0.14"
+version = "1.0.15"
 edition = "2024"
 
 [workspace.dependencies]
