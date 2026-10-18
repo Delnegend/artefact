@@ -1,11 +1,5 @@
 name: Release / Build Artifacts
 
-# Solo-dev maintenance flow: one run, zero clicks on the happy path.
-# Sunday cron (or a manual run) gates on all of CI, then bumps, tags,
-# pushes, builds, and ships. No PR, no second run, no PAT.
-#
-# Branch protection keeps force-push/deletion/linear-history guards but
-# requires no status checks, so the bot pushes the bump straight to main.
 on:
   workflow_dispatch:
     inputs:
@@ -29,7 +23,6 @@ permissions:
   contents: write
 
 jobs:
-  # Every CI job must pass before anything ships.
   gate:
     name: Gate (all of CI)
     uses: ./.github/workflows/ci.yml
@@ -122,10 +115,6 @@ jobs:
           touch backend/artefact-cli/main.rs
           cargo build --bin artefact-cli --release --target "$CARGO_TARGET"
 
-      # Names the archive `<name>-<version>-<target>.<ext>` and uploads it
-      # under that same name, so the run and the release agree. Format, effort,
-      # layout and the `.exe` suffix are all the action's decision from
-      # `target`, so this file names no per-platform strings.
       - name: Package artifact
         uses: Delnegend/actions/package-artifact@3914bdd59116118eb4a7bad3cb2c4a04ab380b64 # v1
         with:
