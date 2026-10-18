@@ -99,4 +99,8 @@ jobs:
       # gains checks between releases, so a floating tag can fail an unrelated
       # commit when a new rule lands.
       - name: Run actionlint
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" rhysd/actionlint:1.7.12
+        # `-w /repo` is required: the image has no WORKDIR, so without it
+        # actionlint runs from `/` and reports "no project was found in any
+        # parent directories". The scans above pass an explicit path for the
+        # same reason.
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo rhysd/actionlint:1.7.12
