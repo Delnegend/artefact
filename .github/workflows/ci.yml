@@ -64,43 +64,10 @@ jobs:
       - name: Run Gitleaks
         run: docker run --rm -v "${GITHUB_WORKSPACE}:/path" ghcr.io/gitleaks/gitleaks:latest detect --source=/path --verbose
 
-  sast-scan:
-    name: SAST (Semgrep)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Run Semgrep OSS
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/src" returntocorp/semgrep semgrep scan --config=auto --error
-
-  trivy-scan:
-    name: Misconfig & Vulns (Trivy)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Run Trivy
-        # -w /src: Trivy only reads .trivyignore from its working directory,
-        # not from the scan target, so run from inside the tree.
-        run: docker run --rm -w /src -v "${GITHUB_WORKSPACE}:/src" aquasec/trivy fs /src --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 1
-
-  osv-scan:
-    name: Dependencies (OSV-Scanner)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Run OSV-Scanner
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/src" ghcr.io/google/osv-scanner:latest --config=/src/osv-scanner.toml --recursive /src
-
-  workflow-lint:
-    name: Workflow lint (actionlint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      # Pinned, unlike the scanners above which float on :latest. actionlint
-      # gains checks between releases, so a floating tag can fail an unrelated
-      # commit when a new rule lands.
-      - name: Run actionlint
-        # `-w /repo` is required: the image has no WORKDIR, so without it
-        # actionlint runs from `/` and reports "no project was found in any
-        # parent directories". The scans above pass an explicit path for the
-        # same reason.
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo rhysd/actionlint:1.7.12
+  scan:
+    name: Scan
+    uses: Delnegend/actions/.github/workflows/scan.yml@d1eac240aa236c277753744453ddf0d0f1ecb5c3 # v1
+    permissions:
+      contents: read
+    with:
+      scans: actionlint semgrep trivy osv
