@@ -19,8 +19,9 @@
 Get running in less than 60 seconds:
 
 ```bash
-# 1. Download prebuilt binary (Linux, Windows, macOS)
-curl -fsSL https://github.com/Delnegend/artefact/releases/latest/download/artefact-cli-linux-x64.tar.gz | tar -xz
+# 1. Download the latest prebuilt binary (Linux x64; Windows and macOS builds are on the releases page)
+URL=$(curl -fsSL https://api.github.com/repos/Delnegend/artefact/releases/latest | grep -o 'https://[^"]*x86_64-unknown-linux-gnu\.tar\.xz')
+curl -fsSL -o artefact.tar.xz "$URL" && tar -xJf artefact.tar.xz --strip-components=1
 
 # 2. Reconstruct an image
 ./artefact-cli input.jpg -o output.png
