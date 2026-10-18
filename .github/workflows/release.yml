@@ -51,6 +51,15 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
+      # `just bump` runs `cargo check -p artefact-cli`, which compiles
+      # `artefact-core` — and its `lib.rs` is `#![feature(portable_simd)]`,
+      # nightly-only. Without this the runner's default stable toolchain
+      # fails the bump with E0554. Matches the toolchain used in the gates.
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master
+        with:
+          toolchain: nightly
+
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Calculate Next SemVer
