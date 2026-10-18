@@ -24,7 +24,7 @@ Without the devcontainer:
 - [`just`](https://github.com/casey/just), [`bun`](https://bun.sh),
   [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
 - `ffmpeg` only for sample image generation (not in the devcontainer by default)
-- `zip`/`tar` only if manually archiving — releases (linux x64, windows x64, macOS arm64) are
+- `zip`/`tar` only if manually archiving — the Linux x64 release is
   built on GitHub Actions via `.github/workflows/release.yml`
 
 ## Build
@@ -142,8 +142,8 @@ revisions with `git worktree add <dir> <revision>`. Keep `RAYON_NUM_THREADS` fix
 
 ## Cross-compiling / releases
 
-Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`, `windows x64`,
-`macOS arm64`; see [Build](#build) for the native commands.
+Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`;
+other platforms install from source through the Homebrew tap.
 
 Trigger: weekly cron (Sunday 00:00 UTC) or `workflow_dispatch`; dispatch modes
 are shared ([Delnegend/actions](https://github.com/Delnegend/actions/blob/main/README.md)).

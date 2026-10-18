@@ -12,8 +12,6 @@
 
 ---
 
-> **Maintenance mode.** Feature work is complete. The project receives automated dependency and security updates with a 14-day supply-chain quarantine, batched into weekly releases. Bug reports are welcome; new features are not accepted.
-
 ## Quick Start
 
 Get running in less than 60 seconds:
