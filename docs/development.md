@@ -62,7 +62,7 @@ Formatting is applied, not gated: `cargo fmt` for Rust, `oxfmt` for JS. The gate
 `odd_420.jpg` edge case cannot pass by skipping a missing adapter. Plain `cargo test` keeps the
 lenient skips for machines without a GPU.
 
-## Sample images and profiling
+## Sample images, profiling & regression
 
 ```bash
 just sample         # scripts/generate-sample.sh (needs ffmpeg) -> assets/sample.png
@@ -76,8 +76,6 @@ need this when you want a fresh sample.
 
 `just flame <chroma>` accepts `420`/`422`/`444`/`j420`/`j422`/`j444`; see `just --choose` for the
 recipe list. To decode one by hand, run `artefact-cli assets/sample.420.input.jpg -y` directly.
-
-## Sample images & regression
 
 Decoding regressions are covered by native Rust tests (`cargo test --workspace`, run as part of
 `just check`): `backend/zune-jpeg/tests/decode.rs` decodes committed `cjpeg` fixtures (4:4:4,
@@ -145,23 +143,11 @@ revisions with `git worktree add <dir> <revision>`. Keep `RAYON_NUM_THREADS` fix
 ## Cross-compiling / releases
 
 Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`, `windows x64`,
-`macOS arm64`.
+`macOS arm64`; see [Build](#build) for the native commands.
 
 Trigger: weekly cron (Sunday 00:00 UTC) or `workflow_dispatch`; dispatch modes
 are shared ([Delnegend/actions](https://github.com/Delnegend/actions/blob/main/README.md)).
 Version comes from Conventional Commits since the latest tag via `ietf-tools/semver-action`.
-
-Locally, just build natively:
-
-```bash
-just build
-# or
-cargo build --bin artefact-cli --release
-# manual cross (if toolchain installed):
-# cargo build --bin artefact-cli --release --target x86_64-unknown-linux-gnu
-# cargo build --bin artefact-cli --release --target x86_64-pc-windows-gnu
-# cargo build --bin artefact-cli --release --target aarch64-apple-darwin
-```
 
 ## Other recipes
 
