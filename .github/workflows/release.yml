@@ -73,7 +73,7 @@ jobs:
 
       - name: Bump, tag, and push
         id: resolve
-        uses: Delnegend/actions/resolve-release@e5a0d7c3af36381065080b6272d91fde28d17414 # v1
+        uses: Delnegend/actions/resolve-release@3914bdd59116118eb4a7bad3cb2c4a04ab380b64 # v1
         with:
           ref: ${{ inputs.ref }}
           dry-run: ${{ inputs.dry-run }}
@@ -97,15 +97,12 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             platform: linux/x64
-            artifact: linux-x64
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             platform: windows/x64
-            artifact: windows-x64
           - os: macos-latest
             target: aarch64-apple-darwin
             platform: darwin/arm64
-            artifact: darwin-arm64
 
     steps:
       - name: Checkout
@@ -131,40 +128,17 @@ jobs:
           touch backend/artefact-cli/main.rs
           cargo build --bin artefact-cli --release --target "$CARGO_TARGET"
 
-      - name: Compress binaries
-        shell: bash
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-          ARTIFACT: ${{ matrix.artifact }}
-          MATRIX_OS: ${{ matrix.os }}
-          CARGO_TARGET: ${{ matrix.target }}
-        run: |
-          BASE="artefact-cli-${VERSION}-${ARTIFACT}"
-          mkdir -p "$BASE"
-          if [ "$MATRIX_OS" = "windows-latest" ]; then
-            cp "target/${CARGO_TARGET}/release/artefact-cli.exe" "$BASE/"
-            7z a -tzip "${BASE}.zip" "$BASE"
-          else
-            cp "target/${CARGO_TARGET}/release/artefact-cli" "$BASE/"
-            tar -czf "${BASE}.tar.gz" "$BASE"
-          fi
-          rm -rf "$BASE"
-
-      - name: Upload artifact (tar.gz)
-        if: matrix.os != 'windows-latest'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      # Names the archive `<name>-<version>-<target>.<ext>` and uploads it
+      # under that same name, so the run and the release agree. Format, effort,
+      # layout and the `.exe` suffix are all the action's decision from
+      # `target`, so this file names no per-platform strings.
+      - name: Package artifact
+        uses: Delnegend/actions/package-artifact@3914bdd59116118eb4a7bad3cb2c4a04ab380b64 # v1
         with:
-          name: artefact-cli-${{ matrix.artifact }}
-          path: artefact-cli-*.tar.gz
-          if-no-files-found: ignore
-
-      - name: Upload artifact (zip)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: artefact-cli-${{ matrix.artifact }}
-          path: artefact-cli-*.zip
-          if-no-files-found: ignore
+          name: artefact-cli
+          version: ${{ needs.prepare.outputs.version }}
+          target: ${{ matrix.target }}
+          source: target/${{ matrix.target }}/release/artefact-cli
 
   release:
     name: Tag & Release
