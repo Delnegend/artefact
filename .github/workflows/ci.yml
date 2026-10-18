@@ -66,8 +66,9 @@ jobs:
 
   scan:
     name: Scan
-    uses: Delnegend/actions/.github/workflows/scan.yml@d1eac240aa236c277753744453ddf0d0f1ecb5c3 # v1
+    uses: Delnegend/actions/.github/workflows/scan.yml@9770db26039f6566a5dbd0626c0de613ab75a5f9 # v1
     permissions:
       contents: read
     with:
       scans: actionlint semgrep trivy osv
+      osv-config: osv-scanner.toml
