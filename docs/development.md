@@ -147,8 +147,9 @@ revisions with `git worktree add <dir> <revision>`. Keep `RAYON_NUM_THREADS` fix
 Built on GitHub Actions (`.github/workflows/release.yml`) for `linux x64`, `windows x64`,
 `macOS arm64`.
 
-Trigger: weekly cron (Sunday 00:00 UTC) or `workflow_dispatch`. Version comes from Conventional
-Commits since the latest tag via `ietf-tools/semver-action`.
+Trigger: weekly cron (Sunday 00:00 UTC) or `workflow_dispatch`; dispatch modes
+are shared ([Delnegend/actions](https://github.com/Delnegend/actions/blob/main/README.md)).
+Version comes from Conventional Commits since the latest tag via `ietf-tools/semver-action`.
 
 Locally, just build natively:
 
