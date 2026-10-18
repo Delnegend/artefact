@@ -54,21 +54,11 @@ jobs:
   # Security scans. They need Docker images and registry egress, so they only run
   # on GitHub-hosted runners. None of them is a required check — the branch
   # protection contract stays `Check (just check)`.
-  secret-scan:
-    name: Secret Scanning (Gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0   # the whole history: a leaked secret lives in it
-      - name: Run Gitleaks
-        run: docker run --rm -v "${GITHUB_WORKSPACE}:/path" ghcr.io/gitleaks/gitleaks:latest detect --source=/path --verbose
-
   scan:
     name: Scan
-    uses: Delnegend/actions/.github/workflows/scan.yml@9770db26039f6566a5dbd0626c0de613ab75a5f9 # v1
+    uses: Delnegend/actions/.github/workflows/scan.yml@6b0ff42cc9e8937cd1b37faebccd093fc6c68a86 # v1
     permissions:
       contents: read
     with:
-      scans: actionlint semgrep trivy osv
+      scans: gitleaks actionlint semgrep trivy osv
       osv-config: osv-scanner.toml
