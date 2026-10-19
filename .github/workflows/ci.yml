@@ -51,7 +51,7 @@ jobs:
 
   scan:
     name: Scan
-    uses: Delnegend/actions/.github/workflows/scan.yml@95dff8c808d26b0b4b849450d90652b9b4aca685 # v1
+    uses: Delnegend/actions/.github/workflows/scan.yml@0e55ed74d7039e8f1f5b23607345eefaef65d8b4 # v1
     permissions:
       contents: read
     with:

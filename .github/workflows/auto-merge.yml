@@ -10,11 +10,4 @@ permissions:
 
 jobs:
   automerge:
-    if: contains(github.event.pull_request.labels.*.name, 'dependencies')
-    runs-on: ubuntu-slim
-    steps:
-      - name: Enable auto-merge and rebase
-        run: gh pr merge --auto --rebase "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: Delnegend/actions/.github/workflows/reusable-auto-merge.yml@0e55ed74d7039e8f1f5b23607345eefaef65d8b4 # v1

@@ -15,79 +15,8 @@ concurrency:
 
 jobs:
   update:
-    name: Upgrade dependencies
-    runs-on: ubuntu-slim
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      # Resolution only: `cargo update` rewrites the lockfile, and the workspace
-      # manifest uses no nightly-only keys, so the build toolchains elsewhere in
-      # this repo keep their nightly pin. Stable is what makes the cooldown
-      # check below meaningful — the registry cooldown is unstable on nightly.
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-
-      - name: Check that Cargo can enforce the cooldown
-        id: cargo-cooldown
-        run: |
-          set -euo pipefail
-          # `registry.global-min-publish-age` is stable from Cargo 1.100, and an
-          # older toolchain ignores the key silently. Upgrading anyway would pull
-          # versions with no quarantine at all, so skip instead of shipping that.
-          version="$(cargo --version | awk '{print $2}')"
-          major="${version%%.*}"
-          minor="${version#*.}"; minor="${minor%%.*}"
-          if [ "$major" -eq 1 ] && [ "$minor" -lt 100 ]; then
-            echo "enforced=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::cargo ${version} ignores registry.global-min-publish-age (stable from 1.100) — no Cargo upgrade was made, so nothing lands without the 14-day quarantine"
-          else
-            echo "enforced=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upgrade Cargo dependencies (cooldown in .cargo/config.toml)
-        if: steps.cargo-cooldown.outputs.enforced == 'true'
-        run: cargo update
-
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: latest
-
-      - name: Upgrade Bun dependencies (cooldown in bunfig.toml)
-        run: |
-          cd frontend
-          bun update
-
-      - name: Detect whether anything changed
-        id: diff
-        run: |
-          if git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Ensure the dependencies label exists
-        if: steps.diff.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh label create dependencies --force --color 0366d6 --description "Dependency updates"
-
-      - name: Open upgrade PR
-        if: steps.diff.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "actions@users.noreply.github.com"
-          git checkout -B deps/automatic
-          git add -u
-          git commit -m "chore(deps): upgrade dependencies"
-          git push --force origin deps/automatic
-          if gh pr view deps/automatic --json number >/dev/null 2>&1; then
-            echo "the push updated the existing upgrade PR"
-          else
-            gh pr create --base main --head deps/automatic \
-              --label dependencies \
-              --title "chore(deps): upgrade dependencies" \
-              --body "Automated daily upgrade. Versions published less than 14 days ago were filtered out by the package manager."
-          fi
+    uses: Delnegend/actions/.github/workflows/reusable-deps-update.yml@0e55ed74d7039e8f1f5b23607345eefaef65d8b4 # v1
+    with:
+      cargo: true
+      bun: true
+      bun-dir: frontend
