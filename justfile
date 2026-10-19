@@ -99,3 +99,22 @@ generate-sample output="assets/sample.png":
 	./scripts/generate-sample.sh "{{output}}"
 
 alias sample := generate-sample
+
+# Language-agnostic version contract for Delnegend/actions/resolve-release.
+# Single truth: Cargo.toml workspace version; bump syncs frontend/package.json.
+version action ver="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{action}}" in
+      get)
+        python3 -c "import tomllib;d=tomllib.load(open('Cargo.toml','rb'));print(d.get('workspace',{}).get('package',{}).get('version') or d.get('package',{}).get('version',''))"
+        ;;
+      bump)
+        [ -n "{{ver}}" ] || { echo "usage: just version bump X.Y.Z" >&2; exit 1; }
+        VERSION="{{ver}}"
+        sed -i -E "0,/^version = \".*\"/s//version = \"${VERSION}\"/" Cargo.toml
+        cargo check -p artefact-cli --quiet
+        cd frontend && npm version --no-git-tag-version "${VERSION}"
+        ;;
+      *) echo "usage: just version get|bump X.Y.Z" >&2; exit 1 ;;
+    esac

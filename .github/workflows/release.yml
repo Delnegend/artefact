@@ -44,7 +44,7 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
-      # `just bump` runs `cargo check -p artefact-cli`, which compiles
+      # `just version bump` runs `cargo check -p artefact-cli`, which compiles
       # `artefact-core` — and its `lib.rs` is `#![feature(portable_simd)]`,
       # nightly-only. Without this the runner's default stable toolchain
       # fails the bump with E0554. Matches the toolchain used in the gates.
@@ -66,13 +66,11 @@ jobs:
 
       - name: Bump, tag, and push
         id: resolve
-        uses: Delnegend/actions/resolve-release@3914bdd59116118eb4a7bad3cb2c4a04ab380b64 # v1
+        uses: Delnegend/actions/resolve-release@c8f251adec9078aa3de75304882b514f9adba042 # v1
         with:
           ref: ${{ inputs.ref }}
           dry-run: ${{ inputs.dry-run }}
           gate-sha: ${{ github.sha }}
-          manifest-path: Cargo.toml
-          bump-command: just bump
           semver-bump: ${{ steps.semver.outputs.bump }}
           semver-current: ${{ steps.semver.outputs.current }}
           semver-next: ${{ steps.semver.outputs.next }}
@@ -116,7 +114,7 @@ jobs:
           cargo build --bin artefact-cli --release --target "$CARGO_TARGET"
 
       - name: Package artifact
-        uses: Delnegend/actions/package-artifact@3914bdd59116118eb4a7bad3cb2c4a04ab380b64 # v1
+        uses: Delnegend/actions/package-artifact@c8f251adec9078aa3de75304882b514f9adba042 # v1
         with:
           name: artefact-cli
           version: ${{ needs.prepare.outputs.version }}
