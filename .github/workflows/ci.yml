@@ -51,8 +51,6 @@ jobs:
 
   scan:
     name: Scan
-    uses: Delnegend/actions/.github/workflows/scan.yml@fd9a429325e7c9103399f01855023e6b394457a2 # v1
+    uses: Delnegend/actions/.github/workflows/scan.yml@62064acc9dce2872175e85b3b2e1c2295cd1bee7 # v1
     permissions:
       contents: read
-    with:
-      osv-config: osv-scanner.toml
