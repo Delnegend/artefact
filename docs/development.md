@@ -151,4 +151,4 @@ Version comes from Conventional Commits since the latest tag via `ietf-tools/sem
 
 ## Other recipes
 
-Check out the [justfile](../justfile) for the full recipe list (`just --choose`).
+Check out the [.justfile](../.justfile) for the full recipe list (`just --choose`).

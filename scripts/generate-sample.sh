@@ -15,7 +15,7 @@
 # Usage:
 #   ./scripts/generate-sample.sh [output]        # default: assets/sample.png
 #   ./scripts/generate-sample.sh assets/sample.png 1600 1200
-#   just generate-sample            # if recipe added to justfile
+#   just generate-sample            # if recipe added to .justfile
 #
 # Requirements: ffmpeg with libfreetype + DejaVu fonts (fonts-dejavu-core)
 #   sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
