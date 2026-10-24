@@ -46,8 +46,6 @@ check kind="all":
 		ARTEFACT_REQUIRE_GPU=1 cargo test --workspace --all-features
 	fi
 
-bump version:
-    @just version bump "{{version}}"
 
 # build: native CLI, wasm, or web
 build target="native":
@@ -103,12 +101,12 @@ version action ver="":
       get)
         python3 -c "import tomllib;d=tomllib.load(open('Cargo.toml','rb'));print(d.get('workspace',{}).get('package',{}).get('version') or d.get('package',{}).get('version',''))"
         ;;
-      bump)
-        [ -n "{{ver}}" ] || { echo "usage: just version bump X.Y.Z" >&2; exit 1; }
+      set|bump)
+        [ -n "{{ver}}" ] || { echo "usage: just version set X.Y.Z" >&2; exit 1; }
         VERSION="{{ver}}"
         sed -i -E "0,/^version = \".*\"/s//version = \"${VERSION}\"/" Cargo.toml
         cargo check -p artefact-cli --quiet
         cd frontend && npm version --no-git-tag-version "${VERSION}"
         ;;
-      *) echo "usage: just version get|bump X.Y.Z" >&2; exit 1 ;;
+      *) echo "usage: just version get|set X.Y.Z" >&2; exit 1 ;;
     esac
