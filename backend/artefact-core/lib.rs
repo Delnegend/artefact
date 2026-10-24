@@ -182,7 +182,6 @@ impl Artefact {
                 max_rounded_px_count,
             )
         } else {
-            // Process channels separately
             jpeg.coefs
                 .par_iter()
                 .cloned()
@@ -217,14 +216,12 @@ impl Artefact {
             return Err(ArtefactError::Benchmark);
         }
 
-        // Fixup luma range for first channel
         for item in output[0].iter_mut().take(max_rounded_px_count) {
             *item += 128.0;
         }
 
         let max_w = max_rounded_px_w as usize;
 
-        // YCbCr -> RGB
         if jpeg.nchannel == 3 {
             let (luma, cb, cr) = (&output[0], &output[1], &output[2]);
             return Ok(image::RgbImage::from_fn(
@@ -247,7 +244,6 @@ impl Artefact {
             ));
         }
 
-        // Grayscale
         let luma = &output[0];
         Ok(image::RgbImage::from_fn(
             jpeg.real_px_w,
