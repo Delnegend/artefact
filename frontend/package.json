@@ -1,6 +1,6 @@
 {
   "name": "artefact",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Optimized JPEG decoder for quality.",
   "type": "module",
   "repository": {
