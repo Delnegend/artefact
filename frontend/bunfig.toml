@@ -9,5 +9,7 @@ minimumReleaseAgeExcludes = [
 	"@types/node",
 	"typescript",
 	"@trickfilm400/rollup-plugin-off-main-thread",
-	"ejs"
+	"ejs",
+	"fast-uri",
+	"serialize-javascript",
 ]

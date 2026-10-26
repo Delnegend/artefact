@@ -1,48 +1,50 @@
 {
-	"name": "artefact",
-	"version": "1.0.15",
-	"description": "Optimized JPEG decoder for quality.",
-	"type": "module",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/Delnegend/artefact.git"
-	},
-	"author": "Delnegend",
-	"license": "MIT, Apache 2.0",
-	"bugs": {
-		"url": "https://github.com/Delnegend/artefact/issues"
-	},
-	"homepage": "https://github.com/Delnegend/artefact#readme",
-	"scripts": {
-		"dev": "vite",
-		"build": "vite build",
-		"preview": "vite preview",
-		"typecheck": "vue-tsc --build"
-	},
-	"dependencies": {
-		"@lucide/vue": "^1.48.0",
-		"clsx": "^2.1.1",
-		"reka-ui": "^2.10.5",
-		"tailwind-merge": "^3.7.0",
-		"tw-animate-css": "^1.4.0",
-		"vue": "^3.5.43",
-		"vue-sonner": "^2.0.9"
-	},
-	"devDependencies": {
-		"@tailwindcss/vite": "^4.3.3",
-		"@vitejs/plugin-vue": "^6.0.9",
-		"@vue/tsconfig": "^0.9.1",
-		"oxfmt": "^0.67.0",
-		"oxlint": "^1.85.0",
-		"tailwindcss": "^4.3.3",
-		"typescript": "^5.9.3",
-		"vite": "^8.3.4",
-		"vite-plugin-pwa": "^1.3.0",
-		"vue-tsc": "^3.3.11"
-	},
-	"overrides": {
-		"@trickfilm400/rollup-plugin-off-main-thread": "4.0.0",
-		"picomatch": "4.0.7",
-		"@babel/core": "7.29.7"
-	}
+  "name": "artefact",
+  "version": "1.0.15",
+  "description": "Optimized JPEG decoder for quality.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Delnegend/artefact.git"
+  },
+  "author": "Delnegend",
+  "license": "MIT, Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/Delnegend/artefact/issues"
+  },
+  "homepage": "https://github.com/Delnegend/artefact#readme",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --build"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.48.0",
+    "clsx": "^2.1.1",
+    "reka-ui": "^2.10.5",
+    "tailwind-merge": "^3.7.0",
+    "tw-animate-css": "^1.4.0",
+    "vue": "^3.5.43",
+    "vue-sonner": "^2.0.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/tsconfig": "^0.9.1",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.85.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4",
+    "vite-plugin-pwa": "^1.3.0",
+    "vue-tsc": "^3.3.11"
+  },
+  "overrides": {
+    "@trickfilm400/rollup-plugin-off-main-thread": "4.0.0",
+    "picomatch": "4.0.7",
+    "@babel/core": "7.29.7",
+    "fast-uri": "3.1.9",
+    "serialize-javascript": "7.1.3"
+  }
 }
