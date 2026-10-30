@@ -14,3 +14,12 @@
 # Transitive via @tailwindcss/node and @vue/compiler-*. No direct dependency.
 id = "GHSA-68fv-2mgg-jv7q"
 reason = "Fix 1.2.2 published 2026-09-30, quarantined until ~2026-10-14. Review: 2026-10-20."
+
+[[IgnoredVulns]]
+# deepmerge 4.3.1 — CVE-2026-93753 / GHSA-gcqx-w48m-w2h4.
+# Build dependency via vite-plugin-pwa -> workbox-build -> @rollup/plugin-node-resolve;
+# node-resolve merges trusted defaults, not attacker-controlled input.
+# No patched version is available; track https://github.com/TehShrike/deepmerge/issues/273
+# and remove this exception when a fix is available and past quarantine.
+id = "GHSA-gcqx-w48m-w2h4"
+reason = "Build-time node-resolve merges trusted defaults; no upstream fix. Review: 2026-11-30."
