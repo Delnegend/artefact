@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   update:
-    uses: Delnegend/actions/.github/workflows/reusable-deps-update.yml@da085f98404ececa327b6d00b05341e002787f3e # v1
+    uses: Delnegend/actions/.github/workflows/reusable-deps-update.yml@cc01ad7470776ce23b38f14823a86d560e2d592e # v1
     with:
       cargo: true
       bun: true
