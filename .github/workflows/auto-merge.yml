@@ -10,4 +10,4 @@ permissions:
 
 jobs:
   automerge:
-    uses: Delnegend/actions/.github/workflows/reusable-auto-merge.yml@62064acc9dce2872175e85b3b2e1c2295cd1bee7 # v1
+    uses: Delnegend/actions/.github/workflows/reusable-auto-merge.yml@cc01ad7470776ce23b38f14823a86d560e2d592e # v1
