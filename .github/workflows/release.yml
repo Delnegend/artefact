@@ -135,7 +135,7 @@ jobs:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Publish release
-        uses: Delnegend/actions/publish-release@62064acc9dce2872175e85b3b2e1c2295cd1bee7 # v1
+        uses: Delnegend/actions/publish-release@cc01ad7470776ce23b38f14823a86d560e2d592e # v1
         with:
           ref: ${{ needs.prepare.outputs.ref }}
           publish: ${{ needs.prepare.outputs.publish }}
