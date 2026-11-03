@@ -12,4 +12,8 @@ minimumReleaseAgeExcludes = [
 	"ejs",
 	"fast-uri",
 	"serialize-javascript",
+	"glob",
+	"minimatch",
+	"path-scurry",
+	"@isaacs/nonrecursive-glob-match"
 ]
