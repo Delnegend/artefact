@@ -29,10 +29,10 @@ artefact-cli input.jpg -o output.png
 
 ## Highlights
 
-- **Artifact reduction** — Re-optimizes raw DCT coefficients with a regularized solver rather than making pixel-level guesses.
-- **High throughput** — Multi-threaded execution with adaptive SIMD vectorization and optional WebGPU acceleration.
-- **Cross-platform** — Runs as a single static native CLI or entirely client-side in the browser via WebAssembly (zero uploads).
-- **Flexible output** — Ingests standard `.jpg`/`.jpeg` files and exports to PNG, WebP, TIFF, or BMP.
+- **Artifact reduction**: Re-optimizes raw DCT coefficients with a regularized solver rather than making pixel-level guesses.
+- **High throughput**: Multi-threaded execution with adaptive SIMD vectorization and optional WebGPU acceleration.
+- **Cross-platform**: Runs as a single static native CLI or entirely client-side in the browser via WebAssembly (zero uploads).
+- **Flexible output**: Ingests standard `.jpg`/`.jpeg` files and exports to PNG, WebP, TIFF, or BMP.
 
 ## Common Options
 
@@ -66,9 +66,9 @@ For component boundaries, internal pipelines, and design decisions, see **[Archi
 
 ## Documentation
 
-- **[CLI Reference](docs/cli.md)** — Command-line flags, tuning guide, and benchmark options.
-- **[Architecture](docs/architecture.md)** — Solver pipelines, data flow, and repository layout.
-- **[Development](docs/development.md)** — Prerequisites, builds, `just check`, and profiling.
+- **[CLI Reference](docs/cli.md)**: Command-line flags, tuning guide, and benchmark options.
+- **[Architecture](docs/architecture.md)**: Solver pipelines, data flow, and repository layout.
+- **[Development](docs/development.md)**: Prerequisites, builds, `just check`, and profiling.
 
 ## License
 

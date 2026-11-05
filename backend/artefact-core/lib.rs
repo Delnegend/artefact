@@ -29,7 +29,7 @@ use jpeg::Jpeg;
 pub use jpeg::JpegSource;
 use utils::macros::mul_add;
 
-// Single-crate dispatch — always buildable, no bloat via features
+// Single-crate dispatch - always buildable, no bloat via features
 #[cfg(not(feature = "simd"))]
 use pipeline::scalar::solve;
 #[cfg(feature = "simd")]

@@ -45,7 +45,7 @@ jobs:
           fetch-depth: 0
 
       # `just version bump` runs `cargo check -p artefact-cli`, which compiles
-      # `artefact-core` — and its `lib.rs` is `#![feature(portable_simd)]`,
+      # `artefact-core`, and its `lib.rs` is `#![feature(portable_simd)]`,
       # nightly-only. Without this the runner's default stable toolchain
       # fails the bump with E0554. Matches the toolchain used in the gates.
       - name: Setup Rust

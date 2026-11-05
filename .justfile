@@ -6,7 +6,7 @@ dev:
 
 # check code for: rust (backend), js (frontend)
 # formatting is applied first (rustfmt + oxfmt), then linted/type-checked
-# default: all — rust checks ensure all pipelines always buildable (no silent regression)
+# default: all - rust checks ensure all pipelines always buildable (no silent regression)
 check kind="all":
 	#!/usr/bin/env bash
 	set -euo pipefail
@@ -18,7 +18,7 @@ check kind="all":
 			--ignore-pattern src/utils/artefact-wasm/**/*.*
 		bun x oxfmt
 		# vue-tsc cannot run under bun (its Volar plugin silently fails to load,
-		# producing bogus TS2307 "Cannot find module './X.vue'" errors) — so fail
+		# producing bogus TS2307 "Cannot find module './X.vue'" errors) - so fail
 		# fast with the real cause instead of 32 misleading type errors. Never
 		# shim this with a node -> bun symlink: a lying runtime is worse than a
 		# missing one.
@@ -34,10 +34,10 @@ check kind="all":
 		cargo check --workspace --all-features
 		# native scalar dispatch (workspace feature-unification otherwise selects simd)
 		cargo check -p artefact-core
-		# wasm — std::simd must build for wasm32
+		# wasm - std::simd must build for wasm32
 		cargo check -p artefact-core --target wasm32-unknown-unknown
 		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd
-		# wasm — wgpu's WebGPU backend must build too
+		# wasm - wgpu's WebGPU backend must build too
 		cargo check -p artefact-core --target wasm32-unknown-unknown --features simd,gpu
 		cargo clippy --workspace --all-features
 		# decode/fixture regression tests (zune-jpeg + pipelines + verify)

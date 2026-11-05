@@ -11,7 +11,7 @@ use criterion::Criterion;
 
 use super::{tv_par, tv_simd64};
 
-/// 1600x1200 — same as assets/sample.png; 3 channels (YCbCr) like a joint solve.
+/// 1600x1200 - same as assets/sample.png; 3 channels (YCbCr) like a joint solve.
 const W: u32 = 1600;
 const H: u32 = 1200;
 /// A width whose tail needs 32/16/8-wide runs, exercising every generic width.

@@ -5,7 +5,7 @@ global-min-publish-age = "14 days"
 
 [resolver]
 # "deny" (the default) skips too-new versions unless already in Cargo.lock.
-# Do NOT set this to "allow" — that disables the cooldown.
+# Do NOT set this to "allow"; that disables the cooldown.
 incompatible-publish-age = "deny"
 
 # Ship binaries compiled for a real SIMD ISA instead of the x86-64 baseline

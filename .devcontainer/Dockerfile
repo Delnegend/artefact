@@ -26,7 +26,7 @@ USER dev
 ENV CARGO_HOME=/usr/local/cargo
 ENV PATH="/usr/local/cargo/bin:/home/dev/.bun/bin:${PATH}"
 
-# Rust toolchain (nightly, minimal) + analyzer/fmt/clippy — pre-installed so container
+# Rust toolchain (nightly, minimal) + analyzer/fmt/clippy - pre-installed so container
 # works even if postCreateCommand is skipped (e.g. Zed); primary dev target is the host
 # x86_64-unknown-linux-gnu. (Static musl is deliberately not the default: it cannot
 # dlopen, so Vulkan/wgpu would be unavailable at runtime.)
@@ -34,7 +34,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
     /usr/local/cargo/bin/rustup component add rust-analyzer rustfmt clippy && \
     /usr/local/cargo/bin/rustup target add wasm32-unknown-unknown
 
-# mold — pinned to keep linker fast/reproducible; also configure cargo to use it
+# mold - pinned to keep linker fast/reproducible; also configure cargo to use it
 RUN curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz" && \
     echo "6ff270c9bf07d2bec5c98aa324eb7c4daf6a1a4d815c05ff1708049616047855  /tmp/mold.tar.gz" | sha256sum -c - && \
     tar -xf /tmp/mold.tar.gz -C /usr/local/cargo "mold-${MOLD_VERSION}-x86_64-linux" && \
@@ -45,7 +45,7 @@ RUN curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/down
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash && \
     cargo binstall -y flamegraph wasm-pack
 
-# bun — pre-installed for cache + non-interactive shells (the installer lands
+# bun - pre-installed for cache + non-interactive shells (the installer lands
 # the binary on PATH at ~/.bun/bin, so no symlink step is needed)
 RUN curl -fsSL https://bun.sh/install | bash
 

@@ -54,7 +54,7 @@ fn max_diff(
     m
 }
 
-/// Known scalar init discrepancy — see module docs.
+/// Known scalar init discrepancy - see module docs.
 #[test]
 #[ignore = "scalar Coefficient->ScalarCoef scrambles the init (per-block from_blocks); converges only after many iterations, slated for removal"]
 fn scalar_matches_simd() {

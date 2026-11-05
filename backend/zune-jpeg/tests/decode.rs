@@ -64,7 +64,7 @@ fn baseline_sampling_matrix() {
         ("baseline_444.jpg", &[(1, 1), (1, 1), (1, 1)]),
         ("baseline_422.jpg", &[(1, 1), (2, 1), (2, 1)]),
         ("baseline_420.jpg", &[(1, 1), (2, 2), (2, 2)]),
-        // 4:1:1 — luma is 4 wide, chroma 1, so chroma downsample factor is 4
+        // 4:1:1 - luma is 4 wide, chroma 1, so chroma downsample factor is 4
         ("baseline_411.jpg", &[(1, 1), (4, 1), (4, 1)]),
     ];
 

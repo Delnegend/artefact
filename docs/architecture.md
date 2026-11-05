@@ -14,21 +14,21 @@ graph TD
 ```
 .
 ├── backend/
-│   ├── artefact-core/    # core solver — pipeline/{scalar,simd,gpu} + shared utils
+│   ├── artefact-core/    # core solver - pipeline/{scalar,simd,gpu} + shared utils
 │   ├── artefact-cli/     # native binary (clap)
 │   ├── artefact-wasm/    # wasm-pack cdylib for frontend
-│   └── zune-jpeg/        # fork of zune-jpeg — exposes DCT coeffs + fixes
-├── frontend/             # Vue 3 + Vite + Tailwind — src/utils/artefact-wasm is generated
+│   └── zune-jpeg/        # fork of zune-jpeg - exposes DCT coeffs + fixes
+├── frontend/             # Vue 3 + Vite + Tailwind - src/utils/artefact-wasm is generated
 ├── assets/               # demo images (01.png-04.png) + generated sample fixtures
 └── docs/                 # this directory
 ```
 
-Workspace versions are centralized in `[workspace.dependencies]` at the root `Cargo.toml` — bump
+Workspace versions are centralized in `[workspace.dependencies]` at the root `Cargo.toml`; bump
 once, inherited via `workspace = true` in each crate.
 
 ## How a solve works
 
-1. The vendored `zune-jpeg` fork decodes the JPEG and exposes the raw DCT coefficients — the
+1. The vendored `zune-jpeg` fork decodes the JPEG and exposes the raw DCT coefficients; the
    high-frequency detail a normal decoder throws away is exactly what artefact needs.
 2. `artefact-core` re-optimizes those coefficients with a regularized solver (2nd-order weight +
    fidelity weight, iterated) instead of guessing pixel values in the gaps.

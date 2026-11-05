@@ -24,7 +24,7 @@ Without the devcontainer:
 - [`just`](https://github.com/casey/just), [`bun`](https://bun.sh),
   [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
 - `ffmpeg` only for sample image generation (not in the devcontainer by default)
-- `zip`/`tar` only if manually archiving — the Linux x64 release is
+- `zip`/`tar` only if manually archiving; the Linux x64 release is
   built on GitHub Actions via `.github/workflows/release.yml`
 
 ## Build

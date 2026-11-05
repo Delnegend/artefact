@@ -10,12 +10,12 @@ Defined in [`backend/artefact-cli/main.rs:18`](../backend/artefact-cli/main.rs) 
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
-| `<input>` | — | — | Input JPEG file |
+| `<input>` | - | - | Input JPEG file |
 | `--output <path>` | `-o` | `<input>.png` | Output file (extension infers format when `--format auto`) |
 | `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp` |
-| `--weight <f32>` | `-w` | `0.3` | 2nd-order weight — higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
-| `--pweight <f32>` | `-p` | `0.001` | Fidelity weight — higher = closer to source JPEG |
-| `--iterations <n>` | `-i` | `50` | Solver iterations — higher = better but slower. Single or `Y,Cb,Cr` |
+| `--weight <f32>` | `-w` | `0.3` | 2nd-order weight: higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
+| `--pweight <f32>` | `-p` | `0.001` | Fidelity weight: higher = closer to source JPEG |
+| `--iterations <n>` | `-i` | `50` | Solver iterations: higher = better but slower. Single or `Y,Cb,Cr` |
 | `--separate-components` | `-s` | `false` | Optimize Y/Cb/Cr separately instead of jointly |
 | `--gpu` | `-g` | `false` | Use the GPU when available (`process_auto`), otherwise fall back to CPU |
 | `--benchmark` | `-b` | `false` | Run solver but don't write output |

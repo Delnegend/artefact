@@ -8,7 +8,7 @@
 # instead of being ignored. Only the quarantined fix below remains.
 
 [[IgnoredVulns]]
-# source-map-js 1.2.1 — CVE-2026-93749 / GHSA-68fv-2mgg-jv7q (DoS, HIGH).
+# source-map-js 1.2.1 - CVE-2026-93749 / GHSA-68fv-2mgg-jv7q (DoS, HIGH).
 # The fixed 1.2.2 was published 2026-09-30, inside the 14-day quarantine in
 # frontend/bunfig.toml, so `bun update` correctly refuses it until ~2026-10-14.
 # Transitive via @tailwindcss/node and @vue/compiler-*. No direct dependency.
@@ -16,7 +16,7 @@ id = "GHSA-68fv-2mgg-jv7q"
 reason = "Fix 1.2.2 published 2026-09-30, quarantined until ~2026-10-14. Review: 2026-10-20."
 
 [[IgnoredVulns]]
-# deepmerge 4.3.1 — CVE-2026-93753 / GHSA-gcqx-w48m-w2h4.
+# deepmerge 4.3.1 - CVE-2026-93753 / GHSA-gcqx-w48m-w2h4.
 # Build dependency via vite-plugin-pwa -> workbox-build -> @rollup/plugin-node-resolve;
 # node-resolve merges trusted defaults, not attacker-controlled input.
 # No patched version is available; track https://github.com/TehShrike/deepmerge/issues/273

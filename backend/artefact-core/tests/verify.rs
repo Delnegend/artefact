@@ -34,7 +34,7 @@ fn channel_dist(a: (u8, u8, u8), b: (u8, u8, u8)) -> u32 {
 
 #[test]
 fn reconstructs_color_blocks() {
-    // (fixture, tolerance) — higher tolerance for the more subsampled chroma
+    // (fixture, tolerance) - higher tolerance for the more subsampled chroma
     let cases = [
         ("baseline_444.jpg", 40u32),
         ("baseline_422.jpg", 50),
