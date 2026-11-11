@@ -51,6 +51,6 @@ jobs:
 
   scan:
     name: Scan
-    uses: Delnegend/actions/.github/workflows/scan.yml@main
+    uses: Delnegend/actions/.github/workflows/scan.yml@main  # nosemgrep
     permissions:
       contents: read

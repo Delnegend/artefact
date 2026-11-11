@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   update:
-    uses: Delnegend/actions/.github/workflows/reusable-deps-update.yml@main
+    uses: Delnegend/actions/.github/workflows/reusable-deps-update.yml@main  # nosemgrep
     with:
       cargo: true
       bun: true

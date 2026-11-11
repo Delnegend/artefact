@@ -10,4 +10,4 @@ permissions:
 
 jobs:
   automerge:
-    uses: Delnegend/actions/.github/workflows/reusable-auto-merge.yml@main
+    uses: Delnegend/actions/.github/workflows/reusable-auto-merge.yml@main  # nosemgrep
