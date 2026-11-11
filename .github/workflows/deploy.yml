@@ -9,7 +9,7 @@ on:
             - '.vscode/**'
             - 'assets/**'
             - 'README.md'
-            - 'LICENSE-Apache'
+            - 'LICENSE-APACHE'
             - 'LICENSE-MIT'
     workflow_dispatch:
 

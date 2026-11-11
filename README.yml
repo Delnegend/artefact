@@ -1,0 +1,39 @@
+$schema: "https://raw.githubusercontent.com/Delnegend/common-facade/main/README.schema.json"
+
+name: Artefact
+repo: Delnegend/artefact
+tagline: "Reconstructs lost JPEG detail for smoother, cleaner images with reduced compression artifacts."
+
+badges:
+  ci: true
+  release: true
+  license: true
+
+quick_start: |
+  ```bash
+  # 1. Install
+  brew install Delnegend/tap/artefact-cli
+
+  # 2. Reconstruct an image
+  artefact-cli input.jpg -o output.png
+
+  # 3. Web browser (zero install)
+  # Visit https://artefact.delnegend.com to drop and compare images locally with WebAssembly/WebGPU.
+  ```
+
+highlights:
+  - "**Artifact reduction**: Re-optimizes raw DCT coefficients with a regularized solver rather than making pixel-level guesses."
+  - "**High throughput**: Multi-threaded execution with adaptive SIMD vectorization and optional WebGPU acceleration."
+  - "**Cross-platform**: Runs as a single static native CLI or entirely client-side in the browser via WebAssembly (zero uploads)."
+  - "**Flexible output**: Ingests standard `.jpg`/`.jpeg` files and exports to PNG, WebP, TIFF, or BMP."
+
+documentation:
+  architecture: "Component boundaries, solver pipelines, and repository layout."
+  development: "Prerequisites, build steps, just check gates, and profiling."
+  deployment: "Installation via Homebrew, prebuilt release archives, and WASM/web deployment."
+
+license:
+  type:
+    - MIT
+    - APACHE-2.0
+  holder: "Delnegend"
