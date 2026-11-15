@@ -35,7 +35,7 @@ artefact-cli input.jpg -o output.png
 ## Documentation
 
 - **[Architecture](docs/architecture.md)**: Component boundaries, solver pipelines, and repository layout.
-- **[Development](docs/development.md)**: Prerequisites, build steps, just check gates, and profiling.
+- **[Development](docs/development.md)**: Prerequisites, build steps, just check gates, profiling, and [CLI reference](docs/cli.md).
 - **[Deployment](docs/deployment.md)**: Installation via Homebrew, prebuilt release archives, and WASM/web deployment.
 
 ## License

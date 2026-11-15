@@ -29,7 +29,7 @@ highlights:
 
 documentation:
   architecture: "Component boundaries, solver pipelines, and repository layout."
-  development: "Prerequisites, build steps, just check gates, and profiling."
+  development: "Prerequisites, build steps, just check gates, profiling, and [CLI reference](docs/cli.md)."
   deployment: "Installation via Homebrew, prebuilt release archives, and WASM/web deployment."
 
 license:
