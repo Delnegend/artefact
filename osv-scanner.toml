@@ -2,24 +2,16 @@
 # upgrade cannot fix by itself, with the reason and the expiry. Re-check on
 # every entry's review date: delete the entry if the upgrade fixed it.
 #
-# History: this file once held 17 entries. 16 of them traced to stale nested
-# copies under the workbox-build tree and were fixed for real with
-# package.json `overrides` (fork 4.0.0, picomatch 4.0.7, @babel/core 7.29.7)
-# instead of being ignored. Only the quarantined fix below remains.
+# History: source-map-js (GHSA-68fv-2mgg-jv7q) was fixed by upgrading to 1.2.2,
+# and deepmerge (GHSA-gcqx-w48m-w2h4) was withdrawn upstream on 2026-11-16.
 
 [[IgnoredVulns]]
-# source-map-js 1.2.1 - CVE-2026-93749 / GHSA-68fv-2mgg-jv7q (DoS, HIGH).
-# The fixed 1.2.2 was published 2026-09-30, inside the 14-day quarantine in
-# frontend/bunfig.toml, so `bun update` correctly refuses it until ~2026-10-14.
-# Transitive via @tailwindcss/node and @vue/compiler-*. No direct dependency.
-id = "GHSA-68fv-2mgg-jv7q"
-reason = "Fix 1.2.2 published 2026-09-30, quarantined until ~2026-10-14. Review: 2026-10-20."
-
-[[IgnoredVulns]]
-# deepmerge 4.3.1 - CVE-2026-93753 / GHSA-gcqx-w48m-w2h4.
-# Build dependency via vite-plugin-pwa -> workbox-build -> @rollup/plugin-node-resolve;
-# node-resolve merges trusted defaults, not attacker-controlled input.
-# No patched version is available; track https://github.com/TehShrike/deepmerge/issues/273
-# and remove this exception when a fix is available and past quarantine.
-id = "GHSA-gcqx-w48m-w2h4"
-reason = "Build-time node-resolve merges trusted defaults; no upstream fix. Review: 2026-11-30."
+# picomatch <= 4.0.7 - CVE-2026-112366 / GHSA-fc5q-39xc-vjpf (ReDoS, HIGH).
+# Build/dev dependency only (via vite, tinyglobby, @rollup/pluginutils, fdir,
+# @vue/language-core); picomatch is not used in shipped runtime code or WASM.
+# Upstream fix PR https://github.com/micromatch/picomatch/pull/194 has no
+# released version beyond 4.0.7 yet. Re-check and remove once >4.0.7 is
+# published and past the 14-day quarantine.
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2026-12-02
+reason = "Build/dev globbing only; no release beyond 4.0.7 upstream yet. Review: 2026-12-02."

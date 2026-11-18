@@ -59,8 +59,9 @@ Formatting is applied, not gated: `cargo fmt` for Rust, `oxfmt` for JS. The gate
 `vue-tsc` + clippy + tests.
 
 `just check rust` sets `ARTEFACT_REQUIRE_GPU=1`, so GPU smoke/equivalence tests and the committed
-`odd_420.jpg` edge case cannot pass by skipping a missing adapter. Plain `cargo test` keeps the
-lenient skips for machines without a GPU.
+`odd_420.jpg` edge case cannot pass by skipping a missing adapter. GPU integration tests run
+one at a time as a precaution after an intermittent CI crash; its cause is not confirmed.
+Plain `cargo test` keeps the lenient skips for machines without a GPU.
 
 ## Sample images, profiling & regression
 
