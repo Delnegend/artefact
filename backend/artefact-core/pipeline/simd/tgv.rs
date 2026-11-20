@@ -104,20 +104,8 @@ fn tgv_run<const N: usize>(
         above,
         w_usize,
         n_minus_1,
-        horiz_edge: if at_left {
-            HorizEdge::Left
-        } else if at_right {
-            HorizEdge::Right
-        } else {
-            HorizEdge::Interior
-        },
-        vert_edge: if at_top {
-            VertEdge::Top
-        } else if at_bottom {
-            VertEdge::Bottom
-        } else {
-            VertEdge::Interior
-        },
+        horizontal_edges: (at_left, at_right),
+        vertical_edges: (at_top, at_bottom),
     };
     scatter_tgv(auxs, &state);
 }
@@ -185,19 +173,6 @@ fn compute_second_order<const N: usize>(
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum HorizEdge {
-    Left,
-    Right,
-    Interior,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum VertEdge {
-    Top,
-    Bottom,
-    Interior,
-}
 
 struct TgvRunState<'a, const N: usize> {
     nchannel: usize,
@@ -210,8 +185,8 @@ struct TgvRunState<'a, const N: usize> {
     above: usize,
     w_usize: usize,
     n_minus_1: usize,
-    horiz_edge: HorizEdge,
-    vert_edge: VertEdge,
+    horizontal_edges: (bool, bool),
+    vertical_edges: (bool, bool),
 }
 
 fn scatter_tgv<const N: usize>(auxs: &mut [Aux], s: &TgvRunState<'_, N>) {
@@ -250,7 +225,7 @@ fn scatter_horizontal<const N: usize>(
     mask: std::simd::Mask<i32, N>,
 ) {
     let gx_term = s.alpha.mul(g_xy_sym.add(g_xx));
-    if s.horiz_edge == HorizEdge::Left {
+    if s.horizontal_edges.0 {
         let target = run_mut(obj_gradient, s.idx, s.n_minus_1);
         add_shifted_left::<N>(target, gx_term.safe_div(s.g2_norm));
     } else {
@@ -261,7 +236,7 @@ fn scatter_horizontal<const N: usize>(
             .store_select(target, mask);
     }
 
-    if s.horiz_edge == HorizEdge::Right {
+    if s.horizontal_edges.1 {
         let target = run_mut(obj_gradient, s.idx.saturating_add(1), s.n_minus_1);
         gx_term
             .div(s.g2_norm)
@@ -285,14 +260,14 @@ fn scatter_vertical_and_diag<const N: usize>(
 ) {
     let below = s.idx.saturating_add(s.w_usize);
     let vertical_term = s.alpha.mul(g_yy.add(g_xy_sym));
-    if s.vert_edge != VertEdge::Top {
+    if !s.vertical_edges.0 {
         let target = run_mut(obj_gradient, s.above, N);
         vertical_term
             .div(s.g2_norm)
             .add_slice(target)
             .store_select(target, mask);
     }
-    if s.vert_edge != VertEdge::Bottom {
+    if !s.vertical_edges.1 {
         let target = run_mut(obj_gradient, below, N);
         vertical_term
             .div(s.g2_norm)
@@ -301,9 +276,9 @@ fn scatter_vertical_and_diag<const N: usize>(
     }
 
     let diag_term = s.alpha.mul(g_xy_sym.neg());
-    if s.vert_edge != VertEdge::Top {
+    if !s.vertical_edges.0 {
         let base = s.idx.saturating_add(1).saturating_sub(s.w_usize);
-        if s.horiz_edge == HorizEdge::Right {
+        if s.horizontal_edges.1 {
             let target = run_mut(obj_gradient, base, s.n_minus_1);
             diag_term
                 .div(s.g2_norm)
@@ -317,8 +292,8 @@ fn scatter_vertical_and_diag<const N: usize>(
                 .store_select(target, mask);
         }
     }
-    if s.vert_edge != VertEdge::Bottom {
-        if s.horiz_edge == HorizEdge::Left {
+    if !s.vertical_edges.1 {
+        if s.horizontal_edges.0 {
             let target = run_mut(obj_gradient, below, s.n_minus_1);
             add_shifted_left::<N>(target, diag_term.safe_div(s.g2_norm));
         } else {
