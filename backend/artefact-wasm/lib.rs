@@ -3,14 +3,22 @@ use std::io::Cursor;
 use artefact_core::{Artefact, JpegSource, ValueCollection, image::ImageFormat};
 use wasm_bindgen::prelude::*;
 
-#[derive(Clone, Copy)]
-#[wasm_bindgen]
-pub enum OutputFormat {
-    Png,
-    Webp,
-    Tiff,
-    Bmp,
+#[allow(clippy::float_cmp)]
+mod output_format {
+    use wasm_bindgen::prelude::*;
+
+    // `#[wasm_bindgen]` on C-style enums emits an exact float comparison in 0.2.130+.
+    #[derive(Clone, Copy)]
+    #[wasm_bindgen]
+    pub enum OutputFormat {
+        Png,
+        Webp,
+        Tiff,
+        Bmp,
+    }
 }
+
+pub use output_format::OutputFormat;
 
 #[wasm_bindgen]
 /// Run JPEG artefact removal on `buffer` and encode the result in `output_format`.
