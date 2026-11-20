@@ -17,19 +17,19 @@ fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-fn process(name: &str) -> artefact_core::image::RgbImage {
+fn try_process(name: &str) -> Result<artefact_core::image::RgbImage, String> {
     let path = fixture(name);
     Artefact::default()
         .source(JpegSource::File(path.display().to_string()))
         .process()
-        .unwrap_or_else(|e| panic!("{name}: {e}"))
+        .map_err(|e| format!("{name}: {e}"))
 }
 
 fn channel_dist(a: (u8, u8, u8), b: (u8, u8, u8)) -> u32 {
-    (i32::from(a.0) - i32::from(b.0))
-        .unsigned_abs()
-        .max((i32::from(a.1) - i32::from(b.1)).unsigned_abs())
-        .max((i32::from(a.2) - i32::from(b.2)).unsigned_abs())
+    i32::from(a.0)
+        .abs_diff(i32::from(b.0))
+        .max(i32::from(a.1).abs_diff(i32::from(b.1)))
+        .max(i32::from(a.2).abs_diff(i32::from(b.2)))
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn reconstructs_color_blocks() {
     ];
 
     for (name, tol) in cases {
-        let img = process(name);
+        let img = try_process(name).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(img.dimensions(), (128, 96), "{name}: dimensions");
 
         let expect = [
@@ -69,7 +69,7 @@ fn reconstructs_color_blocks() {
 
 #[test]
 fn grayscale_stays_gray() {
-    let img = process("gray.jpg");
+    let img = try_process("gray.jpg").unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(img.dimensions(), (128, 96));
     // No chroma: R, G and B must track each other closely.
     for (x, y) in [(10, 10), (32, 32), (80, 72), (120, 90)] {
@@ -139,7 +139,10 @@ fn matches_libjpeg_reference_when_available() {
         let _ = std::fs::remove_file(&ref_path);
 
         assert_eq!(
-            (ours.width() as usize, ours.height() as usize),
+            (
+                usize::try_from(ours.width()).unwrap_or(0),
+                usize::try_from(ours.height()).unwrap_or(0),
+            ),
             (reference.0, reference.1),
             "{name}: dimensions"
         );
@@ -161,39 +164,44 @@ fn matches_libjpeg_reference_when_available() {
 
 /// Minimal P5/P6 reader (djpeg output), avoiding an extra `image` format.
 fn read_pnm(data: &[u8]) -> (usize, usize, Vec<[u8; 3]>) {
-    let mut pos = 0;
+    let mut pos = 0usize;
     let mut token = || {
-        while data[pos].is_ascii_whitespace() {
-            pos += 1;
+        while data.get(pos).is_some_and(u8::is_ascii_whitespace) {
+            pos = pos.saturating_add(1);
         }
-        if data[pos] == b'#' {
-            while data[pos] != b'\n' {
-                pos += 1;
+        if data.get(pos) == Some(&b'#') {
+            while data.get(pos).is_some_and(|&b| b != b'\n') {
+                pos = pos.saturating_add(1);
             }
-            while data[pos].is_ascii_whitespace() {
-                pos += 1;
+            while data.get(pos).is_some_and(u8::is_ascii_whitespace) {
+                pos = pos.saturating_add(1);
             }
         }
         let start = pos;
-        while !data[pos].is_ascii_whitespace() {
-            pos += 1;
+        while data.get(pos).is_some_and(|b| !b.is_ascii_whitespace()) {
+            pos = pos.saturating_add(1);
         }
-        std::str::from_utf8(&data[start..pos]).unwrap().to_string()
+        std::str::from_utf8(data.get(start..pos).unwrap_or_default())
+            .unwrap_or_default()
+            .to_string()
     };
 
     let magic = token();
-    let w: usize = token().parse().unwrap();
-    let h: usize = token().parse().unwrap();
+    let w: usize = token().parse().unwrap_or(0);
+    let h: usize = token().parse().unwrap_or(0);
     let _max = token();
-    pos += 1; // single whitespace after maxval
+    pos = pos.saturating_add(1); // single whitespace after maxval
 
-    let mut out = Vec::with_capacity(w * h);
+    let pixels = w.saturating_mul(h);
+    let mut out = Vec::with_capacity(pixels);
     if magic == "P5" {
-        for &g in &data[pos..pos + w * h] {
+        let end = pos.saturating_add(pixels);
+        for &g in data.get(pos..end).unwrap_or_default() {
             out.push([g, g, g]);
         }
     } else {
-        for px in data[pos..pos + w * h * 3].as_chunks::<3>().0 {
+        let end = pos.saturating_add(pixels.saturating_mul(3));
+        for px in data.get(pos..end).unwrap_or_default().as_chunks::<3>().0 {
             out.push([px[0], px[1], px[2]]);
         }
     }

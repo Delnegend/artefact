@@ -55,53 +55,51 @@ impl GpuContext {
     /// Returns [`GpuError::Unavailable`] when no adapter is available and
     /// [`GpuError::Init`] when device creation fails.
     pub fn new() -> Pin<Box<dyn Future<Output = Result<Self, GpuError>>>> {
-        Box::pin(Self::create())
-    }
+        Box::pin(async {
+            #[cfg(target_arch = "wasm32")]
+            let backends = wgpu::Backends::BROWSER_WEBGPU;
+            #[cfg(not(target_arch = "wasm32"))]
+            let backends = wgpu::Backends::all();
 
-    async fn create() -> Result<Self, GpuError> {
-        #[cfg(target_arch = "wasm32")]
-        let backends = wgpu::Backends::BROWSER_WEBGPU;
-        #[cfg(not(target_arch = "wasm32"))]
-        let backends = wgpu::Backends::all();
+            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+                backends,
+                ..wgpu::InstanceDescriptor::new_without_display_handle()
+            });
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends,
-            ..wgpu::InstanceDescriptor::new_without_display_handle()
-        });
+            let adapter = instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    compatible_surface: None,
+                    force_fallback_adapter: false,
+                    ..Default::default()
+                })
+                .await
+                .map_err(|e| GpuError::Unavailable(e.to_string()))?;
 
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
-                ..Default::default()
+            let info = adapter.get_info();
+            tracing::info!(
+                name = %info.name,
+                backend = ?info.backend,
+                device_type = ?info.device_type,
+                driver = %info.driver,
+                "GPU adapter selected"
+            );
+
+            let (device, queue) = adapter
+                .request_device(&wgpu::DeviceDescriptor {
+                    label: Some("artefact-gpu"),
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                    ..Default::default()
+                })
+                .await
+                .map_err(|e| GpuError::Init(e.to_string()))?;
+
+            Ok(Self {
+                device,
+                queue,
+                info,
             })
-            .await
-            .map_err(|e| GpuError::Unavailable(e.to_string()))?;
-
-        let info = adapter.get_info();
-        tracing::info!(
-            name = %info.name,
-            backend = ?info.backend,
-            device_type = ?info.device_type,
-            driver = %info.driver,
-            "GPU adapter selected"
-        );
-
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                label: Some("artefact-gpu"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                ..Default::default()
-            })
-            .await
-            .map_err(|e| GpuError::Init(e.to_string()))?;
-
-        Ok(Self {
-            device,
-            queue,
-            info,
         })
     }
 

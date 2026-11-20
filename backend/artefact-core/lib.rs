@@ -1,18 +1,4 @@
 #![feature(portable_simd)]
-#![warn(clippy::perf, clippy::pedantic, clippy::nursery, clippy::unwrap_used)]
-// wgpu's `Surface` auto-trait cycle overflows trait solving when the compiler
-// computes `Send` for async fns that capture wgpu request descriptors.
-#![allow(recursion_depth_exceeding_limit)]
-#![allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::cast_sign_loss,
-    clippy::too_many_lines,
-    clippy::too_many_arguments,
-    clippy::similar_names,
-    clippy::cast_precision_loss,
-    clippy::branches_sharing_code
-)]
 
 mod jpeg;
 pub mod pipeline;
@@ -30,6 +16,24 @@ pub use jpeg::JpegSource;
 use utils::macros::mul_add;
 
 // Single-crate dispatch - always buildable, no bloat via features
+/// Convert a floating-point pixel value in `[0.0, 255.0]` to `u8` with
+/// truncation (matching `v.clamp(0.0, 255.0) as u8` without `as` casts).
+#[inline]
+fn f32_to_u8_clamped(v: f32) -> u8 {
+    // Fast IEEE-754 f32 -> u8 truncation for clamped [0.0, 255.0]
+    let clamped = v.clamp(0.0, 255.0);
+    if clamped.is_nan() || clamped < 1.0 {
+        return 0;
+    }
+    let bits = clamped.to_bits();
+    let exp = (bits >> 23) & 0xff;
+    // clamped is in [1.0, 255.0], so exp is in [127, 134]
+    let shift = 150_u32.saturating_sub(exp); // 150 = 127 + 23
+    let mantissa = (bits & 0x007f_ffff) | 0x0080_0000;
+    let int_val = mantissa.checked_shr(shift).unwrap_or(0);
+    u8::try_from(int_val).unwrap_or(255)
+}
+
 #[cfg(not(feature = "simd"))]
 use pipeline::scalar::solve;
 #[cfg(feature = "simd")]
@@ -132,12 +136,7 @@ impl Artefact {
     pub fn process(&self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
         tracing::info!("solving on CPU pipeline");
-        let output = self.solve_cpu(
-            &jpeg,
-            max_rounded_px_w,
-            max_rounded_px_h,
-            max_rounded_px_count,
-        );
+        let output = self.solve_cpu(&jpeg, max_rounded_px_w, max_rounded_px_h);
         self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
     }
 
@@ -155,7 +154,11 @@ impl Artefact {
             w = w.max(coef.rounded_px_w);
             h = h.max(coef.rounded_px_h);
         }
-        Ok((jpeg, w, h, (w * h) as usize))
+        let max_px_count = usize::try_from(w)
+            .ok()
+            .and_then(|wu| usize::try_from(h).ok().and_then(|hu| wu.checked_mul(hu)))
+            .ok_or_else(|| ArtefactError::Message("image dimensions overflow usize".into()))?;
+        Ok((jpeg, w, h, max_px_count))
     }
 
     /// Run the CPU pipeline for the requested component split.
@@ -164,7 +167,6 @@ impl Artefact {
         jpeg: &Jpeg,
         max_rounded_px_w: u32,
         max_rounded_px_h: u32,
-        max_rounded_px_count: usize,
     ) -> Vec<AlignedF32> {
         let weight = self.weight.to_slice();
         let pweight = self.pweight.to_slice();
@@ -179,7 +181,6 @@ impl Artefact {
                 iterations[0],
                 max_rounded_px_w,
                 max_rounded_px_h,
-                max_rounded_px_count,
             )
         } else {
             jpeg.coefs
@@ -187,18 +188,20 @@ impl Artefact {
                 .cloned()
                 .enumerate()
                 .map(|(c, coef)| {
-                    std::mem::take(
-                        &mut solve(
-                            1,
-                            vec![coef],
-                            weight[c],
-                            pweight,
-                            iterations[c],
-                            max_rounded_px_w,
-                            max_rounded_px_h,
-                            max_rounded_px_count,
-                        )[0],
+                    let w = weight.get(c).copied().unwrap_or(weight[0]);
+                    let it = iterations.get(c).copied().unwrap_or(iterations[0]);
+                    solve(
+                        1,
+                        vec![coef],
+                        w,
+                        pweight,
+                        it,
+                        max_rounded_px_w,
+                        max_rounded_px_h,
                     )
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default()
                 })
                 .collect::<Vec<_>>()
         }
@@ -216,45 +219,79 @@ impl Artefact {
             return Err(ArtefactError::Benchmark);
         }
 
-        for item in output[0].iter_mut().take(max_rounded_px_count) {
+        let Some(first) = output.first_mut() else {
+            return Err(ArtefactError::Message("solver returned no output".into()));
+        };
+        for item in first.iter_mut().take(max_rounded_px_count) {
             *item += 128.0;
         }
 
-        let max_w = max_rounded_px_w as usize;
+        let max_w = usize::try_from(max_rounded_px_w)
+            .map_err(|_| ArtefactError::Message("image width overflow".into()))?;
 
         if jpeg.nchannel == 3 {
-            let (luma, cb, cr) = (&output[0], &output[1], &output[2]);
+            let [luma, cb, cr, ..] = output.as_slice() else {
+                return Err(ArtefactError::Message(
+                    "expected 3 output channels from solver".into(),
+                ));
+            };
             return Ok(image::RgbImage::from_fn(
                 jpeg.real_px_w,
                 jpeg.real_px_h,
                 |x, y| {
-                    let idx = y as usize * max_w + x as usize;
+                    let idx = usize::try_from(y)
+                        .ok()
+                        .and_then(|yu| yu.checked_mul(max_w))
+                        .and_then(|row| usize::try_from(x).ok().and_then(|xu| row.checked_add(xu)));
 
-                    let yi = luma[idx];
-                    let cbi = cb[idx];
-                    let cri = cr[idx];
+                    let (yi, cbi, cri) = idx
+                        .and_then(|i| {
+                            Some((
+                                luma.get(i).copied()?,
+                                cb.get(i).copied()?,
+                                cr.get(i).copied()?,
+                            ))
+                        })
+                        .unwrap_or((0.0, 0.0, 0.0));
 
                     image::Rgb([
-                        mul_add!(1.402_f32, cri, yi).clamp(0.0, 255.0) as u8,
-                        mul_add!(0.71414_f32, -cri, mul_add!(0.34414_f32, -cbi, yi))
-                            .clamp(0.0, 255.0) as u8,
-                        mul_add!(1.772_f32, cbi, yi).clamp(0.0, 255.0) as u8,
+                        f32_to_u8_clamped(mul_add!(1.402_f32, cri, yi)),
+                        f32_to_u8_clamped(mul_add!(
+                            0.71414_f32,
+                            -cri,
+                            mul_add!(0.34414_f32, -cbi, yi)
+                        )),
+                        f32_to_u8_clamped(mul_add!(1.772_f32, cbi, yi)),
                     ])
                 },
             ));
         }
 
-        let luma = &output[0];
+        let luma = output
+            .first()
+            .ok_or_else(|| ArtefactError::Message("solver returned no output".into()))?;
         Ok(image::RgbImage::from_fn(
             jpeg.real_px_w,
             jpeg.real_px_h,
             |x, y| {
-                let v = luma[y as usize * max_w + x as usize].clamp(0.0, 255.0) as u8;
+                let idx = usize::try_from(y)
+                    .ok()
+                    .and_then(|yu| yu.checked_mul(max_w))
+                    .and_then(|row| usize::try_from(x).ok().and_then(|xu| row.checked_add(xu)));
+                let v = f32_to_u8_clamped(idx.and_then(|i| luma.get(i).copied()).unwrap_or(0.0));
                 image::Rgb([v, v, v])
             },
         ))
     }
 }
+
+#[cfg(feature = "gpu")]
+type GpuProcessFuture<'a> = std::pin::Pin<
+    Box<
+        dyn Future<Output = Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError>>
+            + 'a,
+    >,
+>;
 
 #[cfg(feature = "gpu")]
 impl Artefact {
@@ -263,15 +300,14 @@ impl Artefact {
     /// # Errors
     /// Returns [`ArtefactError::Message`] if no GPU adapter is available, the
     /// JPEG fails to decode, or the GPU solver fails.
-    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is too.
-    #[allow(clippy::future_not_send)]
-    pub async fn process_gpu(
-        &self,
-    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
-        let ctx = pipeline::gpu::GpuContext::new()
-            .await
-            .map_err(|e| ArtefactError::Message(e.to_string()))?;
-        self.process_gpu_with(&ctx).await
+    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is boxed.
+    pub fn process_gpu(&self) -> GpuProcessFuture<'_> {
+        Box::pin(async move {
+            let ctx = pipeline::gpu::GpuContext::new()
+                .await
+                .map_err(|e| ArtefactError::Message(e.to_string()))?;
+            self.process_gpu_with(&ctx).await
+        })
     }
 
     /// Solve with an existing GPU context and return an RGB image buffer.
@@ -282,24 +318,18 @@ impl Artefact {
     /// # Errors
     /// Returns [`ArtefactError::Message`] if the JPEG fails to decode or the
     /// GPU solver fails, and [`ArtefactError::Benchmark`] when benchmarking.
-    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is too.
-    #[allow(clippy::future_not_send)]
-    pub async fn process_gpu_with(
-        &self,
-        ctx: &pipeline::gpu::GpuContext,
-    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
-        let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
-        tracing::info!("solving on GPU");
-        let output = self
-            .solve_gpu(
-                ctx,
-                &jpeg,
-                max_rounded_px_w,
-                max_rounded_px_h,
-                max_rounded_px_count,
-            )
-            .await?;
-        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+    pub fn process_gpu_with<'a>(
+        &'a self,
+        ctx: &'a pipeline::gpu::GpuContext,
+    ) -> GpuProcessFuture<'a> {
+        Box::pin(async move {
+            let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
+            tracing::info!("solving on GPU");
+            let output = self
+                .solve_gpu(ctx, &jpeg, max_rounded_px_w, max_rounded_px_h)
+                .await?;
+            self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+        })
     }
 
     /// Try the GPU solver, falling back to the CPU pipeline when no adapter is
@@ -307,79 +337,88 @@ impl Artefact {
     ///
     /// # Errors
     /// Returns the CPU pipeline's error if both paths fail.
-    #[allow(clippy::future_not_send)]
-    pub async fn process_auto(
-        &self,
-    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
-        // Only fall back when the GPU device or solve is unavailable; errors from
-        // `finish` (e.g. benchmark mode) are propagated as-is.
-        let ctx = match pipeline::gpu::GpuContext::new().await {
-            Ok(ctx) => ctx,
-            Err(e) => {
-                tracing::warn!(error = %e, "no GPU adapter; falling back to CPU");
-                return self.process();
+    // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is boxed.
+    pub fn process_auto(&self) -> GpuProcessFuture<'_> {
+        Box::pin(async move {
+            // Only fall back when the GPU device or solve is unavailable; errors from
+            // `finish` (e.g. benchmark mode) are propagated as-is.
+            let ctx = match pipeline::gpu::GpuContext::new().await {
+                Ok(ctx) => ctx,
+                Err(e) => {
+                    tracing::warn!(error = %e, "no GPU adapter; falling back to CPU");
+                    return self.process();
+                }
+            };
+            let (jpeg, w, h, count) = self.decode()?;
+            match self.solve_gpu(&ctx, &jpeg, w, h).await {
+                Ok(output) => {
+                    tracing::info!("solving on GPU");
+                    self.finish(&jpeg, output, w, count)
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "GPU solve failed; falling back to CPU");
+                    self.process()
+                }
             }
-        };
-        let (jpeg, w, h, count) = self.decode()?;
-        match self.solve_gpu(&ctx, &jpeg, w, h, count).await {
-            Ok(output) => {
-                tracing::info!("solving on GPU");
-                self.finish(&jpeg, output, w, count)
-            }
-            Err(e) => {
-                tracing::warn!(error = %e, "GPU solve failed; falling back to CPU");
-                self.process()
-            }
-        }
+        })
     }
 
     /// Run the GPU pipeline for the requested component split.
-    async fn solve_gpu(
-        &self,
-        ctx: &pipeline::gpu::GpuContext,
-        jpeg: &Jpeg,
+    fn solve_gpu<'a>(
+        &'a self,
+        ctx: &'a pipeline::gpu::GpuContext,
+        jpeg: &'a Jpeg,
         max_rounded_px_w: u32,
         max_rounded_px_h: u32,
-        max_rounded_px_count: usize,
-    ) -> Result<Vec<AlignedF32>, ArtefactError> {
-        let weight = self.weight.to_slice();
-        let pweight = self.pweight.to_slice();
-        let iterations = self.iterations.to_slice();
-        let to_error = |e: pipeline::gpu::GpuError| ArtefactError::Message(e.to_string());
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<AlignedF32>, ArtefactError>> + 'a>> {
+        Box::pin(async move {
+            let weight = self.weight.to_slice();
+            let pweight = self.pweight.to_slice();
+            let iterations = self.iterations.to_slice();
+            let to_error = |e: pipeline::gpu::GpuError| ArtefactError::Message(e.to_string());
 
-        if jpeg.nchannel == 3 && !self.separate_components {
-            pipeline::gpu::solve(
-                ctx,
-                &jpeg.coefs,
-                weight[0],
-                &pweight,
-                iterations[0],
-                max_rounded_px_w,
-                max_rounded_px_h,
-                max_rounded_px_count,
-            )
-            .await
-            .map_err(to_error)
-        } else {
-            let mut output = Vec::with_capacity(jpeg.coefs.len());
-            for (c, coef) in jpeg.coefs.iter().enumerate() {
-                let mut solved = pipeline::gpu::solve(
+            if jpeg.nchannel == 3 && !self.separate_components {
+                pipeline::gpu::solve(
                     ctx,
-                    std::slice::from_ref(coef),
-                    weight[c],
+                    &jpeg.coefs,
+                    weight[0],
                     &pweight,
-                    iterations[c],
+                    iterations[0],
                     max_rounded_px_w,
                     max_rounded_px_h,
-                    max_rounded_px_count,
                 )
                 .await
-                .map_err(to_error)?;
-                output.push(solved.pop().ok_or_else(|| {
-                    ArtefactError::Message("GPU solver returned no output".into())
-                })?);
+                .map_err(to_error)
+            } else {
+                let mut output = Vec::with_capacity(jpeg.coefs.len());
+                for (c, coef) in jpeg.coefs.iter().enumerate() {
+                    let Some(&w) = weight.get(c) else {
+                        return Err(ArtefactError::Message(format!(
+                            "channel index {c} out of range"
+                        )));
+                    };
+                    let Some(&it) = iterations.get(c) else {
+                        return Err(ArtefactError::Message(format!(
+                            "channel index {c} out of range"
+                        )));
+                    };
+                    let mut solved = pipeline::gpu::solve(
+                        ctx,
+                        std::slice::from_ref(coef),
+                        w,
+                        &pweight,
+                        it,
+                        max_rounded_px_w,
+                        max_rounded_px_h,
+                    )
+                    .await
+                    .map_err(to_error)?;
+                    output.push(solved.pop().ok_or_else(|| {
+                        ArtefactError::Message("GPU solver returned no output".into())
+                    })?);
+                }
+                Ok(output)
             }
-            Ok(output)
-        }
+        })
     }
 }

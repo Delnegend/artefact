@@ -23,20 +23,24 @@ pub struct ScalarCoef {
 
 impl From<Coefficient> for ScalarCoef {
     fn from(c: Coefficient) -> Self {
-        let mut image_data = vec![0.0; c.rounded_px_count as usize];
+        let px_count = usize::try_from(c.rounded_px_count).unwrap_or(0);
+        let mut image_data = vec![0.0; px_count];
 
-        // DCT coefs + quantization table -> image data
-        for i in 0..(c.block_count as usize) {
-            for j in 0..64 {
-                image_data[i * 64 + j] = c.dct_coefs[i * 64 + j] * c.quant_table[j];
+        let block_count = usize::try_from(c.block_count).unwrap_or(0);
+        for i in 0..block_count {
+            if let Some(out_block) = image_data.as_chunks_mut::<64>().0.get_mut(i)
+                && let Some(dct_block) = c.dct_coefs.as_chunks::<64>().0.get(i)
+            {
+                for ((out, &dct), &q) in out_block
+                    .iter_mut()
+                    .zip(dct_block.iter())
+                    .zip(c.quant_table.iter())
+                {
+                    *out = dct * q;
+                }
+
+                idct8x8(out_block);
             }
-
-            idct8x8(
-                image_data[i * 64..(i + 1) * 64]
-                    .as_mut()
-                    .try_into()
-                    .expect("Invalid coef's image data length"),
-            );
 
             // 8x8 -> 64x1
             from_blocks(
@@ -67,7 +71,7 @@ impl From<Coefficient> for ScalarCoef {
 
 impl AuxTraits for ScalarCoef {
     fn cos_count(&self) -> usize {
-        self.rounded_px_count as usize
+        usize::try_from(self.rounded_px_count).unwrap_or(0)
     }
 
     fn init_pixels_into(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
@@ -84,9 +88,20 @@ impl AuxTraits for ScalarCoef {
     }
 
     fn init_dct_target_into(&self, out: &mut [f32]) {
-        for i in 0..self.block_count as usize {
-            for j in 0..64 {
-                out[i * 64 + j] = self.dct_coefs[i * 64 + j] * self.quant_table[j];
+        let block_count = usize::try_from(self.block_count).unwrap_or(0);
+        for (out_block, dct_block) in out
+            .as_chunks_mut::<64>()
+            .0
+            .iter_mut()
+            .zip(self.dct_coefs.as_chunks::<64>().0.iter())
+            .take(block_count)
+        {
+            for ((o, &dct), &q) in out_block
+                .iter_mut()
+                .zip(dct_block.iter())
+                .zip(self.quant_table.iter())
+            {
+                *o = dct * q;
             }
         }
     }

@@ -14,10 +14,11 @@
 //! bench profile can read a few percent slower).
 //!
 //! Run with the production pipeline (`simd`):
-//!   RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-//!     cargo bench -p artefact-core --features bench,simd \
-//!     --bench bench -- solve
-//!
+//! ```text
+//! RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+//!   cargo bench -p artefact-core --features bench,simd \
+//!   --bench bench -- solve
+//! ```
 //! Skipped when `assets/sample.420.input.jpg` is absent (`just sample`); set
 //! `ARTEFACT_BENCH_INPUT` to override the input path.
 

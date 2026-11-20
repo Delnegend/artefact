@@ -40,7 +40,7 @@ pub fn adaptive_runs(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
     let mut out = Vec::new();
     let mut idx = 0;
     while idx < max_rounded_px_w {
-        let remaining = max_rounded_px_w - idx;
+        let remaining = max_rounded_px_w.saturating_sub(idx);
         let (width, item) = if remaining >= 64 {
             (64, AdaptiveWidth::X64(idx))
         } else if remaining >= 32 {
@@ -51,7 +51,7 @@ pub fn adaptive_runs(max_rounded_px_w: u32) -> Vec<AdaptiveWidth> {
             (8, AdaptiveWidth::X8(idx))
         };
         out.push(item);
-        idx += width;
+        idx = idx.saturating_add(width);
     }
     out
 }

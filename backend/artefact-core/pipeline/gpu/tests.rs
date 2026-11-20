@@ -36,13 +36,14 @@ fn decode(suffix: &str) -> Option<(Jpeg, usize, u32, u32, usize)> {
         return None;
     }
     let jpeg = Jpeg::from(JpegSource::File(path)).ok()?;
-    let nchannel = jpeg.nchannel as usize;
-    let (mut w, mut h) = (0, 0);
+    let nchannel = usize::try_from(jpeg.nchannel).ok()?;
+    let (mut w, mut h) = (0u32, 0u32);
     for coef in &jpeg.coefs {
         w = w.max(coef.rounded_px_w);
         h = h.max(coef.rounded_px_h);
     }
-    Some((jpeg, nchannel, w, h, (w * h) as usize))
+    let count = w.checked_mul(h).and_then(|px| usize::try_from(px).ok())?;
+    Some((jpeg, nchannel, w, h, count))
 }
 
 fn max_diff(a: &[AlignedF32], b: &[AlignedF32]) -> f32 {
@@ -88,7 +89,7 @@ fn gpu_matches_simd() {
             return;
         }
     };
-    for (suffix, (jpeg, nch, w, h, count)) in inputs {
+    for (suffix, (jpeg, nch, w, h, _count)) in inputs {
         for iterations in [1_usize, 5, 50] {
             let cpu = crate::pipeline::simd::solve(
                 nch,
@@ -98,7 +99,6 @@ fn gpu_matches_simd() {
                 iterations,
                 w,
                 h,
-                count,
             );
             let gpu = pollster::block_on(crate::pipeline::gpu::solve(
                 &ctx,
@@ -108,7 +108,6 @@ fn gpu_matches_simd() {
                 iterations,
                 w,
                 h,
-                count,
             ))
             .expect("gpu solve");
             let diff = max_diff(&cpu, &gpu);

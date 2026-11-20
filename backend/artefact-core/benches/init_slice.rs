@@ -11,7 +11,7 @@ fn init_with_copy(target: [f32; 64]) -> f32x8 {
     })
 }
 
-fn manual_init(target: [f32; 64]) -> f32x8 {
+const fn manual_init(target: [f32; 64]) -> f32x8 {
     f32x8::from_array([
         target[0], target[1], target[2], target[3], target[4], target[5], target[6], 0.0,
     ])

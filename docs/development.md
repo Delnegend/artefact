@@ -58,6 +58,10 @@ just check js       # frontend only (oxlint + oxfmt + vue-tsc)
 Formatting is applied, not gated: `cargo fmt` for Rust, `oxfmt` for JS. The gate is oxlint +
 `vue-tsc` + clippy + tests.
 
+Rust workspace packages follow the shared strict Clippy policy in `Cargo.toml`; the vendored
+`zune-jpeg` fork declares the same Clippy policy alongside its existing `fuzzing` cfg setting.
+Release builds use thin LTO, one codegen unit, and stripped symbols.
+
 `just check rust` sets `ARTEFACT_REQUIRE_GPU=1`, so GPU smoke/equivalence tests and the committed
 `odd_420.jpg` edge case cannot pass by skipping a missing adapter. GPU integration tests run
 one at a time as a precaution after an intermittent CI crash; its cause is not confirmed.

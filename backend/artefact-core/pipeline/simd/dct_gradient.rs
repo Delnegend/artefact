@@ -1,5 +1,5 @@
 use std::{
-    ops::{Div, Sub},
+    ops::{Div, Mul, Sub},
     simd::f32x64,
 };
 
@@ -17,17 +17,22 @@ pub fn dct_gradient(
     cos: &[f32],              // Cosine transform data
     obj_gradient: &mut [f32], // Output gradient buffer
 ) {
+    let hf = coef.horizontal_samp_factor.u32();
+    let vf = coef.vertical_samp_factor.u32();
+    let mut blocks = cos.as_chunks::<64>().0.iter().zip(coef.dct_coefs.iter());
+
     // Iterate through each 8x8 block in the image
     for block_y in 0..coef.block_h {
         for block_x in 0..coef.block_w {
-            // Calculate block index and prepare cosine buffer
-            let i = (block_y * coef.block_w + block_x) as usize;
+            let Some((cos_slice, &dct_coef)) = blocks.next() else {
+                return;
+            };
 
             // 8x8 block buffer
             let mut cosbs = [0.0; 64];
 
-            f32x64::from_slice(&cos[i * 64..(i + 1) * 64])
-                .sub(coef.dct_coefs[i] * coef.quant_table)
+            f32x64::from_slice(cos_slice)
+                .sub(dct_coef.mul(coef.quant_table))
                 .div(coef.quant_table_squared)
                 .write_to(&mut cosbs);
 
@@ -35,20 +40,30 @@ pub fn dct_gradient(
             idct8x8(&mut cosbs);
 
             // Distribute gradient to output buffer with upsampling
-            for in_y in 0..8 {
-                for in_x in 0..8 {
-                    let j = (in_y * 8 + in_x) as usize;
-                    let cx = block_x * 8 + in_x;
-                    let cy = block_y * 8 + in_y;
-
+            for (in_y, cos_row) in cosbs.as_chunks::<8>().0.iter().enumerate() {
+                let Ok(row_in_block) = u32::try_from(in_y) else {
+                    continue;
+                };
+                for (in_x, &cos_val) in cos_row.iter().enumerate() {
+                    let Ok(col_in_block) = u32::try_from(in_x) else {
+                        continue;
+                    };
+                    let cx = block_x.saturating_mul(8).saturating_add(col_in_block);
+                    let cy = block_y.saturating_mul(8).saturating_add(row_in_block);
                     // Apply sampling factors (upsampling): replicate each
                     // coefficient pixel across the component's subsampling block.
-                    let vf = coef.vertical_samp_factor.u32();
-                    let hf = coef.horizontal_samp_factor.u32();
                     for sy in 0..vf {
                         for sx in 0..hf {
-                            let idx = ((cy * vf + sy) * max_rounded_px_w + (cx * hf + sx)) as usize;
-                            obj_gradient[idx] = alpha.mul_add(cosbs[j], obj_gradient[idx]);
+                            if let Some(idx) = cy
+                                .checked_mul(vf)
+                                .and_then(|v| v.checked_add(sy))
+                                .and_then(|v| v.checked_mul(max_rounded_px_w))
+                                .and_then(|v| v.checked_add(cx.checked_mul(hf)?.checked_add(sx)?))
+                                .and_then(|v| usize::try_from(v).ok())
+                                && let Some(slot) = obj_gradient.get_mut(idx)
+                            {
+                                *slot = alpha.mul_add(cos_val, *slot);
+                            }
                         }
                     }
                 }

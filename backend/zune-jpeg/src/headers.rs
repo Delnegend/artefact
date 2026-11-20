@@ -26,7 +26,7 @@ use crate::misc::{SOFMarkers, UN_ZIGZAG};
 
 ///**B.2.4.2 Huffman table-specification syntax**
 #[allow(clippy::similar_names, clippy::cast_sign_loss)]
-pub(crate) fn parse_huffman<T: ZByteReaderTrait>(
+pub fn parse_huffman<T: ZByteReaderTrait>(
     decoder: &mut JpegDecoder<T>,
 ) -> Result<(), DecodeErrors>
 where
@@ -42,7 +42,7 @@ where
         // third bit indicates whether the huffman encoding is DC or AC type
         let dc_or_ac = (ht_info >> 4) & 0xF;
         // Indicate the position of this table, should be less than 4;
-        let index = (ht_info & 0xF) as usize;
+        let index = usize::from(ht_info & 0xF);
         // read the number of symbols
         let mut num_symbols: [u8; 17] = [0; 17];
 
@@ -58,9 +58,12 @@ where
             )));
         }
 
-        decoder.stream.read_exact_bytes(&mut num_symbols[1..17])?;
+        let (_, counts) = num_symbols
+            .split_first_mut()
+            .ok_or(DecodeErrors::FormatStatic("Invalid Huffman symbol counts"))?;
+        decoder.stream.read_exact_bytes(counts)?;
 
-        dht_length -= 1 + 16;
+        dht_length = dht_length.saturating_sub(17);
 
         let symbols_sum: i32 = num_symbols.iter().map(|f| i32::from(*f)).sum();
 
@@ -75,31 +78,43 @@ where
                 "Excessive Huffman table of length {symbols_sum} found when header length is {dht_length}"
             )));
         }
-        dht_length -= symbols_sum;
+        dht_length = dht_length.saturating_sub(symbols_sum);
         // A table containing symbols in increasing code length
         let mut symbols = [0; 256];
 
-        decoder
-            .stream
-            .read_exact_bytes(&mut symbols[0..(symbols_sum as usize)])?;
+        let symbol_count = usize::try_from(symbols_sum)
+            .map_err(|_| DecodeErrors::FormatStatic("Invalid Huffman symbol count"))?;
+        let symbol_bytes = symbols
+            .get_mut(..symbol_count)
+            .ok_or(DecodeErrors::FormatStatic(
+                "Encountered Huffman table with excessive length in DHT",
+            ))?;
+        decoder.stream.read_exact_bytes(symbol_bytes)?;
         // store
-        match dc_or_ac {
-            0 => {
-                decoder.dc_huffman_tables[index] = Some(HuffmanTable::new(
-                    &num_symbols,
-                    symbols,
-                    true,
-                    decoder.is_progressive,
-                )?);
-            }
-            _ => {
-                decoder.ac_huffman_tables[index] = Some(HuffmanTable::new(
-                    &num_symbols,
-                    symbols,
-                    false,
-                    decoder.is_progressive,
-                )?);
-            }
+        if dc_or_ac == 0 {
+            let table = decoder.dc_huffman_tables.get_mut(index).ok_or_else(|| {
+                DecodeErrors::HuffmanDecode(format!(
+                    "Invalid DHT index {index}, expected between 0 and 3"
+                ))
+            })?;
+            *table = Some(HuffmanTable::new(
+                &num_symbols,
+                symbols,
+                true,
+                decoder.is_progressive,
+            )?);
+        } else {
+            let table = decoder.ac_huffman_tables.get_mut(index).ok_or_else(|| {
+                DecodeErrors::HuffmanDecode(format!(
+                    "Invalid DHT index {index}, expected between 0 and 3"
+                ))
+            })?;
+            *table = Some(HuffmanTable::new(
+                &num_symbols,
+                symbols,
+                false,
+                decoder.is_progressive,
+            )?);
         }
     }
 
@@ -112,7 +127,7 @@ where
 
 ///**B.2.4.1 Quantization table-specification syntax**
 #[allow(clippy::cast_possible_truncation, clippy::needless_range_loop)]
-pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
+pub fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
     // read length
     let mut qt_length =
         img.stream
@@ -125,16 +140,16 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
     while qt_length > 0 {
         let qt_info = img.stream.read_u8_err()?;
         // 0 = 8 bit otherwise 16 bit dqt
-        let precision = (qt_info >> 4) as usize;
+        let precision = usize::from(qt_info >> 4);
         // last 4 bits give us position
-        let table_position = (qt_info & 0x0f) as usize;
-        let precision_value = 64 * (precision + 1);
+        let table_position = usize::from(qt_info & 0x0f);
+        let precision_value = 64_u16.saturating_mul(u16::from(qt_info >> 4).saturating_add(1));
 
-        if (precision_value + 1) as u16 > qt_length {
+        if precision_value.saturating_add(1) > qt_length {
             return Err(DecodeErrors::DqtError(format!(
                 "Invalid QT table bytes left :{}. Too small to construct a valid qt table which should be {} long",
                 qt_length,
-                precision_value + 1
+                precision_value.saturating_add(1)
             )));
         }
 
@@ -144,7 +159,7 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
 
                 img.stream.read_exact_bytes(&mut qt_values)?;
 
-                qt_length -= (precision_value as u16) + 1 /*QT BIT*/;
+                qt_length = qt_length.saturating_sub(precision_value.saturating_add(1));
                 // carry out un zig-zag here
                 un_zig_zag(&qt_values)
             }
@@ -152,10 +167,10 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
                 // 16 bit quantization tables
                 let mut qt_values = [0_u16; 64];
 
-                for i in 0..64 {
-                    qt_values[i] = img.stream.get_u16_be_err()?;
+                for value in &mut qt_values {
+                    *value = img.stream.get_u16_be_err()?;
                 }
-                qt_length -= (precision_value as u16) + 1;
+                qt_length = qt_length.saturating_sub(precision_value.saturating_add(1));
 
                 un_zig_zag(&qt_values)
             }
@@ -172,14 +187,19 @@ pub(crate) fn parse_dqt<T: ZByteReaderTrait>(img: &mut JpegDecoder<T>) -> Result
             )));
         }
 
-        img.qt_tables[table_position] = Some(dct_table);
+        let table = img.qt_tables.get_mut(table_position).ok_or_else(|| {
+            DecodeErrors::DqtError(format!(
+                "Too large table position for QT :{table_position}, expected between 0 and 3"
+            ))
+        })?;
+        *table = Some(dct_table);
     }
 
     Ok(())
 }
 
 /// Section:`B.2.2 Frame header syntax`
-pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
+pub fn parse_start_of_frame<T: ZByteReaderTrait>(
     sof: SOFMarkers,
     img: &mut JpegDecoder<T>,
 ) -> Result<(), DecodeErrors> {
@@ -210,8 +230,8 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
     let img_width = img.stream.get_u16_be_err()?;
     img.info.set_width(img_width);
 
-    trace!("Image width  :{}", img_width);
-    trace!("Image height :{}", img_height);
+    trace!("Image width  :{img_width}");
+    trace!("Image height :{img_height}");
 
     if usize::from(img_width) > img.options.max_width() {
         return Err(DecodeErrors::Format(format!(
@@ -243,7 +263,9 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
         ));
     }
 
-    let expected = 8 + 3 * u16::from(num_components);
+    let expected = u16::from(num_components)
+        .saturating_mul(3)
+        .saturating_add(8);
     // length should be equal to num components
     if length != expected {
         return Err(DecodeErrors::SofError(format!(
@@ -251,7 +273,7 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
         )));
     }
 
-    trace!("Image components : {}", num_components);
+    trace!("Image components : {num_components}");
 
     if num_components == 1 {
         // SOF sets the number of image components
@@ -270,7 +292,7 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
     // set number of components
     img.info.components = num_components;
 
-    let mut components = Vec::with_capacity(num_components as usize);
+    let mut components = Vec::with_capacity(usize::from(num_components));
     let mut temp = [0; 3];
 
     for pos in 0..num_components {
@@ -292,9 +314,7 @@ pub(crate) fn parse_start_of_frame<T: ZByteReaderTrait>(
 }
 
 /// Parse a start of scan data
-pub(crate) fn parse_sos<T: ZByteReaderTrait>(
-    image: &mut JpegDecoder<T>,
-) -> Result<(), DecodeErrors> {
+pub fn parse_sos<T: ZByteReaderTrait>(image: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
     // Scan header length
     let ls = image.stream.get_u16_be_err()?;
     // Number of image components in scan
@@ -304,7 +324,7 @@ pub(crate) fn parse_sos<T: ZByteReaderTrait>(
 
     image.num_scans = ns;
 
-    if ls != 6 + 2 * u16::from(ns) {
+    if ls != u16::from(ns).saturating_mul(2).saturating_add(6) {
         return Err(DecodeErrors::SosError(format!(
             "Bad SOS length {ls},corrupt jpeg"
         )));
@@ -334,33 +354,38 @@ pub(crate) fn parse_sos<T: ZByteReaderTrait>(
             )));
         }
 
-        seen[usize::from(i)] = i32::from(id);
+        *seen
+            .get_mut(usize::from(i))
+            .ok_or(DecodeErrors::FormatStatic("Too many components in SOS"))? = i32::from(id);
         // DC and AC huffman table position
         // top 4 bits contain dc huffman destination table
         // lower four bits contain ac huffman destination table
         let y = image.stream.read_u8_err()?;
 
-        let mut j = 0;
+        let num_components = usize::from(image.info.components);
+        let j = image
+            .components
+            .iter()
+            .take(num_components)
+            .position(|c| c.id == id)
+            .ok_or_else(|| {
+                DecodeErrors::SofError(format!(
+                    "Invalid component id {}, expected a value between 0 and {}",
+                    id,
+                    image.components.len()
+                ))
+            })?;
 
-        while j < image.info.components {
-            if image.components[j as usize].id == id {
-                break;
-            }
-
-            j += 1;
-        }
-
-        if j == image.info.components {
-            return Err(DecodeErrors::SofError(format!(
-                "Invalid component id {}, expected a value between 0 and {}",
-                id,
-                image.components.len()
-            )));
-        }
-
-        image.components[usize::from(j)].dc_huff_table = usize::from((y >> 4) & 0xF);
-        image.components[usize::from(j)].ac_huff_table = usize::from(y & 0xF);
-        image.z_order[i as usize] = j as usize;
+        let component = image
+            .components
+            .get_mut(j)
+            .ok_or(DecodeErrors::FormatStatic("Invalid component index"))?;
+        component.dc_huff_table = usize::from((y >> 4) & 0xF);
+        component.ac_huff_table = usize::from(y & 0xF);
+        *image
+            .z_order
+            .get_mut(usize::from(i))
+            .ok_or(DecodeErrors::FormatStatic("Too many components in SOS"))? = j;
     }
 
     // Collect the component spec parameters
@@ -418,9 +443,7 @@ pub(crate) fn parse_sos<T: ZByteReaderTrait>(
 }
 
 /// Parse Adobe App14 segment
-pub(crate) fn parse_app14<T: ZByteReaderTrait>(
-    decoder: &mut JpegDecoder<T>,
-) -> Result<(), DecodeErrors> {
+pub fn parse_app14<T: ZByteReaderTrait>(decoder: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
     // skip length
     let mut length = usize::from(decoder.stream.get_u16_be());
 
@@ -471,9 +494,7 @@ pub(crate) fn parse_app14<T: ZByteReaderTrait>(
 /// Parse the APP1 segment
 ///
 /// This contains the exif tag
-pub(crate) fn parse_app1<T: ZByteReaderTrait>(
-    decoder: &mut JpegDecoder<T>,
-) -> Result<(), DecodeErrors> {
+pub fn parse_app1<T: ZByteReaderTrait>(decoder: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
     // contains exif data
     let mut length = usize::from(decoder.stream.get_u16_be());
 
@@ -481,13 +502,13 @@ pub(crate) fn parse_app1<T: ZByteReaderTrait>(
         return Err(DecodeErrors::FormatStatic("Too small app1 length"));
     }
     // length bytes
-    length -= 2;
+    length = length.saturating_sub(2);
 
     if length > 6 && decoder.stream.peek_at(0, 6)? == b"Exif\x00\x00" {
         trace!("Exif segment present");
         // skip bytes we read above
         decoder.stream.skip(6)?;
-        length -= 6;
+        length = length.saturating_sub(6);
 
         let exif_bytes = decoder.stream.peek_at(0, length)?.to_vec();
 
@@ -500,26 +521,24 @@ pub(crate) fn parse_app1<T: ZByteReaderTrait>(
     Ok(())
 }
 
-pub(crate) fn parse_app2<T: ZByteReaderTrait>(
-    decoder: &mut JpegDecoder<T>,
-) -> Result<(), DecodeErrors> {
+pub fn parse_app2<T: ZByteReaderTrait>(decoder: &mut JpegDecoder<T>) -> Result<(), DecodeErrors> {
     let mut length = usize::from(decoder.stream.get_u16_be());
 
     if length < 2 {
         return Err(DecodeErrors::FormatStatic("Too small app2 segment"));
     }
     // length bytes
-    length -= 2;
+    length = length.saturating_sub(2);
 
     if length > 14 && decoder.stream.peek_at(0, 12)? == *b"ICC_PROFILE\0" {
         trace!("ICC Profile present");
         // skip 12 bytes which indicate ICC profile
-        length -= 12;
+        length = length.saturating_sub(12);
         decoder.stream.skip(12)?;
         let seq_no = decoder.stream.read_u8();
         let num_markers = decoder.stream.read_u8();
         // deduct the two bytes we read above
-        length -= 2;
+        length = length.saturating_sub(2);
 
         let data = decoder.stream.peek_at(0, length)?.to_vec();
 
@@ -544,8 +563,10 @@ where
 {
     let mut output = [i32::default(); 64];
 
-    for i in 0..64 {
-        output[UN_ZIGZAG[i]] = i32::from(a[i]);
+    for (&pos, &value) in UN_ZIGZAG.iter().zip(a) {
+        if let Some(out) = output.get_mut(pos) {
+            *out = i32::from(value);
+        }
     }
 
     output

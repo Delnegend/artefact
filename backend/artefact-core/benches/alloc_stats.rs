@@ -19,9 +19,10 @@
 //! a few percent with the profile).
 //!
 //! Run with the production pipeline (`simd`):
-//!   RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-//!     cargo bench -p artefact-core --features simd --bench alloc_stats
-//!
+//! ```text
+//! RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+//!   cargo bench -p artefact-core --features simd --bench alloc_stats
+//! ```
 //! `ARTEFACT_BENCH_INPUT` overrides the input path, `ARTEFACT_BENCH_RUNS` the
 //! number of timed runs (default 15). Skipped when the sample asset is absent
 //! (`just sample`).
@@ -117,9 +118,11 @@ fn main() {
         })
         .collect();
     times.sort_unstable();
-
-    let median = times[times.len() / 2].as_secs_f64() * 1e3;
-    let min = times[0].as_secs_f64() * 1e3;
+    let (Some(median_dur), Some(min_dur)) = (times.get(times.len() / 2), times.first()) else {
+        return;
+    };
+    let median = median_dur.as_secs_f64() * 1e3;
+    let min = min_dur.as_secs_f64() * 1e3;
     println!("== full solve: {input}");
     println!("   allocations (full process) = {allocs}");
     println!("   bytes allocated            = {bytes}");

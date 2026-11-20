@@ -3,6 +3,13 @@ use rayon::prelude::*;
 use super::coef::Coef;
 use crate::utils::{auxiliary::Aux, macros::mul_add};
 
+fn usize_to_f32(n: usize) -> f32 {
+    let clamped = u32::try_from(n).unwrap_or(u32::MAX);
+    let hi = f32::from(u16::try_from(clamped >> 16).unwrap_or(u16::MAX));
+    let lo = f32::from(u16::try_from(clamped & 0xFFFF).unwrap_or(0));
+    hi.mul_add(65536.0, lo)
+}
+
 /// FISTA (Fast Iterative Shrinkage-Thresholding Algorithm) accelerated loop:
 /// runs `iterations` of the projected subgradient step with Nesterov momentum.
 pub fn run_fista<C, F>(
@@ -23,15 +30,20 @@ pub fn run_fista<C, F>(
         let factor = (term - 1.0) / next_term;
 
         auxs.par_iter_mut().for_each(|aux| {
-            for i in 0..max_rounded_px_count {
-                aux.fista[i] = mul_add!(factor, aux.fdata[i] - aux.fista[i], aux.fdata[i]);
+            for (fista, &fdata) in aux
+                .fista
+                .iter_mut()
+                .zip(aux.fdata.iter())
+                .take(max_rounded_px_count)
+            {
+                *fista = mul_add!(factor, fdata - *fista, fdata);
             }
             std::mem::swap(&mut aux.fdata, &mut aux.fista);
         });
 
         term = next_term;
 
-        let step_size = radius / (1.0 + iterations as f32).sqrt();
+        let step_size = radius / (1.0 + usize_to_f32(iterations)).sqrt();
         step_fn(coefs, auxs, step_size);
     }
 }
@@ -50,5 +62,5 @@ where
 /// Radius of the feasible box `[-0.5, 0.5]^n`, where `n` is the number of
 /// pixel-domain samples.
 pub fn box_radius(max_count: usize) -> f32 {
-    (max_count as f32).sqrt() / 2.0
+    usize_to_f32(max_count).sqrt() / 2.0
 }

@@ -3,6 +3,9 @@ name = "artefact-cli"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 artefact-core = { workspace = true, features = ["simd", "gpu"] }
 clap = { workspace = true }

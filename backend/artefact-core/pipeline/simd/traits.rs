@@ -1,5 +1,5 @@
 use std::{
-    ops::RangeInclusive,
+    ops::{Add, Div, RangeInclusive},
     simd::{Simd, cmp::SimdPartialEq},
 };
 
@@ -35,14 +35,18 @@ impl<const N: usize> WriteTo for Simd<f32, N> {
     }
 
     fn write_partial_to(&self, target: &mut [f32], range: RangeInclusive<usize>) {
-        target.copy_from_slice(&self.as_array()[range]);
+        if let Some(src) = self.as_array().get(range) {
+            target.copy_from_slice(src);
+        }
     }
 }
 
 impl<const N: usize> FromSlice for Simd<f32, N> {
     fn from_range_slice(slice: &[f32], range: RangeInclusive<usize>) -> Self {
         let mut tmp = Self::splat(0.0);
-        tmp[range].copy_from_slice(slice);
+        if let Some(dst) = tmp.as_mut_array().get_mut(range) {
+            dst.copy_from_slice(slice);
+        }
         tmp
     }
 }
@@ -51,21 +55,21 @@ impl<const N: usize> SafeDiv for Simd<f32, N> {
     fn safe_div(&self, divisor: Self) -> Self {
         let mask = divisor.simd_ne(Self::splat(0.0));
         let mut tmp = [0.0; N];
-        (self / divisor).store_select(&mut tmp, mask);
+        self.div(divisor).store_select(&mut tmp, mask);
         Self::from_slice(&tmp)
     }
 }
 
 impl<const N: usize> AddSlice for Simd<f32, N> {
     fn add_slice(&self, slice: &[f32]) -> Self {
-        *self + Self::from_slice(slice)
+        self.add(Self::from_slice(slice))
     }
 
     fn add_short_slice(&self, slice: &[f32]) -> Self {
-        *self + Self::load_or_default(slice)
+        self.add(Self::load_or_default(slice))
     }
 
     fn add_range_slice(&self, slice: &[f32], range: RangeInclusive<usize>) -> Self {
-        *self + Self::from_range_slice(slice, range)
+        self.add(Self::from_range_slice(slice, range))
     }
 }

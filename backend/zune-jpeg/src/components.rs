@@ -77,7 +77,7 @@ pub struct Components {
 impl Components {
     /// Create a new instance from three bytes from the start of frame
     #[inline]
-    pub fn from(a: [u8; 3], pos: u8) -> Result<Components, DecodeErrors> {
+    pub fn from(a: [u8; 3], pos: u8) -> Result<Self, DecodeErrors> {
         // it's a unique identifier.
         // doesn't have to be ascending
         // see tests/inputs/huge_sof_number
@@ -116,11 +116,10 @@ impl Components {
         }
 
         trace!(
-            "Component ID:{:?} \tHS:{} VS:{} QT:{}",
-            id, horizontal_samp, vertical_samp, quant_table_number
+            "Component ID:{id:?} \tHS:{horizontal_samp} VS:{vertical_samp} QT:{quant_table_number}"
         );
 
-        Ok(Components {
+        Ok(Self {
             component_id: id,
             vertical_samp,
             horizontal_samp,
@@ -162,12 +161,18 @@ impl Components {
     /// # Requirements
     ///  - width stride of this element is set for the component.
     pub fn setup_upsample_scanline(&mut self) {
-        self.row = vec![0; self.width_stride * self.vertical_samp.usize()];
-        self.row_up = vec![0; self.width_stride * self.vertical_samp.usize()];
+        let row_len = self.width_stride.saturating_mul(self.vertical_samp.usize());
+        let sampled_len = self.width_stride.saturating_mul(self.sample_ratio.sample());
+        self.row = vec![0; row_len];
+        self.row_up = vec![0; row_len];
         self.first_row_upsample_dest =
-            vec![128; self.vertical_samp.usize() * self.width_stride * self.sample_ratio.sample()];
-        self.upsample_dest =
-            vec![0; self.width_stride * self.sample_ratio.sample() * self.fix_an_annoying_bug * 8];
+            vec![128; row_len.saturating_mul(self.sample_ratio.sample())];
+        self.upsample_dest = vec![
+            0;
+            sampled_len
+                .saturating_mul(self.fix_an_annoying_bug)
+                .saturating_mul(8)
+        ];
     }
 }
 
@@ -194,11 +199,11 @@ pub enum SampleRatios {
 
 impl SampleRatios {
     #[must_use]
-    pub fn sample(self) -> usize {
+    pub const fn sample(self) -> usize {
         match self {
-            SampleRatios::HV => 4,
-            SampleRatios::V | SampleRatios::H => 2,
-            SampleRatios::None => 1,
+            Self::HV => 4,
+            Self::V | Self::H => 2,
+            Self::None => 1,
         }
     }
 }

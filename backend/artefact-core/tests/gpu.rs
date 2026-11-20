@@ -54,43 +54,40 @@ fn fixture_or_skip(test: &str, relative: &str) -> Option<std::path::PathBuf> {
 
 #[test]
 fn gpu_smoke() {
-    pollster::block_on(run());
-}
+    pollster::block_on(async {
+        let ctx = match GpuContext::new().await {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                assert!(
+                    !gpu_is_required(),
+                    "gpu_smoke: ARTEFACT_REQUIRE_GPU=1 but no GPU adapter: {e}"
+                );
+                eprintln!("skipping gpu_smoke: {e}");
+                return;
+            }
+        };
+        eprintln!("adapter: {:?}", ctx.adapter_info());
 
-async fn run() {
-    let ctx = match GpuContext::new().await {
-        Ok(ctx) => ctx,
-        Err(e) => {
-            assert!(
-                !gpu_is_required(),
-                "gpu_smoke: ARTEFACT_REQUIRE_GPU=1 but no GPU adapter: {e}"
-            );
-            eprintln!("skipping gpu_smoke: {e}");
-            return;
-        }
-    };
-    eprintln!("adapter: {:?}", ctx.adapter_info());
+        let device = ctx.device();
+        let queue = ctx.queue();
 
-    let device = ctx.device();
-    let queue = ctx.queue();
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let bytes = bytemuck::cast_slice(&input);
+        let size = u64::try_from(bytes.len()).unwrap_or(0);
 
-    let input = [1.0_f32, 2.0, 3.0, 4.0];
-    let bytes = bytemuck::cast_slice(&input);
-    let size = bytes.len() as u64;
+        let storage = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("smoke-input"),
+            contents: bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        });
+        let staging = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("smoke-readback"),
+            size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-    let storage = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("smoke-input"),
-        contents: bytes,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-    });
-    let staging = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("smoke-readback"),
-        size,
-        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    const SHADER: &str = r"
+        let shader = r"
 @group(0) @binding(0) var<storage, read_write> data: array<f32>;
 
 @compute @workgroup_size(4)
@@ -98,56 +95,57 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     data[gid.x] = data[gid.x] * 2.0;
 }
 ";
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("smoke-shader"),
-        source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("smoke-pipeline"),
-        layout: None,
-        module: &module,
-        entry_point: Some("main"),
-        compilation_options: Default::default(),
-        cache: None,
-    });
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("smoke-bind"),
-        layout: &pipeline.get_bind_group_layout(0),
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: storage.as_entire_binding(),
-        }],
-    });
-
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("smoke-encoder"),
-    });
-    {
-        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("smoke-pass"),
-            timestamp_writes: None,
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("smoke-shader"),
+            source: wgpu::ShaderSource::Wgsl(shader.into()),
         });
-        pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bind_group, &[]);
-        pass.dispatch_workgroups(1, 1, 1);
-    }
-    encoder.copy_buffer_to_buffer(&storage, 0, &staging, 0, size);
-    queue.submit(Some(encoder.finish()));
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("smoke-pipeline"),
+            layout: None,
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("smoke-bind"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: storage.as_entire_binding(),
+            }],
+        });
 
-    let slice = staging.slice(..);
-    let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |result| {
-        let _ = tx.send(result);
-    });
-    let _ = device.poll(wgpu::PollType::Wait {
-        submission_index: None,
-        timeout: None,
-    });
-    rx.recv().expect("map channel").expect("buffer map");
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("smoke-encoder"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("smoke-pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(&storage, 0, &staging, 0, size);
+        queue.submit(Some(encoder.finish()));
 
-    let mapped = slice.get_mapped_range().expect("mapped range");
-    let output: Vec<f32> = bytemuck::cast_slice(&mapped).to_vec();
-    assert_eq!(output, [2.0, 4.0, 6.0, 8.0], "doubling kernel output");
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        let _ = device.poll(wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        });
+        assert!(rx.recv().is_ok_and(|r| r.is_ok()), "buffer map");
+
+        let mapped = slice.get_mapped_range().expect("mapped range");
+        let output: Vec<f32> = bytemuck::cast_slice(&mapped).to_vec();
+        assert_eq!(output, [2.0, 4.0, 6.0, 8.0], "doubling kernel output");
+    });
 }
 
 /// End-to-end: the GPU pipeline (`Artefact::process_gpu_with`) must produce an
@@ -190,11 +188,12 @@ fn gpu_process_matches_cpu() {
         for k in 0..3 {
             let d = (i32::from(a[k]) - i32::from(b[k])).abs();
             max = max.max(d);
-            sum += d as u64;
+            sum += u64::from(d.unsigned_abs());
             count += 1;
         }
     }
-    let mean = sum as f64 / count as f64;
+    let mean = f64::from(u32::try_from(sum).unwrap_or(u32::MAX))
+        / f64::from(u32::try_from(count).unwrap_or(u32::MAX));
     eprintln!("gpu_process_matches_cpu: max={max} mean={mean:.3}");
     assert!(max <= 8, "max channel diff {max}");
     assert!(mean < 1.0, "mean channel diff {mean}");
@@ -241,11 +240,12 @@ fn gpu_matches_cpu_on_odd_width() {
         for k in 0..3 {
             let d = (i32::from(a[k]) - i32::from(b[k])).abs();
             max = max.max(d);
-            sum += d as u64;
+            sum += u64::from(d.unsigned_abs());
             count += 1;
         }
     }
-    let mean = sum as f64 / count as f64;
+    let mean = f64::from(u32::try_from(sum).unwrap_or(u32::MAX))
+        / f64::from(u32::try_from(count).unwrap_or(u32::MAX));
     eprintln!("gpu_matches_cpu_on_odd_width: max={max} mean={mean:.3}");
     assert!(max <= 8, "max channel diff {max}");
     assert!(mean < 1.0, "mean channel diff {mean}");

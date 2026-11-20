@@ -36,63 +36,91 @@ pub fn tv_gradient_px(
     tv: &mut f64,
 ) {
     let mut g_xs = [0.0; 3];
-    let mut g_ys = [0.0; 3];
+    let mut g_verts = [0.0; 3];
 
-    let curr_px_idx = (curr_row * max_rounded_px_w + curr_row_idx) as usize;
-    let next_px_idx = curr_px_idx + 1;
-    let below_px_idx = ((curr_row + 1) * max_rounded_px_w + curr_row_idx) as usize;
+    let Ok(curr_px_idx) = usize::try_from(
+        curr_row
+            .saturating_mul(max_rounded_px_w)
+            .saturating_add(curr_row_idx),
+    ) else {
+        return;
+    };
+    let next_px_idx = curr_px_idx.saturating_add(1);
+    let Ok(below_px_idx) = usize::try_from(
+        curr_row
+            .saturating_add(1)
+            .saturating_mul(max_rounded_px_w)
+            .saturating_add(curr_row_idx),
+    ) else {
+        return;
+    };
 
-    let px_at_right_edge = curr_row_idx >= max_rounded_px_w - 1;
-    let px_at_bottom_edge = curr_row >= max_rounded_px_h - 1;
+    let px_at_right_edge = curr_row_idx >= max_rounded_px_w.saturating_sub(1);
+    let px_at_bottom_edge = curr_row >= max_rounded_px_h.saturating_sub(1);
 
-    for c in 0..nchannel {
-        let aux = &mut auxs[c];
-
+    for ((aux, gx), gv) in auxs
+        .iter_mut()
+        .zip(g_xs.iter_mut())
+        .zip(g_verts.iter_mut())
+        .take(nchannel)
+    {
+        let curr_val = aux.fdata.get(curr_px_idx).copied().unwrap_or(0.0);
         // forward difference x
-        if !px_at_right_edge {
-            g_xs[c] = aux.fdata[next_px_idx] - aux.fdata[curr_px_idx];
+        if !px_at_right_edge && let Some(&next_val) = aux.fdata.get(next_px_idx) {
+            *gx = next_val - curr_val;
         }
 
         // forward difference y
-        if !px_at_bottom_edge {
-            g_ys[c] = aux.fdata[below_px_idx] - aux.fdata[curr_px_idx];
+        if !px_at_bottom_edge && let Some(&below_val) = aux.fdata.get(below_px_idx) {
+            *gv = below_val - curr_val;
         }
     }
 
     // norm
-    let mut g_norm = 0.0;
-    for c in 0..nchannel {
-        g_norm += g_xs[c].powi(2);
-        g_norm += g_ys[c].powi(2);
+    let mut g_norm = 0.0_f32;
+    for (&gx, &gv) in g_xs.iter().zip(g_verts.iter()).take(nchannel) {
+        g_norm += gx.mul_add(gx, gv.powi(2));
     }
     g_norm = g_norm.sqrt();
 
-    let alpha = 1.0 / (nchannel as f32).sqrt();
+    let nch_f32 = f32::from(u16::try_from(nchannel).unwrap_or(u16::MAX));
+    let alpha = 1.0 / nch_f32.sqrt();
     *tv = f64::mul_add(f64::from(alpha), f64::from(g_norm), *tv);
 
     // compute derivatives
     if g_norm != 0.0 {
-        for c in 0..nchannel {
-            auxs[c].obj_gradient[curr_px_idx] = alpha.mul_add(
-                -(g_xs[c] + g_ys[c]) / g_norm,
-                auxs[c].obj_gradient[curr_px_idx],
-            );
-
-            if !px_at_right_edge {
-                auxs[c].obj_gradient[next_px_idx] =
-                    alpha.mul_add(g_xs[c] / g_norm, auxs[c].obj_gradient[next_px_idx]);
+        for ((aux, &gx), &gv) in auxs
+            .iter_mut()
+            .zip(g_xs.iter())
+            .zip(g_verts.iter())
+            .take(nchannel)
+        {
+            if let Some(slot) = aux.obj_gradient.get_mut(curr_px_idx) {
+                *slot = alpha.mul_add(-(gx + gv) / g_norm, *slot);
             }
 
-            if !px_at_bottom_edge {
-                auxs[c].obj_gradient[below_px_idx] =
-                    alpha.mul_add(g_ys[c] / g_norm, auxs[c].obj_gradient[below_px_idx]);
+            if !px_at_right_edge && let Some(slot) = aux.obj_gradient.get_mut(next_px_idx) {
+                *slot = alpha.mul_add(gx / g_norm, *slot);
+            }
+
+            if !px_at_bottom_edge && let Some(slot) = aux.obj_gradient.get_mut(below_px_idx) {
+                *slot = alpha.mul_add(gv / g_norm, *slot);
             }
         }
     }
 
     // store for the second-order TGV pass
-    for c in 0..nchannel {
-        auxs[c].pixel_diff.x[curr_px_idx] = g_xs[c];
-        auxs[c].pixel_diff.y[curr_px_idx] = g_ys[c];
+    for ((aux, &gx), &gv) in auxs
+        .iter_mut()
+        .zip(g_xs.iter())
+        .zip(g_verts.iter())
+        .take(nchannel)
+    {
+        if let Some(slot) = aux.pixel_diff.x.get_mut(curr_px_idx) {
+            *slot = gx;
+        }
+        if let Some(slot) = aux.pixel_diff.y.get_mut(curr_px_idx) {
+            *slot = gv;
+        }
     }
 }

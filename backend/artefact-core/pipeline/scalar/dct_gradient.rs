@@ -17,46 +17,54 @@ pub fn dct_gradient(
     for block_y in 0..coef.block_h {
         for block_x in 0..coef.block_w {
             // Calculate block index and prepare cosine buffer
-            let i = (block_y * coef.block_w + block_x) as usize;
-            // 8x8 block buffer
-            let mut cosbs: [f32; 64] = cos[i * 64..(i + 1) * 64]
-                .try_into()
-                .expect("Invalid cosine transform data length");
-
-            // Process each coefficient in current block
-            for (j, cosb) in cosbs.iter_mut().enumerate() {
-                // Calculate difference from original DCT coefficients
-                *cosb = coef.dct_coefs[i * 64 + j].mul_add(-coef.quant_table[j], *cosb);
-
-                // Calculate derivative for gradient
-                *cosb /= (coef.quant_table[j]).powi(2);
-            }
-
+            let i = usize::try_from(block_y.saturating_mul(coef.block_w).saturating_add(block_x))
+                .unwrap_or(0);
+            let Some(cos_slice) = cos.as_chunks::<64>().0.get(i) else {
+                continue;
+            };
+            let Some(dct_slice) = coef.dct_coefs.as_chunks::<64>().0.get(i) else {
+                continue;
+            };
+            let mut cosbs: [f32; 64] = std::array::from_fn(|j| {
+                let c = cos_slice.get(j).copied().unwrap_or(0.0);
+                let d = dct_slice.get(j).copied().unwrap_or(0.0);
+                let q = coef.quant_table.get(j).copied().unwrap_or(1.0);
+                let diff = d.mul_add(-q, c);
+                diff / q.powi(2)
+            });
             // Apply inverse DCT to get spatial domain gradient
             idct8x8(&mut cosbs);
 
             // Distribute gradient to output buffer with upsampling
-            for in_y in 0..8 {
-                for in_x in 0..8 {
-                    let j = (in_y * 8 + in_x) as usize;
-                    let cx = block_x * 8 + in_x;
-                    let cy = block_y * 8 + in_y;
+            for (in_y, cos_row) in cosbs.as_chunks::<8>().0.iter().enumerate() {
+                let Some(in_y_u32) = u32::try_from(in_y).ok() else {
+                    continue;
+                };
+                for (in_x, &cos_val) in cos_row.iter().enumerate() {
+                    let Ok(x_in_block) = u32::try_from(in_x) else {
+                        continue;
+                    };
+                    let cx = block_x.saturating_mul(8).saturating_add(x_in_block);
+                    let cy = block_y.saturating_mul(8).saturating_add(in_y_u32);
 
                     // Apply sampling factors (upsampling)
-                    for sy in 0..coef.vertical_samp_factor.u32() {
-                        for sx in 0..coef.horizontal_samp_factor.u32() {
-                            let y = cy * coef.vertical_samp_factor.u32() + sy;
-                            let x = cx * coef.horizontal_samp_factor.u32() + sx;
+                    let v_samp = coef.vertical_samp_factor.u32();
+                    let h_samp = coef.horizontal_samp_factor.u32();
+                    for sy in 0..v_samp {
+                        for sx in 0..h_samp {
+                            let y = cy.saturating_mul(v_samp).saturating_add(sy);
+                            let x = cx.saturating_mul(h_samp).saturating_add(sx);
 
                             // Bounds checking
                             debug_assert!(y < max_rounded_px_h);
                             debug_assert!(x < max_rounded_px_w);
 
-                            // Update gradient with scaled cosine value
-                            obj_gradient[(y * max_rounded_px_w + x) as usize] = alpha.mul_add(
-                                cosbs[j],
-                                obj_gradient[(y * max_rounded_px_w + x) as usize],
-                            );
+                            if let Ok(idx) = usize::try_from(
+                                y.saturating_mul(max_rounded_px_w).saturating_add(x),
+                            ) && let Some(slot) = obj_gradient.get_mut(idx)
+                            {
+                                *slot = alpha.mul_add(cos_val, *slot);
+                            }
                         }
                     }
                 }

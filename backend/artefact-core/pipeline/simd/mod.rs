@@ -23,7 +23,6 @@ pub use tv::tv_gradient;
 
 /// Solve for the smoothest image consistent with the JPEG's quantized DCT
 /// coefficients, using the SIMD pipeline with adaptive lane widths.
-#[allow(unused)]
 pub fn solve(
     nchannel: usize,
     coefs: Vec<Coefficient>,
@@ -32,8 +31,9 @@ pub fn solve(
     iterations: usize,
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
-    max_rounded_px_count: usize,
 ) -> Vec<AlignedF32> {
+    let max_rounded_px_count =
+        usize::try_from(max_rounded_px_w.checked_mul(max_rounded_px_h).unwrap_or(0)).unwrap_or(0);
     let coefs = coefs
         .into_par_iter()
         .map(SIMDCoef::from)
@@ -62,16 +62,18 @@ pub fn solve(
         radius,
         |coefs, auxs, step_size| {
             step::solver_step(
-                max_rounded_px_w,
-                max_rounded_px_h,
-                max_rounded_px_count,
-                nchannel,
-                coefs,
+                &step::StepCtx {
+                    max_w: max_rounded_px_w,
+                    max_h: max_rounded_px_h,
+                    max_count: max_rounded_px_count,
+                    nchannel,
+                    coefs,
+                    step_size,
+                    weight,
+                    pweight: &pweight,
+                },
                 auxs,
                 &mut norm,
-                step_size,
-                weight,
-                &pweight,
                 dct_gradient,
                 |w, h, nch, auxs, norm| tv_gradient(w, h, nch, auxs, &widths, norm),
                 |w, h, nch, auxs, alpha, norm| tgv_gradient(w, h, nch, auxs, alpha, &widths, norm),

@@ -41,10 +41,13 @@ impl Jpeg {
             coefs.push(Coefficient {
                 rounded_px_w: comp.rounded_px_w,
                 rounded_px_h: comp.rounded_px_h,
-                rounded_px_count: comp.rounded_px_count as u32,
+                rounded_px_count: u32::try_from(comp.rounded_px_count)
+                    .map_err(|_| "Component pixel count exceeds u32::MAX")?,
                 block_w,
                 block_h,
-                block_count: block_w * block_h,
+                block_count: block_w
+                    .checked_mul(block_h)
+                    .ok_or("Component block count overflow")?,
                 horizontal_samp_factor: comp.horizontal_samp_factor,
                 vertical_samp_factor: comp.vertical_samp_factor,
 
@@ -54,18 +57,21 @@ impl Jpeg {
                     .map(f32::from)
                     .collect::<Vec<_>>(),
 
-                quant_table: comp
-                    .quant_table
-                    .into_iter()
-                    .map(|x| x as f32)
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .map_err(|_| "Invalid quant_table length")?,
+                quant_table: {
+                    let mut qt = [0.0_f32; 64];
+                    for (dst, &src) in qt.iter_mut().zip(&comp.quant_table) {
+                        *dst = f32::from(
+                            u16::try_from(src)
+                                .map_err(|_| "Quantization table entry out of u16 range")?,
+                        );
+                    }
+                    qt
+                },
             });
         }
 
         Ok(Self {
-            nchannel: nchannel as u32,
+            nchannel: u32::try_from(nchannel).map_err(|_| "Channel count exceeds u32::MAX")?,
             real_px_w: real_px_w.into(),
             real_px_h: real_px_h.into(),
             coefs,

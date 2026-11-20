@@ -88,15 +88,15 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
 
             if self.is_interleaved {
                 // set upsampling functions
-                self.set_upsampling()?;
+                self.set_upsampling();
 
                 mcu_width = self.min_mcu_w;
                 mcu_height = self.min_mcu_h;
             } else {
                 // For non-interleaved images( (1*1) subsampling)
                 // number of MCU's are the widths (+7 to account for paddings) divided bu 8.
-                mcu_width = ((self.info.width + 7) / 8) as usize;
-                mcu_height = ((self.info.height + 7) / 8) as usize;
+                mcu_width = usize::from(self.info.width).div_ceil(8);
+                mcu_height = usize::from(self.info.height).div_ceil(8);
             }
             if self.is_interleaved
                 && self.input_colorspace.num_components() > 1
@@ -112,8 +112,10 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 //
                 // set coeff to be 2 to ensure that we increment two rows
                 // for every mcu processed also
-                mcu_height *= self.max_vertical_samp as usize;
-                mcu_height /= self.max_horizontal_samp as usize;
+                mcu_height = mcu_height
+                    .checked_mul(self.max_vertical_samp.usize())
+                    .and_then(|h| h.checked_div(self.max_horizontal_samp.usize()))
+                    .ok_or(DecodeErrors::FormatStatic("MCU height overflow"))?;
                 self.coeff = 2;
             }
 
@@ -131,8 +133,8 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
 
                 self.reset_params();
 
-                mcu_width = ((self.info.width + 7) / 8) as usize;
-                mcu_height = ((self.info.height + 7) / 8) as usize;
+                mcu_width = usize::from(self.info.width).div_ceil(8);
+                mcu_height = usize::from(self.info.height).div_ceil(8);
             }
 
             (mcu_width, mcu_height)
@@ -148,7 +150,10 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             // For special colorspaces i.e YCCK and CMYK, just allocate all of the needed
             // components.
             if min(
-                self.options.jpeg_get_out_colorspace().num_components() - 1,
+                self.options
+                    .jpeg_get_out_colorspace()
+                    .num_components()
+                    .saturating_sub(1),
                 pos,
             ) == pos
                 || comp_len == 4
@@ -157,7 +162,11 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // allocate enough space to hold a whole MCU width
                 // this means we should take into account sampling ratios
                 // `*8` is because each MCU spans 8 widths.
-                let len = comp.width_stride * comp.vertical_samp.usize() * 8;
+                let len = comp
+                    .width_stride
+                    .checked_mul(comp.vertical_samp.usize())
+                    .and_then(|l| l.checked_mul(8))
+                    .ok_or(DecodeErrors::FormatStatic("Component buffer size overflow"))?;
 
                 comp.needed = true;
                 comp.raw_coeff = vec![0; len];
@@ -175,7 +184,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             {
                 if self.options.strict_mode() {
                     return Err(DecodeErrors::FormatStatic("Premature end of buffer"));
-                };
+                }
 
                 error!("Premature end of buffer");
                 break;
@@ -185,7 +194,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
             if self.decode_mcu_width(mcu_width, &mut stream, curr_mcu_row, dct_coefs)? {
                 warn!("Got terminate signal, will not process further");
                 return Ok(());
-            };
+            }
         }
         // it may happen that some images don't have the whole buffer
         // so we can't panic in case of that
@@ -202,20 +211,27 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
         curr_mcu_row: usize,
         dct_coefs: &mut [Vec<i16>; MAX_COMPONENTS],
     ) -> Result<bool, DecodeErrors> {
-        let max_lens = dct_coefs.iter().map(|x| x.len()).collect::<Vec<_>>();
-
         for curr_mcu_col in 0..mcu_width {
             // iterate over components
-            for (comp_idx, comp) in &mut self.components.iter_mut().enumerate() {
-                let dc_table = self.dc_huffman_tables[comp.dc_huff_table % MAX_COMPONENTS]
-                    .as_ref()
+            for (comp_idx, (comp, coefs)) in self
+                .components
+                .iter_mut()
+                .zip(dct_coefs.iter_mut())
+                .enumerate()
+            {
+                let dc_table = self
+                    .dc_huffman_tables
+                    .get(comp.dc_huff_table)
+                    .and_then(Option::as_ref)
                     .ok_or_else(|| {
                         DecodeErrors::HuffmanDecode(format!(
                             "No DC Huffman table for component {comp_idx}"
                         ))
                     })?;
-                let ac_table = self.ac_huffman_tables[comp.ac_huff_table % MAX_COMPONENTS]
-                    .as_ref()
+                let ac_table = self
+                    .ac_huffman_tables
+                    .get(comp.ac_huff_table)
+                    .and_then(Option::as_ref)
                     .ok_or_else(|| {
                         DecodeErrors::HuffmanDecode(format!(
                             "No AC Huffman table for component {comp_idx}"
@@ -226,23 +242,32 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                 // to each MCU, stored in the component's own raster block grid.
                 let h_samp = comp.horizontal_samp.usize();
                 let v_samp = comp.vertical_samp.usize();
-                let comp_block_w = mcu_width * h_samp;
+                let total_blocks = coefs.len() / 64;
+                // Blocks per row of this component's raster block grid, and the
+                // index of this MCU's top-left block within it.
+                let mcu_origin = mcu_width.checked_mul(h_samp).and_then(|comp_block_w| {
+                    let row = curr_mcu_row.checked_mul(v_samp)?;
+                    let col = curr_mcu_col.checked_mul(h_samp)?;
+                    Some((comp_block_w, row, col))
+                });
 
                 for v in 0..v_samp {
                     for h in 0..h_samp {
-                        let idx =
-                            (curr_mcu_row * v_samp + v) * comp_block_w + curr_mcu_col * h_samp + h;
-                        let start_idx = idx * 64;
-                        let end_idx = start_idx + 64;
-
-                        let block = dct_coefs[comp_idx]
-                            .get_mut(start_idx..end_idx)
-                            .ok_or_else(|| {
-                                DecodeErrors::MCUError(format!(
-                                    "Block {idx} out of bounds for component {comp_idx} ({} blocks)",
-                                    max_lens[comp_idx] / 64
-                                ))
-                            })?;
+                        let block = mcu_origin
+                            .and_then(|(comp_block_w, row, col)| {
+                                let idx = row
+                                    .checked_add(v)?
+                                    .checked_mul(comp_block_w)?
+                                    .checked_add(col)?
+                                    .checked_add(h)?;
+                                let start_idx = idx.checked_mul(64)?;
+                                coefs.get_mut(start_idx..start_idx.checked_add(64)?)
+                            })
+                        .ok_or_else(|| {
+                            DecodeErrors::MCUError(format!(
+                                "Block (row {curr_mcu_row}, col {curr_mcu_col}, v {v}, h {h}) out of bounds for component {comp_idx} ({total_blocks} blocks)"
+                            ))
+                        })?;
 
                         stream.decode_mcu_block(
                             &mut self.stream,
@@ -288,10 +313,7 @@ impl<T: ZByteReaderTrait> JpegDecoder<T> {
                             "Marker {m:?} found where not expected"
                         )));
                     }
-                    error!(
-                        "Marker `{:?}` Found within Huffman Stream, possibly corrupt jpeg",
-                        m
-                    );
+                    error!("Marker `{m:?}` Found within Huffman Stream, possibly corrupt jpeg");
                     self.parse_marker_inner(m)?;
                     if m == Marker::SOS {
                         return Ok(true);

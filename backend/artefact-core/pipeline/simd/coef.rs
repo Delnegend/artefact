@@ -1,4 +1,7 @@
-use std::{ops::Mul, simd::f32x64};
+use std::{
+    ops::{Add, Mul, Sub},
+    simd::f32x64,
+};
 
 use zune_jpeg::sample_factor::SampleFactor;
 
@@ -66,36 +69,43 @@ impl From<Coefficient> for SIMDCoef {
             horizontal_samp_factor: c.horizontal_samp_factor,
             vertical_samp_factor: c.vertical_samp_factor,
 
-            quant_table_squared: quant_table * quant_table,
+            quant_table_squared: quant_table.mul(quant_table),
 
             dequant_dct_coefs_min: dct_coefs
                 .iter()
-                .map(|dct_coefs| (*dct_coefs - f32x64::splat(0.5)) * quant_table)
+                .map(|dct_coefs| dct_coefs.sub(f32x64::splat(0.5)).mul(quant_table))
                 .collect(),
 
             dequant_dct_coefs_max: dct_coefs
                 .iter()
-                .map(|dct_coefs| (*dct_coefs + f32x64::splat(0.5)) * quant_table)
+                .map(|dct_coefs| dct_coefs.add(f32x64::splat(0.5)).mul(quant_table))
                 .collect(),
 
             image_data: {
-                let mut image_data = vec![0.0; c.rounded_px_count as usize];
-                let block_w = c.block_w as usize;
-                let rounded_px_w = c.rounded_px_w as usize;
+                let px_count = usize::try_from(c.rounded_px_count).unwrap_or(0);
+                let mut image_data = vec![0.0; px_count];
+                let block_w = usize::try_from(c.block_w).unwrap_or(0);
+                let rounded_px_w = usize::try_from(c.rounded_px_w).unwrap_or(0);
 
-                for (i, dct) in dct_coefs.iter().enumerate() {
-                    let mut block = [0.0_f32; 64];
-                    (*dct * quant_table).write_to(&mut block);
+                if block_w > 0 {
+                    for (block_y, row_coefs) in dct_coefs.chunks_exact(block_w).enumerate() {
+                        for (block_x, dct) in row_coefs.iter().enumerate() {
+                            let mut block = [0.0_f32; 64];
+                            dct.mul(quant_table).write_to(&mut block);
 
-                    idct8x8(&mut block);
+                            idct8x8(&mut block);
 
-                    // 8x8 -> raster
-                    let block_y = i / block_w;
-                    let block_x = i % block_w;
-                    for in_y in 0..8 {
-                        let row = (block_y * 8 + in_y) * rounded_px_w + block_x * 8;
-                        for in_x in 0..8 {
-                            image_data[row + in_x] = block[in_y * 8 + in_x];
+                            // 8x8 -> raster
+                            for (in_y, block_row) in block.as_chunks::<8>().0.iter().enumerate() {
+                                let row = block_y
+                                    .saturating_mul(8)
+                                    .saturating_add(in_y)
+                                    .saturating_mul(rounded_px_w)
+                                    .saturating_add(block_x.saturating_mul(8));
+                                if let Some(dst) = image_data.get_mut(row..row.saturating_add(8)) {
+                                    dst.copy_from_slice(block_row);
+                                }
+                            }
                         }
                     }
                 }
@@ -111,7 +121,7 @@ impl From<Coefficient> for SIMDCoef {
 
 impl AuxTraits for SIMDCoef {
     fn cos_count(&self) -> usize {
-        self.rounded_px_count as usize
+        usize::try_from(self.rounded_px_count).unwrap_or(0)
     }
 
     fn init_pixels_into(&self, max_rounded_px_w: u32, max_rounded_px_h: u32, out: &mut [f32]) {
@@ -128,10 +138,14 @@ impl AuxTraits for SIMDCoef {
     }
 
     fn init_dct_target_into(&self, out: &mut [f32]) {
-        for i in 0..self.block_count as usize {
-            self.dct_coefs[i]
-                .mul(self.quant_table)
-                .write_to(&mut out[i * 64..(i + 1) * 64]);
+        let block_count = usize::try_from(self.block_count).unwrap_or(0);
+        for (dct, out_block) in self
+            .dct_coefs
+            .iter()
+            .zip(out.as_chunks_mut::<64>().0.iter_mut())
+            .take(block_count)
+        {
+            dct.mul(self.quant_table).write_to(out_block);
         }
     }
 }
@@ -160,8 +174,11 @@ impl Coef for SIMDCoef {
     }
     fn clamp_dct_block(&self, block_idx: usize, data: &mut [f32]) {
         use std::simd::num::SimdFloat;
-        let max = self.dequant_dct_coefs_max[block_idx];
-        let min = self.dequant_dct_coefs_min[block_idx];
-        f32x64::from_slice(data).simd_clamp(min, max).write_to(data);
+        if let (Some(&max), Some(&min)) = (
+            self.dequant_dct_coefs_max.get(block_idx),
+            self.dequant_dct_coefs_min.get(block_idx),
+        ) {
+            f32x64::from_slice(data).simd_clamp(min, max).write_to(data);
+        }
     }
 }

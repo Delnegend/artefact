@@ -142,7 +142,7 @@ where
 {
     #[allow(clippy::redundant_field_names)]
     fn default(options: DecoderOptions, buffer: T) -> Self {
-        JpegDecoder {
+        Self {
             info: ImageInfo::default(),
             qt_tables: [None, None, None, None],
             dc_huffman_tables: [None, None, None, None],
@@ -188,9 +188,15 @@ where
         self.decode_headers_internal()?;
         setup_component_params(self)?;
 
+        if self.components.len() > MAX_COMPONENTS {
+            return Err(DecodeErrors::Format(format!(
+                "Too many components: {} (maximum {MAX_COMPONENTS})",
+                self.components.len()
+            )));
+        }
         let mut dct_coefs: [Vec<i16>; MAX_COMPONENTS] = Default::default();
-        for (i, comp) in self.components.iter().enumerate() {
-            dct_coefs[i] = vec![0; comp.rounded_px_count];
+        for (coefs, comp) in dct_coefs.iter_mut().zip(&self.components) {
+            *coefs = vec![0; comp.rounded_px_count];
         }
 
         if self.is_progressive {
@@ -208,8 +214,8 @@ where
             self.decode_mcu_ycbcr_baseline(&mut dct_coefs)?;
         }
 
-        for (i, comp) in self.components.iter_mut().enumerate() {
-            comp.dct_coefs = core::mem::take(&mut dct_coefs[i]);
+        for (comp, coefs) in self.components.iter_mut().zip(&mut dct_coefs) {
+            comp.dct_coefs = core::mem::take(coefs);
         }
 
         Ok(())
@@ -221,8 +227,8 @@ where
     ///  - `stream`: The raw bytes of a jpeg file.
     #[must_use]
     #[allow(clippy::new_without_default)]
-    pub fn new(stream: T) -> JpegDecoder<T> {
-        JpegDecoder::default(DecoderOptions::default(), stream)
+    pub fn new(stream: T) -> Self {
+        Self::default(DecoderOptions::default(), stream)
     }
 
     /// Returns the image information
@@ -328,7 +334,7 @@ where
     /// // now decode
     /// decoder.decode().unwrap();
     /// ```
-    pub fn set_options(&mut self, options: DecoderOptions) {
+    pub const fn set_options(&mut self, options: DecoderOptions) {
         self.options = options;
     }
     /// Decode Decoder headers
@@ -356,7 +362,7 @@ where
         let magic_bytes = self.stream.get_u16_be_err()?;
 
         let mut last_byte = 0;
-        let mut bytes_before_marker = 0;
+        let mut bytes_before_marker: usize = 0;
 
         if magic_bytes != 0xffd8 {
             return Err(DecodeErrors::IllegalMagicBytes(magic_bytes));
@@ -402,7 +408,7 @@ where
 
                         error!(
                             "Extra bytes {} before marker 0xFF{:X}",
-                            bytes_before_marker - 3,
+                            bytes_before_marker.saturating_sub(3),
                             m
                         );
                     }
@@ -419,7 +425,7 @@ where
                 } else {
                     bytes_before_marker = 0;
 
-                    warn!("Marker 0xFF{:X} not known", m);
+                    warn!("Marker 0xFF{m:X} not known");
 
                     let length = self.stream.get_u16_be_err()?;
 
@@ -429,12 +435,12 @@ where
                         )));
                     }
 
-                    warn!("Skipping {} bytes", length - 2);
-                    self.stream.skip((length - 2) as usize)?;
+                    warn!("Skipping {} bytes", length.saturating_sub(2));
+                    self.stream.skip(usize::from(length.saturating_sub(2)))?;
                 }
             }
             last_byte = m;
-            bytes_before_marker += 1;
+            bytes_before_marker = bytes_before_marker.saturating_add(1);
         }
     }
     #[allow(clippy::too_many_lines)]
@@ -451,7 +457,7 @@ where
                     }
                 };
 
-                trace!("Image encoding scheme =`{:?}`", marker);
+                trace!("Image encoding scheme =`{marker:?}`");
                 // get components
                 parse_start_of_frame(marker, self)?;
             }
@@ -481,10 +487,10 @@ where
                     if &buffer == b"AVI1\0" {
                         self.is_mjpeg = true;
                     }
-                    length -= 5;
+                    length = length.saturating_sub(5);
                 }
 
-                self.stream.skip(length.saturating_sub(2) as usize)?;
+                self.stream.skip(usize::from(length.saturating_sub(2)))?;
 
                 //parse_app(buf, m, &mut self.info)?;
             }
@@ -535,10 +541,7 @@ where
                 parse_app14(self)?;
             }
             _ => {
-                warn!(
-                    "Capabilities for processing marker \"{:?}\" not implemented",
-                    m
-                );
+                warn!("Capabilities for processing marker \"{m:?}\" not implemented");
 
                 let length = self.stream.get_u16_be_err()?;
 
@@ -547,8 +550,8 @@ where
                         "Found a marker with invalid length:{length}\n"
                     )));
                 }
-                warn!("Skipping {} bytes", length - 2);
-                self.stream.skip((length - 2) as usize)?;
+                warn!("Skipping {} bytes", length.saturating_sub(2));
+                self.stream.skip(usize::from(length.saturating_sub(2)))?;
             }
         }
         Ok(())
@@ -587,17 +590,18 @@ where
                 warn!("Zero sequence number in ICC, corrupt ICC chunk");
                 return None;
             }
-            if marker_present[usize::from(chunk.seq_no)].is_some() {
+            let slot = marker_present.get_mut(usize::from(chunk.seq_no))?;
+            if slot.is_some() {
                 // duplicate seq_no
                 warn!("Duplicate sequence number in ICC, corrupt chunk");
                 return None;
             }
 
-            marker_present[usize::from(chunk.seq_no)] = Some(chunk);
+            *slot = Some(chunk);
         }
         let mut data = Vec::with_capacity(1000);
         // assemble the data now
-        for chunk in marker_present.get(1..=num_markers).unwrap() {
+        for chunk in marker_present.get(1..=num_markers)? {
             if let Some(ch) = chunk {
                 data.extend_from_slice(&ch.data);
             } else {
@@ -620,7 +624,7 @@ where
     ///    1. The image doesn't have exif data
     ///    2. The image headers haven't been decoded
     #[must_use]
-    pub fn exif(&self) -> Option<&Vec<u8>> {
+    pub const fn exif(&self) -> Option<&Vec<u8>> {
         self.exif_data.as_ref()
     }
     /// Get the output colorspace the image pixels will be decoded into
@@ -656,17 +660,17 @@ where
     /// - `buf`: The input buffer from where we will pull in compressed jpeg bytes from
     /// - `options`: Options specific to this decoder instance
     #[must_use]
-    pub fn new_with_options(buf: T, options: DecoderOptions) -> JpegDecoder<T> {
-        JpegDecoder::default(options, buf)
+    pub fn new_with_options(buf: T, options: DecoderOptions) -> Self {
+        Self::default(options, buf)
     }
 
     /// Set up-sampling routines in case an image is down sampled
-    pub(crate) fn set_upsampling(&mut self) -> Result<(), DecodeErrors> {
+    pub(crate) fn set_upsampling(&mut self) {
         // no sampling, return early
         // check if horizontal max ==1
         if self.max_horizontal_samp == self.max_vertical_samp && self.max_horizontal_samp.u8() == 1
         {
-            return Ok(());
+            return;
         }
         self.sub_sample_ratio = match (self.max_horizontal_samp, self.max_vertical_samp) {
             (SampleFactor::One, SampleFactor::One) => SampleRatios::None,
@@ -678,14 +682,12 @@ where
         for comp in &mut self.components {
             comp.setup_upsample_scanline();
         }
-
-        Ok(())
     }
     #[must_use]
     /// Get the width of the image as a u16
     ///
     /// The width lies between 1 and 65535
-    pub(crate) fn width(&self) -> u16 {
+    pub(crate) const fn width(&self) -> u16 {
         self.info.width
     }
 
@@ -693,7 +695,7 @@ where
     ///
     /// The height lies between 1 and 65535
     #[must_use]
-    pub(crate) fn height(&self) -> u16 {
+    pub(crate) const fn height(&self) -> u16 {
         self.info.height
     }
 
@@ -737,28 +739,28 @@ impl ImageInfo {
     /// Set width of the image
     ///
     /// Found in the start of frame
-    pub(crate) fn set_width(&mut self, width: u16) {
+    pub(crate) const fn set_width(&mut self, width: u16) {
         self.width = width;
     }
 
     /// Set height of the image
     ///
     /// Found in the start of frame
-    pub(crate) fn set_height(&mut self, height: u16) {
+    pub(crate) const fn set_height(&mut self, height: u16) {
         self.height = height;
     }
 
     /// Set the image density
     ///
     /// Found in the start of frame
-    pub(crate) fn set_density(&mut self, density: u8) {
+    pub(crate) const fn set_density(&mut self, density: u8) {
         self.pixel_density = density;
     }
 
     /// Set image Start of frame marker
     ///
     /// found in the Start of frame header
-    pub(crate) fn set_sof_marker(&mut self, marker: SOFMarkers) {
+    pub(crate) const fn set_sof_marker(&mut self, marker: SOFMarkers) {
         self.sof = marker;
     }
 
@@ -766,7 +768,7 @@ impl ImageInfo {
     ///
     /// Found in the APP(0) marker
     #[allow(dead_code)]
-    pub(crate) fn set_x(&mut self, sample: u16) {
+    pub(crate) const fn set_x(&mut self, sample: u16) {
         self.x_density = sample;
     }
 
@@ -774,7 +776,7 @@ impl ImageInfo {
     ///
     /// Found in the APP(0) marker
     #[allow(dead_code)]
-    pub(crate) fn set_y(&mut self, sample: u16) {
+    pub(crate) const fn set_y(&mut self, sample: u16) {
         self.y_density = sample;
     }
 }

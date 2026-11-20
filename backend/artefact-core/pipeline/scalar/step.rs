@@ -8,30 +8,42 @@ use crate::utils::{aligned::AlignedF32, auxiliary::Aux, macros::mul_add};
 /// Transform (DCT) data-fidelity gradient plus the Total Variation (TV) and
 /// Total Generalized Variation (TGV) gradients, a normalized descent step, and
 /// the projection onto the quantized DCT box.
-#[allow(clippy::too_many_arguments)]
+pub struct StepParams {
+    pub max_rounded_px_w: u32,
+    pub max_rounded_px_h: u32,
+    pub max_rounded_px_count: usize,
+    pub nchannel: usize,
+    pub step_size: f32,
+    pub weight: f32,
+}
+
 pub fn solver_step(
-    max_rounded_px_w: u32,
-    max_rounded_px_h: u32,
-    max_rounded_px_count: usize,
-    nchannel: usize,
+    params: &StepParams,
     coefs: &[ScalarCoef],
     auxs: &mut [Aux],
-    step_size: f32,
-    weight: f32,
     pweight: &[f32; 3],
 ) {
-    for c in 0..nchannel {
-        let aux = &mut auxs[c];
-        let coef = &coefs[c];
+    let max_rounded_px_w = params.max_rounded_px_w;
+    let max_rounded_px_h = params.max_rounded_px_h;
+    let max_rounded_px_count = params.max_rounded_px_count;
+    let nchannel = params.nchannel;
+    let step_size = params.step_size;
+    let weight = params.weight;
 
+    for ((aux, coef), &pw) in auxs
+        .iter_mut()
+        .zip(coefs.iter())
+        .zip(pweight.iter())
+        .take(nchannel)
+    {
         aux.obj_gradient = AlignedF32::zeros(max_rounded_px_count);
 
         // DCT coefficient distance
-        if pweight[c] != 0.0 {
+        if pw != 0.0 {
             dct_gradient(
                 max_rounded_px_w,
                 max_rounded_px_h,
-                pweight[c] * 2.0 * 255.0 * 2.0_f32.sqrt(),
+                pw * 2.0 * 255.0 * 2.0_f32.sqrt(),
                 coef,
                 &aux.cos,
                 &mut aux.obj_gradient,
@@ -63,14 +75,19 @@ pub fn solver_step(
 
         // Only update if gradient norm is non-zero
         if norm != 0.0 {
-            for i in 0..max_rounded_px_count {
-                aux.fdata[i] = step_size.mul_add(-(aux.obj_gradient[i] / norm), aux.fdata[i]);
+            for (fdata, &grad) in aux
+                .fdata
+                .iter_mut()
+                .zip(aux.obj_gradient.iter())
+                .take(max_rounded_px_count)
+            {
+                *fdata = step_size.mul_add(-(grad / norm), *fdata);
             }
         }
     }
 
     // Project onto DCT basis
-    auxs.iter_mut().enumerate().for_each(|(c, aux)| {
-        project_onto_box(max_rounded_px_w, max_rounded_px_h, aux, &coefs[c]);
-    });
+    for (aux, coef) in auxs.iter_mut().zip(coefs.iter()) {
+        project_onto_box(max_rounded_px_w, max_rounded_px_h, aux, coef);
+    }
 }

@@ -3,6 +3,9 @@ name = "artefact-wasm"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 artefact-core = { workspace = true, features = ["simd", "gpu"] }
 console_error_panic_hook = { workspace = true }

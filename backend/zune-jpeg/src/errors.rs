@@ -74,7 +74,7 @@ impl Debug for DecodeErrors {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Format(a) => write!(f, "{a:?}"),
-            Self::FormatStatic(a) => write!(f, "{:?}", a),
+            Self::FormatStatic(a) => write!(f, "{a:?}"),
 
             Self::HuffmanDecode(reason) => {
                 write!(f, "Error decoding huffman values: {reason}")
@@ -180,7 +180,7 @@ impl UnsupportedSchemes {
     /// # Returns
     /// `Some(UnsupportedScheme)` if the int refers to a specific scheme,
     /// otherwise returns `None`
-    pub fn from_int(int: u8) -> Option<UnsupportedSchemes> {
+    pub const fn from_int(int: u8) -> Option<Self> {
         let int = u16::from_be_bytes([0xff, int]);
 
         match int {

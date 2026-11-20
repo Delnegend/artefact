@@ -1,4 +1,7 @@
-use std::simd::{Simd, StdFloat, f32x8};
+use std::{
+    ops::{Add, Mul, Neg, Sub},
+    simd::{Simd, StdFloat, f32x8},
+};
 
 use rayon::prelude::*;
 
@@ -28,24 +31,29 @@ pub fn tv_gradient(
         let Aux {
             pixel_diff, fdata, ..
         } = aux;
-        let w = max_rounded_px_w as usize;
+        let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+        if w == 0 {
+            return;
+        }
         pixel_diff
             .x
             .par_chunks_mut(w)
             .zip(pixel_diff.y.par_chunks_mut(w))
             .enumerate()
             .for_each(|(y, (px, py))| {
-                for &run in adaptive_widths {
-                    dispatch_run!(
-                        run,
-                        compute_g_run,
-                        fdata,
-                        max_rounded_px_w,
-                        max_rounded_px_h,
-                        px,
-                        py;
-                        y as u32
-                    );
+                if let Ok(y_u32) = u32::try_from(y) {
+                    for &run in adaptive_widths {
+                        dispatch_run!(
+                            run,
+                            compute_g_run,
+                            fdata,
+                            max_rounded_px_w,
+                            max_rounded_px_h,
+                            px,
+                            py;
+                            y_u32
+                        );
+                    }
                 }
             });
     });
@@ -62,24 +70,26 @@ pub fn tv_gradient(
         } = aux;
         let gx = &pixel_diff.x;
         let gy = &pixel_diff.y;
-        let w = max_rounded_px_w as usize;
+        let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+        if w == 0 {
+            return;
+        }
         obj_gradient
             .par_chunks_mut(w)
             .enumerate()
             .for_each(|(y, obj_row)| {
-                for &run in adaptive_widths {
-                    dispatch_run!(
-                        run,
-                        gather_run,
+                if let Ok(y_u32) = u32::try_from(y) {
+                    let ctx = GatherCtx {
                         gx,
                         gy,
                         norm,
-                        obj_row,
                         max_rounded_px_w,
-                        max_rounded_px_h,
-                        nchannel;
-                        y as u32
-                    );
+                        nchannel,
+                        y: y_u32,
+                    };
+                    for &run in adaptive_widths {
+                        dispatch_run!(run, gather_run, &ctx; obj_row);
+                    }
                 }
             });
     });
@@ -96,87 +106,122 @@ fn compute_g_run<const N: usize>(
     x0: u32,
     y: u32,
 ) {
-    let pad = N - 8;
-    let w = max_rounded_px_w as usize;
-    let x = x0 as usize;
-    let start = y as usize * w + x;
-    let at_right_edge = x + 8 + pad == w;
-    let at_bottom_edge = y as usize + 1 == max_rounded_px_h as usize;
+    let pad = N.saturating_sub(8);
+    let n_minus_1 = N.saturating_sub(1);
+    let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+    let h = usize::try_from(max_rounded_px_h).unwrap_or(0);
+    let x = usize::try_from(x0).unwrap_or(0);
+    let y_usize = usize::try_from(y).unwrap_or(0);
+    let start = y_usize.saturating_mul(w).saturating_add(x);
+    let at_right_edge = x.saturating_add(8).saturating_add(pad) == w;
+    let at_bottom_edge = y_usize.saturating_add(1) == h;
 
     let gx = if at_right_edge {
-        load_or_zero::<N>(fdata, start + 1, N - 1) - load_or_zero::<N>(fdata, start, N - 1)
+        load_or_zero::<N>(fdata, start.saturating_add(1), n_minus_1)
+            .sub(load_or_zero::<N>(fdata, start, n_minus_1))
     } else {
-        load::<N>(fdata, start + 1) - load::<N>(fdata, start)
+        load::<N>(fdata, start.saturating_add(1)).sub(load::<N>(fdata, start))
     };
     let gy = if at_bottom_edge {
         Simd::<f32, N>::splat(0.0)
     } else {
-        load::<N>(fdata, start + w) - load::<N>(fdata, start)
+        load::<N>(fdata, start.saturating_add(w)).sub(load::<N>(fdata, start))
     };
 
-    gx.write_to(&mut px[x..x + N]);
-    gy.write_to(&mut py[x..x + N]);
+    if let Some(dst) = px.get_mut(x..x.saturating_add(N)) {
+        gx.write_to(dst);
+    }
+    if let Some(dst) = py.get_mut(x..x.saturating_add(N)) {
+        gy.write_to(dst);
+    }
 }
 
 /// Cross-channel norm `sqrt(sum_c gx^2 + gy^2)` for every pixel.
 fn compute_norm(auxs: &[Aux], norm: &mut [f32], max_rounded_px_w: u32) {
-    let w = max_rounded_px_w as usize;
+    let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+    if w == 0 {
+        return;
+    }
     norm.par_chunks_mut(w).enumerate().for_each(|(y, n_row)| {
-        let base = y * w;
-        for x in (0..w).step_by(8) {
+        let base = y.saturating_mul(w);
+        for (chunk_idx, n_chunk) in n_row.as_chunks_mut::<8>().0.iter_mut().enumerate() {
+            let offset = base.saturating_add(chunk_idx.saturating_mul(8));
             let mut acc = f32x8::splat(0.0);
             for aux in auxs {
-                let gx = f32x8::from_slice(&aux.pixel_diff.x[base + x..base + x + 8]);
-                let gy = f32x8::from_slice(&aux.pixel_diff.y[base + x..base + x + 8]);
-                acc += gx * gx + gy * gy;
+                if let (Some(gx_slice), Some(gy_slice)) = (
+                    aux.pixel_diff.x.get(offset..offset.saturating_add(8)),
+                    aux.pixel_diff.y.get(offset..offset.saturating_add(8)),
+                ) {
+                    let gx = f32x8::from_slice(gx_slice);
+                    let gy = f32x8::from_slice(gy_slice);
+                    acc = acc.add(gx.mul(gx).add(gy.mul(gy)));
+                }
             }
-            acc.sqrt().write_to(&mut n_row[x..x + 8]);
+            acc.sqrt().write_to(n_chunk);
         }
     });
 }
 
 /// Gather one run's TV gradient: own `-(gx+gy)/n` plus the left pixel's `gx/n`
 /// and the pixel above's `gy/n`.
-#[allow(clippy::too_many_arguments)]
-fn gather_run<const N: usize>(
-    gx: &[f32],
-    gy: &[f32],
-    norm: &[f32],
-    obj: &mut [f32],
+struct GatherCtx<'a> {
+    gx: &'a [f32],
+    gy: &'a [f32],
+    norm: &'a [f32],
     max_rounded_px_w: u32,
-    _max_rounded_px_h: u32,
     nchannel: usize,
-    x0: u32,
     y: u32,
-) {
-    let w = max_rounded_px_w as usize;
-    let x = x0 as usize;
-    let row = y as usize * w;
+}
 
-    let own_x = load::<N>(gx, row + x);
-    let own_y = load::<N>(gy, row + x);
-    let own_n = load::<N>(norm, row + x);
+fn gather_run<const N: usize>(ctx: &GatherCtx<'_>, x0: u32, obj: &mut [f32]) {
+    let &GatherCtx {
+        gx,
+        gy,
+        norm,
+        max_rounded_px_w,
+        nchannel,
+        y,
+    } = ctx;
+    let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+    let x = usize::try_from(x0).unwrap_or(0);
+    let row = usize::try_from(y).unwrap_or(0).saturating_mul(w);
+    let row_x = row.saturating_add(x);
+    let n_minus_1 = N.saturating_sub(1);
+
+    let own_x = load::<N>(gx, row_x);
+    let own_y = load::<N>(gy, row_x);
+    let own_n = load::<N>(norm, row_x);
 
     let left_x = if x == 0 {
-        load_shifted_right::<N>(gx, row, N - 1)
+        load_shifted_right::<N>(gx, row, n_minus_1)
     } else {
-        load::<N>(gx, row + x - 1)
+        load::<N>(gx, row_x.saturating_sub(1))
     };
     let left_n = if x == 0 {
-        load_shifted_right::<N>(norm, row, N - 1)
+        load_shifted_right::<N>(norm, row, n_minus_1)
     } else {
-        load::<N>(norm, row + x - 1)
+        load::<N>(norm, row_x.saturating_sub(1))
     };
 
     let (up_y, up_n) = if y == 0 {
         (Simd::<f32, N>::splat(0.0), Simd::<f32, N>::splat(0.0))
     } else {
-        (load::<N>(gy, row - w + x), load::<N>(norm, row - w + x))
+        let up = row.saturating_sub(w).saturating_add(x);
+        (load::<N>(gy, up), load::<N>(norm, up))
     };
-    let alpha = Simd::<f32, N>::splat(1.0 / (nchannel as f32).sqrt());
-    let value =
-        alpha * (-(own_x + own_y).safe_div(own_n) + left_x.safe_div(left_n) + up_y.safe_div(up_n));
+    let nch_f32 = f32::from(u16::try_from(nchannel).unwrap_or(u16::MAX));
+    let alpha = Simd::<f32, N>::splat(1.0 / nch_f32.sqrt());
+    let value = alpha.mul(
+        own_x
+            .add(own_y)
+            .safe_div(own_n)
+            .neg()
+            .add(left_x.safe_div(left_n))
+            .add(up_y.safe_div(up_n)),
+    );
 
     // The TV pass initialises `obj_gradient`, so this is a plain store.
-    value.write_to(&mut obj[x..x + N]);
+    if let Some(dst) = obj.get_mut(x..x.saturating_add(N)) {
+        value.write_to(dst);
+    }
 }

@@ -21,7 +21,7 @@ const NCH: usize = 3;
 const TOL: f32 = 1e-3;
 
 fn make_auxs() -> Vec<Aux> {
-    let count = (W * H) as usize;
+    let count = usize::try_from(W * H).unwrap_or(0);
     (0..NCH)
         .map(|_| Aux {
             cos: AlignedF32::zeros(count),
@@ -31,7 +31,9 @@ fn make_auxs() -> Vec<Aux> {
                 y: AlignedF32::zeros(count),
             },
             fdata: (0..count)
-                .map(|i| ((i * 31) % 251) as f32 / 250.0 - 0.5)
+                .map(|i| {
+                    f32::from(u16::try_from((i.wrapping_mul(31)) % 251).unwrap_or(0)) / 250.0 - 0.5
+                })
                 .collect(),
             fista: AlignedF32::zeros(count),
         })
@@ -74,7 +76,7 @@ fn tv_implementations_match() {
     let base = make_auxs();
 
     let widths = uniform_runs(W);
-    let mut norm = vec![0.0f32; (W * H) as usize];
+    let mut norm = vec![0.0f32; usize::try_from(W * H).unwrap_or(0)];
     let mut a = clone_auxs(&base);
     tv_gradient(W, H, NCH, &mut a, &widths, &mut norm);
 
@@ -107,7 +109,7 @@ fn mixed_widths_match_uniform() {
     let base = make_auxs();
     let uniform = uniform_runs(W);
     let mixed = adaptive_runs(W);
-    let mut norm = vec![0.0f32; (W * H) as usize];
+    let mut norm = vec![0.0f32; usize::try_from(W * H).unwrap_or(0)];
 
     let mut uni_tv = clone_auxs(&base);
     tv_gradient(W, H, NCH, &mut uni_tv, &uniform, &mut norm);
@@ -115,21 +117,21 @@ fn mixed_widths_match_uniform() {
     tv_gradient(W, H, NCH, &mut mix_tv, &mixed, &mut norm);
     let tv_diff = max_diff(&uni_tv, &mix_tv);
 
-    let mut uni_tv2 = clone_auxs(&base);
-    tgv_gradient(W, H, NCH, &mut uni_tv2, 0.3, &uniform, &mut norm);
-    let mut mix_tv2 = clone_auxs(&base);
-    tgv_gradient(W, H, NCH, &mut mix_tv2, 0.3, &mixed, &mut norm);
-    let tv2_diff = max_diff(&uni_tv2, &mix_tv2);
+    let mut uniform_tgv = clone_auxs(&base);
+    tgv_gradient(W, H, NCH, &mut uniform_tgv, 0.3, &uniform, &mut norm);
+    let mut mixed_tgv = clone_auxs(&base);
+    tgv_gradient(W, H, NCH, &mut mixed_tgv, 0.3, &mixed, &mut norm);
+    let second_order_diff = max_diff(&uniform_tgv, &mixed_tgv);
 
     println!("tv  uniform vs mixed: max diff = {tv_diff:.3e}");
-    println!("tv2 uniform vs mixed: max diff = {tv2_diff:.3e}");
+    println!("tv2 uniform vs mixed: max diff = {second_order_diff:.3e}");
 
     assert!(
         tv_diff <= TOL,
         "tv mixed tiling diverged by {tv_diff} (tol {TOL})"
     );
     assert!(
-        tv2_diff <= TOL,
-        "tv2 mixed tiling diverged by {tv2_diff} (tol {TOL})"
+        second_order_diff <= TOL,
+        "tv2 mixed tiling diverged by {second_order_diff} (tol {TOL})"
     );
 }

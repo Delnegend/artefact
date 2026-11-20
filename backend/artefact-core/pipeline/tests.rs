@@ -32,13 +32,19 @@ fn decode(suffix: &str) -> Option<(Jpeg, usize, u32, u32, usize)> {
         return None;
     }
     let jpeg = Jpeg::from(JpegSource::File(path)).ok()?;
-    let nchannel = jpeg.nchannel as usize;
+    let nchannel = usize::try_from(jpeg.nchannel).ok()?;
     let (mut w, mut h) = (0, 0);
     for coef in &jpeg.coefs {
         w = w.max(coef.rounded_px_w);
         h = h.max(coef.rounded_px_h);
     }
-    Some((jpeg, nchannel, w, h, (w * h) as usize))
+    Some((
+        jpeg,
+        nchannel,
+        w,
+        h,
+        usize::try_from(w.saturating_mul(h)).ok()?,
+    ))
 }
 
 fn max_diff(
@@ -60,7 +66,7 @@ fn max_diff(
 fn scalar_matches_simd() {
     let mut checked = 0;
     for suffix in ["420", "422", "444"] {
-        let Some((jpeg, nch, w, h, count)) = decode(suffix) else {
+        let Some((jpeg, nch, w, h, _count)) = decode(suffix) else {
             continue;
         };
         checked += 1;
@@ -72,10 +78,8 @@ fn scalar_matches_simd() {
             ITERATIONS,
             w,
             h,
-            count,
         );
-        let simd =
-            crate::pipeline::simd::solve(nch, jpeg.coefs, WEIGHT, PWEIGHT, ITERATIONS, w, h, count);
+        let simd = crate::pipeline::simd::solve(nch, jpeg.coefs, WEIGHT, PWEIGHT, ITERATIONS, w, h);
         let d = max_diff(&scalar, &simd);
         println!("{suffix}: max|scalar - simd| = {d:.3e}");
         assert!(d <= 1.0, "scalar diverged from simd on {suffix} by {d}");
@@ -102,17 +106,17 @@ fn tgv_matches_scalar() {
     const NCH: usize = 3;
 
     fn make() -> Vec<Aux> {
-        let count = (W * H) as usize;
+        let count = usize::try_from(W * H).unwrap_or(0);
         (0..NCH)
             .map(|c| Aux {
                 cos: AlignedF32::zeros(count),
                 obj_gradient: AlignedF32::zeros(count),
                 pixel_diff: PixelDifference {
                     x: (0..count)
-                        .map(|i| (((i + c) * 7) % 13) as f32 - 6.0)
+                        .map(|i| f32::from(u8::try_from(((i + c) * 7) % 13).unwrap_or(0)) - 6.0)
                         .collect(),
                     y: (0..count)
-                        .map(|i| (((i + c) * 5) % 11) as f32 - 5.0)
+                        .map(|i| f32::from(u8::try_from(((i + c) * 5) % 11).unwrap_or(0)) - 5.0)
                         .collect(),
                 },
                 fdata: AlignedF32::zeros(count),
@@ -122,7 +126,7 @@ fn tgv_matches_scalar() {
     }
 
     let mut simd = make();
-    let mut norm = vec![0.0f32; (W * H) as usize];
+    let mut norm = vec![0.0f32; usize::try_from(W * H).unwrap_or(0)];
     tgv_gradient(W, H, NCH, &mut simd, 0.3, &uniform_runs(W), &mut norm);
 
     let mut scalar = make();

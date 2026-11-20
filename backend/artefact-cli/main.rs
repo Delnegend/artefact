@@ -50,6 +50,12 @@ struct Args {
     #[arg(short, long, default_value = "50")]
     iterations: String,
 
+    #[command(flatten)]
+    flags: RunFlags,
+}
+
+#[derive(clap::Args, Debug)]
+struct RunFlags {
     /// Separately optimize components instead of all together
     #[arg(short, long, default_value = "false", alias = "spearate-components")]
     separate_components: bool,
@@ -126,24 +132,24 @@ fn resolve_output(args: &Args) -> Result<(PathBuf, String), String> {
         args.format.clone()
     };
 
-    let path = match &args.output {
-        Some(out) => {
+    let path = args.output.as_ref().map_or_else(
+        || PathBuf::from(&args.input).with_extension(&format),
+        |out| {
             let p = PathBuf::from(out);
             if p.extension().is_some() {
                 p
             } else {
                 p.with_extension(&format)
             }
-        }
-        None => PathBuf::from(&args.input).with_extension(&format),
-    };
+        },
+    );
 
     Ok((path, format))
 }
 
 fn main() -> ExitCode {
     init_tracing();
-    match run(Args::parse()) {
+    match run(&Args::parse()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("Error: {e}");
@@ -164,10 +170,10 @@ fn init_tracing() {
         .init();
 }
 
-fn run(args: Args) -> Result<(), String> {
-    let (output, _format) = resolve_output(&args)?;
+fn run(args: &Args) -> Result<(), String> {
+    let (output, _format) = resolve_output(args)?;
 
-    if output.exists() && !args.overwrite && !args.benchmark {
+    if output.exists() && !args.overwrite && !args.flags.benchmark {
         return Err("output file already exists, use -y to overwrite".into());
     }
 
@@ -176,10 +182,10 @@ fn run(args: Args) -> Result<(), String> {
         .weight(parse_values::<f32>(&args.weight, "weight")?)
         .pweight(parse_values::<f32>(&args.pweight, "pweight")?)
         .iterations(parse_values::<usize>(&args.iterations, "iterations")?)
-        .benchmark(args.benchmark)
-        .separate_components(args.separate_components);
+        .benchmark(args.flags.benchmark)
+        .separate_components(args.flags.separate_components);
 
-    let result = if args.gpu {
+    let result = if args.flags.gpu {
         pollster::block_on(artefact.process_auto())
     } else {
         artefact.process()

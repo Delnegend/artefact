@@ -28,17 +28,29 @@ impl SampleFactor {
 
     #[must_use]
     pub const fn u16(self) -> u16 {
-        self.value() as u16
+        match self {
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Four => 4,
+        }
     }
 
     #[must_use]
     pub const fn u32(self) -> u32 {
-        self.value() as u32
+        match self {
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Four => 4,
+        }
     }
 
     #[must_use]
     pub const fn usize(self) -> usize {
-        self.value() as usize
+        match self {
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Four => 4,
+        }
     }
 }
 
@@ -61,13 +73,13 @@ impl Display for SampleFactor {
     }
 }
 
-impl Div<SampleFactor> for SampleFactor {
-    type Output = SampleFactor;
+impl Div<Self> for SampleFactor {
+    type Output = Self;
 
-    fn div(self, rhs: SampleFactor) -> Self::Output {
-        match self.value() / rhs.value() {
-            4 => Self::Four,
-            2 => Self::Two,
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Four, Self::One) => Self::Four,
+            (Self::Four, Self::Two) | (Self::Two, Self::One) => Self::Two,
             _ => Self::One,
         }
     }

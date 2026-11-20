@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 autobenches = false
 
+[lints]
+workspace = true
+
 [dependencies]
 image = { workspace = true }
 zune-jpeg = { workspace = true }

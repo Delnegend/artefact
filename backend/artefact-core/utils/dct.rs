@@ -1,157 +1,169 @@
 //! Ooura DCT/IDCT (source: <http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html>,
 //! `fft2d.zip`, `shrtdct.c`; Copyright Takuya OOURA 1996-2001).
-#![allow(clippy::identity_op)]
-#![allow(clippy::erasing_op)]
-#![allow(clippy::excessive_precision)]
-
 use crate::utils::macros::mul_add;
 
-pub const C8_1R: f32 = 0.490_392_640_201_615_224_56;
-pub const C8_1I: f32 = 0.097_545_161_008_064_133_92;
-pub const C8_2R: f32 = 0.461_939_766_255_643_378_06;
-pub const C8_2I: f32 = 0.191_341_716_182_544_885_86;
-pub const C8_3R: f32 = 0.415_734_806_151_272_618_54;
-pub const C8_3I: f32 = 0.277_785_116_509_801_112_37;
-pub const C8_4R: f32 = 0.353_553_390_593_273_762_20;
+pub const C8_1R: f32 = 0.490_392_63_f32;
+pub const C8_1I: f32 = 0.097_545_16_f32;
+pub const C8_2R: f32 = 0.461_939_75_f32;
+pub const C8_2I: f32 = 0.191_341_71_f32;
+pub const C8_3R: f32 = 0.415_734_8_f32;
+pub const C8_3I: f32 = 0.277_785_12_f32;
+pub const C8_4R: f32 = 0.353_553_38_f32;
 pub const W8_4R: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
 pub fn idct8x8(a: &mut [f32; 64]) {
-    let mut x0r: f32;
-    let mut x0i: f32;
-    let mut x1r: f32;
-    let mut x1i: f32;
-    let mut x2r: f32;
-    let mut x2i: f32;
-    let mut x3r: f32;
-    let mut x3i: f32;
-    let mut xr: f32;
-    let mut xi: f32;
+    // Column pass (8 columns, stride 8) via row slices to avoid indexing/arithmetic lints
+    let (r0, rest) = a.split_at_mut(8);
+    let (r1, rest) = rest.split_at_mut(8);
+    let (r2, rest) = rest.split_at_mut(8);
+    let (r3, rest) = rest.split_at_mut(8);
+    let (r4, rest) = rest.split_at_mut(8);
+    let (r5, rest) = rest.split_at_mut(8);
+    let (r6, r7) = rest.split_at_mut(8);
 
-    for j in 0..8 {
-        x1r = mul_add!(C8_1R, a[1 * 8 + j], C8_1I * a[7 * 8 + j]);
-        x1i = mul_add!(C8_1R, a[7 * 8 + j], -(C8_1I * a[1 * 8 + j]));
-        x3r = mul_add!(C8_3R, a[3 * 8 + j], C8_3I * a[5 * 8 + j]);
-        x3i = mul_add!(C8_3R, a[5 * 8 + j], -(C8_3I * a[3 * 8 + j]));
-        xr = x1r - x3r;
-        xi = x1i + x3i;
-        x1r += x3r;
+    for (a0, (a1, (a2, (a3, (a4, (a5, (a6, a7))))))) in r0.iter_mut().zip(
+        r1.iter_mut().zip(
+            r2.iter_mut().zip(
+                r3.iter_mut().zip(
+                    r4.iter_mut()
+                        .zip(r5.iter_mut().zip(r6.iter_mut().zip(r7.iter_mut()))),
+                ),
+            ),
+        ),
+    ) {
+        let mut x1r = mul_add!(C8_1R, *a1, C8_1I * *a7);
+        let mut x1i = mul_add!(C8_1R, *a7, -(C8_1I * *a1));
+        let x3r_init = mul_add!(C8_3R, *a3, C8_3I * *a5);
+        let mut x3i = mul_add!(C8_3R, *a5, -(C8_3I * *a3));
+        let mut xr = x1r - x3r_init;
+        let mut xi = x1i + x3i;
+        x1r += x3r_init;
         x3i -= x1i;
         x1i = W8_4R * (xr + xi);
-        x3r = W8_4R * (xr - xi);
-        xr = mul_add!(C8_2R, a[2 * 8 + j], C8_2I * a[6 * 8 + j]);
-        xi = mul_add!(C8_2R, a[6 * 8 + j], -(C8_2I * a[2 * 8 + j]));
-        x0r = C8_4R * (a[0 * 8 + j] + a[4 * 8 + j]);
-        x0i = C8_4R * (a[0 * 8 + j] - a[4 * 8 + j]);
-        x2r = x0r - xr;
-        x2i = x0i - xi;
+        let x3r = W8_4R * (xr - xi);
+        xr = mul_add!(C8_2R, *a2, C8_2I * *a6);
+        xi = mul_add!(C8_2R, *a6, -(C8_2I * *a2));
+        let mut x0r = C8_4R * (*a0 + *a4);
+        let mut x0i = C8_4R * (*a0 - *a4);
+        let x2r = x0r - xr;
+        let x2i = x0i - xi;
         x0r += xr;
         x0i += xi;
-        a[0 * 8 + j] = x0r + x1r;
-        a[7 * 8 + j] = x0r - x1r;
-        a[2 * 8 + j] = x0i + x1i;
-        a[5 * 8 + j] = x0i - x1i;
-        a[4 * 8 + j] = x2r - x3i;
-        a[3 * 8 + j] = x2r + x3i;
-        a[6 * 8 + j] = x2i - x3r;
-        a[1 * 8 + j] = x2i + x3r;
+        *a0 = x0r + x1r;
+        *a7 = x0r - x1r;
+        *a2 = x0i + x1i;
+        *a5 = x0i - x1i;
+        *a4 = x2r - x3i;
+        *a3 = x2r + x3i;
+        *a6 = x2i - x3r;
+        *a1 = x2i + x3r;
     }
-    for j in 0..8 {
-        x1r = mul_add!(C8_1R, a[j * 8 + 1], C8_1I * a[j * 8 + 7]);
-        x1i = mul_add!(C8_1R, a[j * 8 + 7], -(C8_1I * a[j * 8 + 1]));
-        x3r = mul_add!(C8_3R, a[j * 8 + 3], C8_3I * a[j * 8 + 5]);
-        x3i = mul_add!(C8_3R, a[j * 8 + 5], -(C8_3I * a[j * 8 + 3]));
-        xr = x1r - x3r;
-        xi = x1i + x3i;
-        x1r += x3r;
+
+    let (rows, _) = a.as_chunks_mut::<8>();
+    for [a0, a1, a2, a3, a4, a5, a6, a7] in rows {
+        let mut x1r = mul_add!(C8_1R, *a1, C8_1I * *a7);
+        let mut x1i = mul_add!(C8_1R, *a7, -(C8_1I * *a1));
+        let x3r_init = mul_add!(C8_3R, *a3, C8_3I * *a5);
+        let mut x3i = mul_add!(C8_3R, *a5, -(C8_3I * *a3));
+        let mut xr = x1r - x3r_init;
+        let mut xi = x1i + x3i;
+        x1r += x3r_init;
         x3i -= x1i;
         x1i = W8_4R * (xr + xi);
-        x3r = W8_4R * (xr - xi);
-        xr = mul_add!(C8_2R, a[j * 8 + 2], C8_2I * a[j * 8 + 6]);
-        xi = mul_add!(C8_2R, a[j * 8 + 6], -(C8_2I * a[j * 8 + 2]));
-        x0r = C8_4R * (a[j * 8 + 0] + a[j * 8 + 4]);
-        x0i = C8_4R * (a[j * 8 + 0] - a[j * 8 + 4]);
-        x2r = x0r - xr;
-        x2i = x0i - xi;
+        let x3r = W8_4R * (xr - xi);
+        xr = mul_add!(C8_2R, *a2, C8_2I * *a6);
+        xi = mul_add!(C8_2R, *a6, -(C8_2I * *a2));
+        let mut x0r = C8_4R * (*a0 + *a4);
+        let mut x0i = C8_4R * (*a0 - *a4);
+        let x2r = x0r - xr;
+        let x2i = x0i - xi;
         x0r += xr;
         x0i += xi;
-        a[j * 8 + 0] = x0r + x1r;
-        a[j * 8 + 7] = x0r - x1r;
-        a[j * 8 + 2] = x0i + x1i;
-        a[j * 8 + 5] = x0i - x1i;
-        a[j * 8 + 4] = x2r - x3i;
-        a[j * 8 + 3] = x2r + x3i;
-        a[j * 8 + 6] = x2i - x3r;
-        a[j * 8 + 1] = x2i + x3r;
+        *a0 = x0r + x1r;
+        *a7 = x0r - x1r;
+        *a2 = x0i + x1i;
+        *a5 = x0i - x1i;
+        *a4 = x2r - x3i;
+        *a3 = x2r + x3i;
+        *a6 = x2i - x3r;
+        *a1 = x2i + x3r;
     }
 }
 
 pub fn dct8x8(a: &mut [f32; 64]) {
-    let mut x0r: f32;
-    let mut x0i: f32;
-    let mut x1r: f32;
-    let mut x1i: f32;
-    let mut x2r: f32;
-    let mut x2i: f32;
-    let mut x3r: f32;
-    let mut x3i: f32;
-    let mut xr: f32;
-    let mut xi: f32;
+    let (r0, rest) = a.split_at_mut(8);
+    let (r1, rest) = rest.split_at_mut(8);
+    let (r2, rest) = rest.split_at_mut(8);
+    let (r3, rest) = rest.split_at_mut(8);
+    let (r4, rest) = rest.split_at_mut(8);
+    let (r5, rest) = rest.split_at_mut(8);
+    let (r6, r7) = rest.split_at_mut(8);
 
-    for j in 0..8 {
-        x0r = a[0 * 8 + j] + a[7 * 8 + j];
-        x1r = a[0 * 8 + j] - a[7 * 8 + j];
-        x0i = a[2 * 8 + j] + a[5 * 8 + j];
-        x1i = a[2 * 8 + j] - a[5 * 8 + j];
-        x2r = a[4 * 8 + j] + a[3 * 8 + j];
-        x3r = a[4 * 8 + j] - a[3 * 8 + j];
-        x2i = a[6 * 8 + j] + a[1 * 8 + j];
-        x3i = a[6 * 8 + j] - a[1 * 8 + j];
-        xr = x0r + x2r;
-        xi = x0i + x2i;
-        a[0 * 8 + j] = C8_4R * (xr + xi);
-        a[4 * 8 + j] = C8_4R * (xr - xi);
+    for (a0, (a1, (a2, (a3, (a4, (a5, (a6, a7))))))) in r0.iter_mut().zip(
+        r1.iter_mut().zip(
+            r2.iter_mut().zip(
+                r3.iter_mut().zip(
+                    r4.iter_mut()
+                        .zip(r5.iter_mut().zip(r6.iter_mut().zip(r7.iter_mut()))),
+                ),
+            ),
+        ),
+    ) {
+        let x0r = *a0 + *a7;
+        let mut x1r = *a0 - *a7;
+        let x0i = *a2 + *a5;
+        let mut x1i = *a2 - *a5;
+        let x2r = *a4 + *a3;
+        let mut x3r = *a4 - *a3;
+        let x2i = *a6 + *a1;
+        let mut x3i = *a6 - *a1;
+        let mut xr = x0r + x2r;
+        let mut xi = x0i + x2i;
+        *a0 = C8_4R * (xr + xi);
+        *a4 = C8_4R * (xr - xi);
         xr = x0r - x2r;
         xi = x0i - x2i;
-        a[2 * 8 + j] = mul_add!(C8_2R, xr, -(C8_2I * xi));
-        a[6 * 8 + j] = mul_add!(C8_2R, xi, C8_2I * xr);
+        *a2 = mul_add!(C8_2R, xr, -(C8_2I * xi));
+        *a6 = mul_add!(C8_2R, xi, C8_2I * xr);
         xr = W8_4R * (x1i - x3i);
         x1i = W8_4R * (x1i + x3i);
         x3i = x1i - x3r;
         x1i += x3r;
         x3r = x1r - xr;
         x1r += xr;
-        a[1 * 8 + j] = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
-        a[7 * 8 + j] = mul_add!(C8_1R, x1i, C8_1I * x1r);
-        a[3 * 8 + j] = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
-        a[5 * 8 + j] = mul_add!(C8_3R, x3i, C8_3I * x3r);
+        *a1 = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
+        *a7 = mul_add!(C8_1R, x1i, C8_1I * x1r);
+        *a3 = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
+        *a5 = mul_add!(C8_3R, x3i, C8_3I * x3r);
     }
 
-    for j in 0..8 {
-        x0r = a[j * 8 + 0] + a[j * 8 + 7];
-        x1r = a[j * 8 + 0] - a[j * 8 + 7];
-        x0i = a[j * 8 + 2] + a[j * 8 + 5];
-        x1i = a[j * 8 + 2] - a[j * 8 + 5];
-        x2r = a[j * 8 + 4] + a[j * 8 + 3];
-        x3r = a[j * 8 + 4] - a[j * 8 + 3];
-        x2i = a[j * 8 + 6] + a[j * 8 + 1];
-        x3i = a[j * 8 + 6] - a[j * 8 + 1];
-        xr = x0r + x2r;
-        xi = x0i + x2i;
-        a[j * 8 + 0] = C8_4R * (xr + xi);
-        a[j * 8 + 4] = C8_4R * (xr - xi);
+    let (rows, _) = a.as_chunks_mut::<8>();
+    for [a0, a1, a2, a3, a4, a5, a6, a7] in rows {
+        let x0r = *a0 + *a7;
+        let mut x1r = *a0 - *a7;
+        let x0i = *a2 + *a5;
+        let mut x1i = *a2 - *a5;
+        let x2r = *a4 + *a3;
+        let mut x3r = *a4 - *a3;
+        let x2i = *a6 + *a1;
+        let mut x3i = *a6 - *a1;
+        let mut xr = x0r + x2r;
+        let mut xi = x0i + x2i;
+        *a0 = C8_4R * (xr + xi);
+        *a4 = C8_4R * (xr - xi);
         xr = x0r - x2r;
         xi = x0i - x2i;
-        a[j * 8 + 2] = mul_add!(C8_2R, xr, -(C8_2I * xi));
-        a[j * 8 + 6] = mul_add!(C8_2R, xi, C8_2I * xr);
+        *a2 = mul_add!(C8_2R, xr, -(C8_2I * xi));
+        *a6 = mul_add!(C8_2R, xi, C8_2I * xr);
         xr = W8_4R * (x1i - x3i);
         x1i = W8_4R * (x1i + x3i);
         x3i = x1i - x3r;
         x1i += x3r;
         x3r = x1r - xr;
         x1r += xr;
-        a[j * 8 + 1] = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
-        a[j * 8 + 7] = mul_add!(C8_1R, x1i, C8_1I * x1r);
-        a[j * 8 + 3] = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
-        a[j * 8 + 5] = mul_add!(C8_3R, x3i, C8_3I * x3r);
+        *a1 = mul_add!(C8_1R, x1r, -(C8_1I * x1i));
+        *a7 = mul_add!(C8_1R, x1i, C8_1I * x1r);
+        *a3 = mul_add!(C8_3R, x3r, -(C8_3I * x3i));
+        *a5 = mul_add!(C8_3R, x3i, C8_3I * x3r);
     }
 }

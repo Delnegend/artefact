@@ -16,14 +16,15 @@
 //! real GPU and drivers/hardware vary.
 //!
 //! Run with the production pipelines:
-//!   RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
-//!     cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+//! ```text
+//! RUSTFLAGS="-C target-cpu=native" RAYON_NUM_THREADS=8 \
+//!   cargo bench -p artefact-core --features bench,simd,gpu --bench gpu
+//! ```
 //!
 //! Selection:
-//!   ARTEFACT_BENCH_MATRIX=smoke|full|all (default `all`)
-//!   ARTEFACT_BENCH_CASE=case-id-substring (e.g. `sample-422`)
-//!   ARTEFACT_BENCH_INPUT=/path/to/image.jpg (replaces the matrix)
-
+//! - `ARTEFACT_BENCH_MATRIX=smoke|full|all` (default `all`)
+//! - `ARTEFACT_BENCH_CASE=case-id-substring` (e.g. `sample-422`)
+//! - `ARTEFACT_BENCH_INPUT=/path/to/image.jpg` (replaces the matrix)
 use std::{
     hint::black_box,
     path::{Path, PathBuf},

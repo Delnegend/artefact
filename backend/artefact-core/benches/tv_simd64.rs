@@ -1,3 +1,4 @@
+use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::simd::{StdFloat, cmp::SimdPartialEq, f32x64};
 
 use artefact_core::Aux;
@@ -5,14 +6,14 @@ use artefact_core::Aux;
 /// This unfortunately slower than [`f32x8`].
 ///
 /// [`f32x8`]: std::simd::f32x8
-#[allow(unused)]
 pub fn tv_gradient_simd64(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
     nchannel: usize,
     auxs: &mut [Aux],
 ) {
-    let alpha = 1.0 / (nchannel as f32).sqrt();
+    let nchan_f32 = f32::from(u16::try_from(nchannel).unwrap_or(1));
+    let alpha = 1.0 / nchan_f32.sqrt();
 
     for curr_row in (0..max_rounded_px_h).step_by(8) {
         for curr_row_px_idx in (0..max_rounded_px_w).step_by(8) {
@@ -29,6 +30,43 @@ pub fn tv_gradient_simd64(
     }
 }
 
+fn load_block(src: &[f32], start: usize, stride: usize, rows: usize, cols: usize) -> f32x64 {
+    let mut tmp = f32x64::splat(0.0);
+    for r in 0..rows {
+        let src_off = start.saturating_add(r.saturating_mul(stride));
+        let dst_off = r.saturating_mul(8);
+        if let (Some(dst_slice), Some(src_slice)) = (
+            tmp.as_mut_array()
+                .get_mut(dst_off..dst_off.saturating_add(cols)),
+            src.get(src_off..src_off.saturating_add(cols)),
+        ) {
+            dst_slice.copy_from_slice(src_slice);
+        }
+    }
+    tmp
+}
+
+fn store_block(
+    dst: &mut [f32],
+    start: usize,
+    stride: usize,
+    rows: usize,
+    cols: usize,
+    val: &f32x64,
+) {
+    let arr = val.as_array();
+    for r in 0..rows {
+        let dst_off = start.saturating_add(r.saturating_mul(stride));
+        let src_off = r.saturating_mul(8);
+        if let (Some(dst_slice), Some(src_slice)) = (
+            dst.get_mut(dst_off..dst_off.saturating_add(cols)),
+            arr.get(src_off..src_off.saturating_add(cols)),
+        ) {
+            dst_slice.copy_from_slice(src_slice);
+        }
+    }
+}
+
 fn tv_gradient_px(
     max_rounded_px_w: u32,
     max_rounded_px_h: u32,
@@ -38,356 +76,112 @@ fn tv_gradient_px(
     curr_row: u32,
     alpha: f32x64,
 ) {
-    // a "group" = 8 consecutive pixels horizontally
-    let px_idx_start_of_block = (curr_row * max_rounded_px_w + curr_row_px_idx) as usize;
-    let block_at_right_edge = curr_row_px_idx as usize + 8 == max_rounded_px_w as usize;
-    let block_at_bottom_edge = curr_row as usize + 8 == max_rounded_px_h as usize;
+    let px_idx_start_of_block = usize::try_from(
+        curr_row
+            .saturating_mul(max_rounded_px_w)
+            .saturating_add(curr_row_px_idx),
+    )
+    .unwrap_or(0);
+    let w = usize::try_from(max_rounded_px_w).unwrap_or(0);
+    let h = usize::try_from(max_rounded_px_h).unwrap_or(0);
+    let block_at_right_edge = usize::try_from(curr_row_px_idx)
+        .unwrap_or(0)
+        .saturating_add(8)
+        == w;
+    let block_at_bottom_edge = usize::try_from(curr_row).unwrap_or(0).saturating_add(8) == h;
 
-    let mut g_xs = [f32x64::splat(0.0); 3];
-    let mut g_ys = [f32x64::splat(0.0); 3];
+    let mut grad_x = [f32x64::splat(0.0); 3];
+    let mut grad_y = [f32x64::splat(0.0); 3];
 
-    let w = max_rounded_px_w as usize;
-
-    // compute forward differences
     for c in 0..nchannel {
-        let fdata = &auxs[c].fdata;
-
-        // forward difference x
-        g_xs[c] = if block_at_right_edge {
-            let curr_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block;
-                let b = px_idx_start_of_block + 6;
-                tmp[0..=6].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=14].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=22].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=30].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=38].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=46].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=54].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=62].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            let shift_right_1px_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block + 1;
-                let b = px_idx_start_of_block + 7;
-                tmp[0..=6].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=14].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=22].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=30].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=38].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=46].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=54].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=62].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            shift_right_1px_block - curr_block
-        } else {
-            let curr_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block;
-                let b = px_idx_start_of_block + 7;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=63].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            let shift_right_1px_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block + 1;
-                let b = px_idx_start_of_block + 8;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=63].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            shift_right_1px_block - curr_block
+        let Some(aux) = auxs.get(c) else {
+            continue;
         };
+        let fdata = &aux.fdata;
 
-        // forward difference y
-        g_ys[c] = if block_at_bottom_edge {
-            let curr_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block;
-                let b = px_idx_start_of_block + 7;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp
-            };
+        let cols = if block_at_right_edge { 7 } else { 8 };
+        let curr_x = load_block(fdata, px_idx_start_of_block, w, 8, cols);
+        let shift_x = load_block(fdata, px_idx_start_of_block.saturating_add(1), w, 8, cols);
+        if let Some(slot) = grad_x.get_mut(c) {
+            *slot = Sub::sub(shift_x, curr_x);
+        }
 
-            let shift_down_1px_block = {
-                let mut tmp = f32x64::splat(0.0);
-
-                let i = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-                let a = i;
-                let b = i + 7;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp
-            };
-
-            shift_down_1px_block - curr_block
-        } else {
-            let curr_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let a = px_idx_start_of_block;
-                let b = px_idx_start_of_block + 7;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=63].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            let shift_down_1px_block = {
-                let mut tmp = f32x64::splat(0.0);
-                let i = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-                let a = i;
-                let b = i + 7;
-                tmp[0..=7].copy_from_slice(&fdata[a..=b]);
-                tmp[8..=15].copy_from_slice(&fdata[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&fdata[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&fdata[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&fdata[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&fdata[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&fdata[a + w * 6..=b + w * 6]);
-                tmp[56..=63].copy_from_slice(&fdata[a + w * 7..=b + w * 7]);
-                tmp
-            };
-
-            shift_down_1px_block - curr_block
-        };
+        let rows = if block_at_bottom_edge { 7 } else { 8 };
+        let curr_y = load_block(fdata, px_idx_start_of_block, w, rows, 8);
+        let down_start = usize::try_from(
+            curr_row
+                .saturating_add(1)
+                .saturating_mul(max_rounded_px_w)
+                .saturating_add(curr_row_px_idx),
+        )
+        .unwrap_or(0);
+        let shift_y = load_block(fdata, down_start, w, rows, 8);
+        if let Some(slot) = grad_y.get_mut(c) {
+            *slot = Sub::sub(shift_y, curr_y);
+        }
     }
 
-    // compute gradient normalization
     let g_norm = (0..nchannel)
-        .map(|c| g_xs[c] * g_xs[c] + g_ys[c] * g_ys[c])
-        .fold(f32x64::splat(0.0), |acc, x| acc + x)
+        .filter_map(|c| {
+            let gx = grad_x.get(c)?;
+            let gy = grad_y.get(c)?;
+            Some(Add::add(Mul::mul(*gx, *gx), Mul::mul(*gy, *gy)))
+        })
+        .fold(f32x64::splat(0.0), Add::add)
         .sqrt();
 
-    // compute derivatives
+    let enable = g_norm.simd_ne(f32x64::splat(0.0));
+
     for c in 0..nchannel {
-        let obj = &mut auxs[c].obj_gradient;
+        let (Some(aux), Some(&gx), Some(&gy)) = (auxs.get_mut(c), grad_x.get(c), grad_y.get(c))
+        else {
+            continue;
+        };
+        let obj = &mut aux.obj_gradient;
 
-        '_for_current_group: {
-            let a = px_idx_start_of_block;
-            let b = px_idx_start_of_block + 7;
-
-            let original = {
-                let mut tmp = f32x64::splat(0.0);
-                tmp[0..=7].copy_from_slice(&obj[a..=b]);
-                tmp[8..=15].copy_from_slice(&obj[a + w..=b + w]);
-                tmp[16..=23].copy_from_slice(&obj[a + w * 2..=b + w * 2]);
-                tmp[24..=31].copy_from_slice(&obj[a + w * 3..=b + w * 3]);
-                tmp[32..=39].copy_from_slice(&obj[a + w * 4..=b + w * 4]);
-                tmp[40..=47].copy_from_slice(&obj[a + w * 5..=b + w * 5]);
-                tmp[48..=55].copy_from_slice(&obj[a + w * 6..=b + w * 6]);
-                tmp[56..=63].copy_from_slice(&obj[a + w * 7..=b + w * 7]);
-                tmp
-            };
-            let result = {
-                let enable = g_norm.simd_ne(f32x64::splat(0.0));
-                let mut tmp = [0.0; 64];
-                (alpha * -(g_xs[c] + g_ys[c]) / g_norm).store_select(&mut tmp, enable);
-                original + f32x64::from(tmp)
-            };
-
-            obj[a..=b].copy_from_slice(&result[0..=7]);
-            obj[a + w..=b + w].copy_from_slice(&result[8..=15]);
-            obj[a + w * 2..=b + w * 2].copy_from_slice(&result[16..=23]);
-            obj[a + w * 3..=b + w * 3].copy_from_slice(&result[24..=31]);
-            obj[a + w * 4..=b + w * 4].copy_from_slice(&result[32..=39]);
-            obj[a + w * 5..=b + w * 5].copy_from_slice(&result[40..=47]);
-            obj[a + w * 6..=b + w * 6].copy_from_slice(&result[48..=55]);
-            obj[a + w * 7..=b + w * 7].copy_from_slice(&result[56..=63]);
+        {
+            let original = load_block(obj, px_idx_start_of_block, w, 8, 8);
+            let mut tmp = [0.0; 64];
+            Div::div(Mul::mul(alpha, Neg::neg(Add::add(gx, gy))), g_norm)
+                .store_select(&mut tmp, enable);
+            let result = Add::add(original, f32x64::from(tmp));
+            store_block(obj, px_idx_start_of_block, w, 8, 8, &result);
         }
 
-        '_for_shifted_right_1px_group: {
-            if block_at_right_edge {
-                let a = px_idx_start_of_block + 1;
-                let b = px_idx_start_of_block + 7;
-
-                let original = {
-                    let mut tmp = f32x64::splat(0.0);
-                    tmp[0..=6].copy_from_slice(&obj[a..=b]);
-                    tmp[8..=14].copy_from_slice(&obj[a + w..=b + w]);
-                    tmp[16..=22].copy_from_slice(&obj[a + w * 2..=b + w * 2]);
-                    tmp[24..=30].copy_from_slice(&obj[a + w * 3..=b + w * 3]);
-                    tmp[32..=38].copy_from_slice(&obj[a + w * 4..=b + w * 4]);
-                    tmp[40..=46].copy_from_slice(&obj[a + w * 5..=b + w * 5]);
-                    tmp[48..=54].copy_from_slice(&obj[a + w * 6..=b + w * 6]);
-                    tmp[56..=62].copy_from_slice(&obj[a + w * 7..=b + w * 7]);
-                    tmp
-                };
-
-                let result = {
-                    let enable = g_norm.simd_ne(f32x64::splat(0.0));
-                    let mut tmp = [0.0; 64];
-                    (alpha * g_xs[c] / g_norm).store_select(&mut tmp, enable);
-                    original + f32x64::from(tmp)
-                };
-
-                obj[a..=b].copy_from_slice(&result[0..=6]);
-                obj[a + w..=b + w].copy_from_slice(&result[8..=14]);
-                obj[a + w * 2..=b + w * 2].copy_from_slice(&result[16..=22]);
-                obj[a + w * 3..=b + w * 3].copy_from_slice(&result[24..=30]);
-                obj[a + w * 4..=b + w * 4].copy_from_slice(&result[32..=38]);
-                obj[a + w * 5..=b + w * 5].copy_from_slice(&result[40..=46]);
-                obj[a + w * 6..=b + w * 6].copy_from_slice(&result[48..=54]);
-                obj[a + w * 7..=b + w * 7].copy_from_slice(&result[56..=62]);
-            } else {
-                let a = px_idx_start_of_block + 1;
-                let b = px_idx_start_of_block + 8;
-
-                let original = {
-                    let mut tmp = f32x64::splat(0.0);
-                    tmp[0..=7].copy_from_slice(&obj[a..=b]);
-                    tmp[8..=15].copy_from_slice(&obj[a + w..=b + w]);
-                    tmp[16..=23].copy_from_slice(&obj[a + w * 2..=b + w * 2]);
-                    tmp[24..=31].copy_from_slice(&obj[a + w * 3..=b + w * 3]);
-                    tmp[32..=39].copy_from_slice(&obj[a + w * 4..=b + w * 4]);
-                    tmp[40..=47].copy_from_slice(&obj[a + w * 5..=b + w * 5]);
-                    tmp[48..=55].copy_from_slice(&obj[a + w * 6..=b + w * 6]);
-                    tmp[56..=63].copy_from_slice(&obj[a + w * 7..=b + w * 7]);
-                    tmp
-                };
-                let result = {
-                    let enable = g_norm.simd_ne(f32x64::splat(0.0));
-                    let mut tmp = [0.0; 64];
-                    (alpha * g_xs[c] / g_norm).store_select(&mut tmp, enable);
-                    original + f32x64::from(tmp)
-                };
-
-                obj[a..=b].copy_from_slice(&result[0..=7]);
-                obj[a + w..=b + w].copy_from_slice(&result[8..=15]);
-                obj[a + w * 2..=b + w * 2].copy_from_slice(&result[16..=23]);
-                obj[a + w * 3..=b + w * 3].copy_from_slice(&result[24..=31]);
-                obj[a + w * 4..=b + w * 4].copy_from_slice(&result[32..=39]);
-                obj[a + w * 5..=b + w * 5].copy_from_slice(&result[40..=47]);
-                obj[a + w * 6..=b + w * 6].copy_from_slice(&result[48..=55]);
-                obj[a + w * 7..=b + w * 7].copy_from_slice(&result[56..=63]);
-            }
+        {
+            let cols = if block_at_right_edge { 7 } else { 8 };
+            let start = px_idx_start_of_block.saturating_add(1);
+            let original = load_block(obj, start, w, 8, cols);
+            let mut tmp = [0.0; 64];
+            Div::div(Mul::mul(alpha, gx), g_norm).store_select(&mut tmp, enable);
+            let result = Add::add(original, f32x64::from(tmp));
+            store_block(obj, start, w, 8, cols, &result);
         }
 
-        '_for_shifted_down_1px_group: {
-            let i = ((curr_row + 1) * max_rounded_px_w + curr_row_px_idx) as usize;
-            let a = i;
-            let b = i + 7;
-
-            if block_at_bottom_edge {
-                let original = {
-                    let mut tmp = f32x64::splat(0.0);
-                    tmp[0..=7].copy_from_slice(&obj[a..=b]);
-                    tmp[8..=15].copy_from_slice(&obj[a + w..=b + w]);
-                    tmp[16..=23].copy_from_slice(&obj[a + w * 2..=b + w * 2]);
-                    tmp[24..=31].copy_from_slice(&obj[a + w * 3..=b + w * 3]);
-                    tmp[32..=39].copy_from_slice(&obj[a + w * 4..=b + w * 4]);
-                    tmp[40..=47].copy_from_slice(&obj[a + w * 5..=b + w * 5]);
-                    tmp[48..=55].copy_from_slice(&obj[a + w * 6..=b + w * 6]);
-                    tmp
-                };
-                let result = {
-                    let enable = g_norm.simd_ne(f32x64::splat(0.0));
-                    let mut tmp = [0.0; 64];
-                    (alpha * g_ys[c] / g_norm).store_select(&mut tmp, enable);
-                    original + f32x64::from(tmp)
-                };
-
-                obj[a..=b].copy_from_slice(&result[0..=7]);
-                obj[a + w..=b + w].copy_from_slice(&result[8..=15]);
-                obj[a + w * 2..=b + w * 2].copy_from_slice(&result[16..=23]);
-                obj[a + w * 3..=b + w * 3].copy_from_slice(&result[24..=31]);
-                obj[a + w * 4..=b + w * 4].copy_from_slice(&result[32..=39]);
-                obj[a + w * 5..=b + w * 5].copy_from_slice(&result[40..=47]);
-                obj[a + w * 6..=b + w * 6].copy_from_slice(&result[48..=55]);
-            } else {
-                let original = {
-                    let mut tmp = f32x64::splat(0.0);
-                    tmp[0..=7].copy_from_slice(&obj[a..=b]);
-                    tmp[8..=15].copy_from_slice(&obj[a + w..=b + w]);
-                    tmp[16..=23].copy_from_slice(&obj[a + w * 2..=b + w * 2]);
-                    tmp[24..=31].copy_from_slice(&obj[a + w * 3..=b + w * 3]);
-                    tmp[32..=39].copy_from_slice(&obj[a + w * 4..=b + w * 4]);
-                    tmp[40..=47].copy_from_slice(&obj[a + w * 5..=b + w * 5]);
-                    tmp[48..=55].copy_from_slice(&obj[a + w * 6..=b + w * 6]);
-                    tmp[56..=63].copy_from_slice(&obj[a + w * 7..=b + w * 7]);
-                    tmp
-                };
-                let result = {
-                    let enable = g_norm.simd_ne(f32x64::splat(0.0));
-                    let mut tmp = [0.0; 64];
-                    (alpha * g_ys[c] / g_norm).store_select(&mut tmp, enable);
-                    original + f32x64::from(tmp)
-                };
-
-                obj[a..=b].copy_from_slice(&result[0..=7]);
-                obj[a + w..=b + w].copy_from_slice(&result[8..=15]);
-                obj[a + w * 2..=b + w * 2].copy_from_slice(&result[16..=23]);
-                obj[a + w * 3..=b + w * 3].copy_from_slice(&result[24..=31]);
-                obj[a + w * 4..=b + w * 4].copy_from_slice(&result[32..=39]);
-                obj[a + w * 5..=b + w * 5].copy_from_slice(&result[40..=47]);
-                obj[a + w * 6..=b + w * 6].copy_from_slice(&result[48..=55]);
-                obj[a + w * 7..=b + w * 7].copy_from_slice(&result[56..=63]);
-            }
+        {
+            let down_start = usize::try_from(
+                curr_row
+                    .saturating_add(1)
+                    .saturating_mul(max_rounded_px_w)
+                    .saturating_add(curr_row_px_idx),
+            )
+            .unwrap_or(0);
+            let rows = if block_at_bottom_edge { 7 } else { 8 };
+            let original = load_block(obj, down_start, w, rows, 8);
+            let mut tmp = [0.0; 64];
+            Div::div(Mul::mul(alpha, gy), g_norm).store_select(&mut tmp, enable);
+            let result = Add::add(original, f32x64::from(tmp));
+            store_block(obj, down_start, w, rows, 8, &result);
         }
     }
 
-    // store for the second-order TGV pass
     for c in 0..nchannel {
-        let diff = &mut auxs[c].pixel_diff;
-
-        let a = px_idx_start_of_block;
-        let b = px_idx_start_of_block + 7;
-
-        let g_x = g_xs[c].as_array();
-
-        diff.x[a..=b].copy_from_slice(&g_x[0..=7]);
-        diff.x[a + w..=b + w].copy_from_slice(&g_x[8..=15]);
-        diff.x[a + w * 2..=b + w * 2].copy_from_slice(&g_x[16..=23]);
-        diff.x[a + w * 3..=b + w * 3].copy_from_slice(&g_x[24..=31]);
-        diff.x[a + w * 4..=b + w * 4].copy_from_slice(&g_x[32..=39]);
-        diff.x[a + w * 5..=b + w * 5].copy_from_slice(&g_x[40..=47]);
-        diff.x[a + w * 6..=b + w * 6].copy_from_slice(&g_x[48..=55]);
-        diff.x[a + w * 7..=b + w * 7].copy_from_slice(&g_x[56..=63]);
-
-        let g_y = g_ys[c].as_array();
-
-        diff.y[a..=b].copy_from_slice(&g_y[0..=7]);
-        diff.y[a + w..=b + w].copy_from_slice(&g_y[8..=15]);
-        diff.y[a + w * 2..=b + w * 2].copy_from_slice(&g_y[16..=23]);
-        diff.y[a + w * 3..=b + w * 3].copy_from_slice(&g_y[24..=31]);
-        diff.y[a + w * 4..=b + w * 4].copy_from_slice(&g_y[32..=39]);
-        diff.y[a + w * 5..=b + w * 5].copy_from_slice(&g_y[40..=47]);
-        diff.y[a + w * 6..=b + w * 6].copy_from_slice(&g_y[48..=55]);
-        diff.y[a + w * 7..=b + w * 7].copy_from_slice(&g_y[56..=63]);
+        let (Some(aux), Some(gx), Some(gy)) = (auxs.get_mut(c), grad_x.get(c), grad_y.get(c))
+        else {
+            continue;
+        };
+        let diff = &mut aux.pixel_diff;
+        store_block(&mut diff.x, px_idx_start_of_block, w, 8, 8, gx);
+        store_block(&mut diff.y, px_idx_start_of_block, w, 8, 8, gy);
     }
 }

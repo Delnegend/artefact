@@ -50,11 +50,31 @@ pub fn upsample_pixels(
     max_rounded_px_h: u32,
     out: &mut [f32],
 ) {
-    for y in 0..max_rounded_px_h as usize {
-        for x in 0..max_rounded_px_w as usize {
-            let cy = (y / vert_factor).min(rounded_px_h as usize - 1);
-            let cx = (x / horiz_factor).min(rounded_px_w as usize - 1);
-            out[y * max_rounded_px_w as usize + x] = image_data[cy * rounded_px_w as usize + cx];
+    let max_w = usize::try_from(max_rounded_px_w).unwrap_or(usize::MAX);
+    let max_h = usize::try_from(max_rounded_px_h).unwrap_or(usize::MAX);
+    let src_w = usize::try_from(rounded_px_w).unwrap_or(usize::MAX);
+    let src_h = usize::try_from(rounded_px_h).unwrap_or(usize::MAX);
+    if src_w == 0 || src_h == 0 || max_w == 0 || max_h == 0 || horiz_factor == 0 || vert_factor == 0
+    {
+        return;
+    }
+    let max_cy = src_h.saturating_sub(1);
+    let max_cx = src_w.saturating_sub(1);
+
+    for (y, dst_row) in out.chunks_exact_mut(max_w).take(max_h).enumerate() {
+        let cy = y.checked_div(vert_factor).unwrap_or(0).min(max_cy);
+        let Some(src_row_start) = cy.checked_mul(src_w) else {
+            continue;
+        };
+        let Some(src_row) = image_data.get(src_row_start..src_row_start.saturating_add(src_w))
+        else {
+            continue;
+        };
+        for (x, dst) in dst_row.iter_mut().enumerate() {
+            let cx = x.checked_div(horiz_factor).unwrap_or(0).min(max_cx);
+            if let Some(&src) = src_row.get(cx) {
+                *dst = src;
+            }
         }
     }
 }

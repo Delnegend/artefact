@@ -11,13 +11,14 @@
 
 use alloc::format;
 use core::fmt;
+use core::ops::Div;
 
 use zune_core::bytestream::ZByteReaderTrait;
 use zune_core::colorspace::ColorSpace;
 use zune_core::log::trace;
 
 use crate::JpegDecoder;
-use crate::components::{ComponentID, SampleRatios};
+use crate::components::{ComponentID, Components, SampleRatios};
 use crate::errors::DecodeErrors;
 use crate::huffman::HuffmanTable;
 use crate::sample_factor::SampleFactor;
@@ -70,7 +71,7 @@ where
     T: Default,
 {
     fn default() -> Self {
-        Aligned16(T::default())
+        Self(T::default())
     }
 }
 
@@ -84,7 +85,7 @@ where
     T: Default,
 {
     fn default() -> Self {
-        Aligned32(T::default())
+        Self(T::default())
     }
 }
 
@@ -113,7 +114,7 @@ pub enum SOFMarkers {
 
 impl SOFMarkers {
     /// Check if a certain marker is sequential DCT or not
-    pub fn is_sequential_dct(self) -> bool {
+    pub const fn is_sequential_dct(self) -> bool {
         matches!(
             self,
             Self::BaselineDct
@@ -123,12 +124,12 @@ impl SOFMarkers {
     }
 
     /// Check if a marker is a Lossles type or not
-    pub fn is_lossless(self) -> bool {
+    pub const fn is_lossless(self) -> bool {
         matches!(self, Self::LosslessHuffman | Self::LosslessArithmetic)
     }
 
     /// Check whether a marker is a progressive marker or not
-    pub fn is_progressive(self) -> bool {
+    pub const fn is_progressive(self) -> bool {
         matches!(
             self,
             Self::ProgressiveDctHuffman | Self::ProgressiveDctArithmetic
@@ -136,7 +137,7 @@ impl SOFMarkers {
     }
 
     /// Create a marker from an integer
-    pub fn from_int(int: u16) -> Option<SOFMarkers> {
+    pub const fn from_int(int: u16) -> Option<Self> {
         match int {
             START_OF_FRAME_BASE => Some(Self::BaselineDct),
             START_OF_FRAME_PROG_DCT => Some(Self::ProgressiveDctHuffman),
@@ -172,7 +173,7 @@ impl fmt::Debug for SOFMarkers {
 ///
 /// This modifies the components in place setting up details needed by other
 /// parts fo the decoder.
-pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
+pub fn setup_component_params<T: ZByteReaderTrait>(
     img: &mut JpegDecoder<T>,
 ) -> Result<(), DecodeErrors> {
     let real_px_w = img.width();
@@ -191,44 +192,68 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
         img.input_colorspace = ColorSpace::RGB;
     }
 
+    let overflow = || DecodeErrors::FormatStatic("Image dimensions overflow");
+    let no_components = || DecodeErrors::FormatStatic("No components found in image");
+
     img.max_horizontal_samp = img
         .components
         .iter()
         .map(|c| c.horizontal_samp)
         .max()
-        .unwrap();
+        .ok_or_else(no_components)?;
     img.max_vertical_samp = img
         .components
         .iter()
         .map(|c| c.vertical_samp)
         .max()
-        .unwrap();
+        .ok_or_else(no_components)?;
     img.is_interleaved =
         img.max_horizontal_samp != SampleFactor::One || img.max_vertical_samp != SampleFactor::One;
 
-    let nearest_multiple_w = 8 * img.max_horizontal_samp.u32() - 1;
-    let nearest_multiple_h = 8 * img.max_vertical_samp.u32() - 1;
+    // sampling factors are at most 4, so these cannot saturate
+    let nearest_multiple_w = img
+        .max_horizontal_samp
+        .u32()
+        .saturating_mul(8)
+        .saturating_sub(1);
+    let nearest_multiple_h = img
+        .max_vertical_samp
+        .u32()
+        .saturating_mul(8)
+        .saturating_sub(1);
 
     // round up to the next multiple of 8 * max sampling factor (8, 16 or 32)
-    let rounded_px_w = (u32::from(real_px_w) + nearest_multiple_w) & !nearest_multiple_w;
-    let rounded_px_h = (u32::from(real_px_h) + nearest_multiple_h) & !nearest_multiple_h;
+    // widths are u16, so adding at most 31 cannot saturate a u32
+    let rounded_px_w =
+        u32::from(real_px_w).saturating_add(nearest_multiple_w) & !nearest_multiple_w;
+    let rounded_px_h =
+        u32::from(real_px_h).saturating_add(nearest_multiple_h) & !nearest_multiple_h;
 
-    assert!(rounded_px_w.is_multiple_of(8));
-    assert!(rounded_px_h.is_multiple_of(8));
+    if !rounded_px_w.is_multiple_of(8) || !rounded_px_h.is_multiple_of(8) {
+        return Err(DecodeErrors::FormatStatic(
+            "Rounded image dimensions are not a multiple of 8",
+        ));
+    }
 
     // compute interleaved image info
-    img.mcu_width_wtf = img.max_horizontal_samp.usize() * 8;
-    img.mcu_height_wtf = img.max_vertical_samp.usize() * 8;
+    img.mcu_width_wtf = img.max_horizontal_samp.usize().saturating_mul(8);
+    img.mcu_height_wtf = img.max_vertical_samp.usize().saturating_mul(8);
 
     // Number of MCU's per width
     img.min_mcu_w = usize::from(img.info.width).div_ceil(img.mcu_width_wtf);
     // Number of MCU's per height
     img.min_mcu_h = usize::from(img.info.height).div_ceil(img.mcu_height_wtf);
 
+    let min_mcu_w_px = img.min_mcu_w.checked_mul(8).ok_or_else(overflow)?;
+
     for comp in &mut img.components {
-        comp.w2 = img.min_mcu_w * comp.horizontal_samp.usize() * 8;
-        comp.quant_table = *img.qt_tables[comp.quant_table_number as usize]
-            .as_ref()
+        comp.w2 = min_mcu_w_px
+            .checked_mul(comp.horizontal_samp.usize())
+            .ok_or_else(overflow)?;
+        comp.quant_table = *img
+            .qt_tables
+            .get(usize::from(comp.quant_table_number))
+            .and_then(Option::as_ref)
             .ok_or_else(|| {
                 DecodeErrors::DqtError(format!(
                     "No quantization table for component {:?}",
@@ -236,67 +261,79 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
                 ))
             })?;
         // initially stride contains its horizontal sub-sampling
-        comp.width_stride *= img.min_mcu_w * 8;
+        comp.width_stride = comp
+            .width_stride
+            .checked_mul(min_mcu_w_px)
+            .ok_or_else(overflow)?;
 
-        comp.horizontal_samp_factor = img.max_horizontal_samp / comp.horizontal_samp;
-        comp.vertical_samp_factor = img.max_vertical_samp / comp.vertical_samp;
+        comp.horizontal_samp_factor = Div::div(img.max_horizontal_samp, comp.horizontal_samp);
+        comp.vertical_samp_factor = Div::div(img.max_vertical_samp, comp.vertical_samp);
 
-        comp.rounded_px_w = rounded_px_w / comp.horizontal_samp_factor.u32();
-        comp.rounded_px_h = rounded_px_h / comp.vertical_samp_factor.u32();
-        assert!(comp.rounded_px_w % 8 == 0);
-        assert!(comp.rounded_px_h % 8 == 0);
-
-        comp.rounded_px_count = comp.rounded_px_w as usize * comp.rounded_px_h as usize;
-    }
-
-    {
-        // Sampling factors are one thing that suck
-        // this fixes a specific problem with images like
-        //
-        // (2 2) None
-        // (2 1) H
-        // (2 1) H
-        //
-        // The images exist in the wild, the images are not meant to exist
-        // but they do, it's just an annoying horizontal sub-sampling that
-        // I don't know why it exists.
-        // But it does
-        // So we try to cope with that.
-        // I am not sure of how to explain how to fix it, but it involved a debugger
-        // and to much coke(the legal one)
-        //
-        // If this wasn't present, self.upsample_dest would have the wrong length
-        let mut handle_that_annoying_bug = false;
-
-        if let Some(y_component) = img
-            .components
-            .iter()
-            .find(|c| c.component_id == ComponentID::Y)
-            && (y_component.horizontal_samp.u8() > 1 || y_component.vertical_samp.u8() > 1)
-        {
-            handle_that_annoying_bug = true;
+        comp.rounded_px_w = rounded_px_w
+            .checked_div(comp.horizontal_samp_factor.u32())
+            .ok_or_else(overflow)?;
+        comp.rounded_px_h = rounded_px_h
+            .checked_div(comp.vertical_samp_factor.u32())
+            .ok_or_else(overflow)?;
+        if !comp.rounded_px_w.is_multiple_of(8) || !comp.rounded_px_h.is_multiple_of(8) {
+            return Err(DecodeErrors::FormatStatic(
+                "Rounded component dimensions are not a multiple of 8",
+            ));
         }
 
-        if handle_that_annoying_bug {
-            for comp in &mut img.components {
-                if (comp.component_id != ComponentID::Y)
-                    && (comp.horizontal_samp.u8() != 1 || comp.vertical_samp.u8() != 1)
-                {
-                    comp.fix_an_annoying_bug = 2;
-                }
-            }
-        }
+        comp.rounded_px_count = usize::try_from(comp.rounded_px_w)
+            .ok()
+            .zip(usize::try_from(comp.rounded_px_h).ok())
+            .and_then(|(w, h)| w.checked_mul(h))
+            .ok_or_else(overflow)?;
     }
+
+    handle_that_annoying_bug(&mut img.components);
 
     if img.is_mjpeg {
         fill_default_mjpeg_tables(
             img.is_progressive,
             &mut img.dc_huffman_tables,
             &mut img.ac_huffman_tables,
-        );
+        )?;
     }
 
     Ok(())
+}
+
+/// Sampling factors are one thing that suck
+/// this fixes a specific problem with images like
+///
+/// (2 2) None
+/// (2 1) H
+/// (2 1) H
+///
+/// The images exist in the wild, the images are not meant to exist
+/// but they do, it's just an annoying horizontal sub-sampling that
+/// I don't know why it exists.
+/// But it does
+/// So we try to cope with that.
+/// I am not sure of how to explain how to fix it, but it involved a debugger
+/// and to much coke(the legal one)
+///
+/// If this wasn't present, self.upsample_dest would have the wrong length
+fn handle_that_annoying_bug(components: &mut [Components]) {
+    let needs_fix = components
+        .iter()
+        .find(|c| c.component_id == ComponentID::Y)
+        .is_some_and(|y_component| {
+            y_component.horizontal_samp.u8() > 1 || y_component.vertical_samp.u8() > 1
+        });
+
+    if needs_fix {
+        for comp in components {
+            if (comp.component_id != ComponentID::Y)
+                && (comp.horizontal_samp.u8() != 1 || comp.vertical_samp.u8() != 1)
+            {
+                comp.fix_an_annoying_bug = 2;
+            }
+        }
+    }
 }
 
 ///Calculate number of fill bytes added to the end of a JPEG image
@@ -312,15 +349,15 @@ pub(crate) fn setup_component_params<T: ZByteReaderTrait>(
 ///
 /// # Returns
 /// The padded width, this is how long the width is for a particular image
-pub fn calculate_padded_width(actual_width: usize, sub_sample: SampleRatios) -> usize {
+pub const fn calculate_padded_width(actual_width: usize, sub_sample: SampleRatios) -> usize {
     match sub_sample {
         SampleRatios::None | SampleRatios::V => {
             // None+V sends one MCU row, so that's a simple calculation
-            ((actual_width + 7) / 8) * 8
+            actual_width.next_multiple_of(8)
         }
         SampleRatios::H | SampleRatios::HV => {
             // sends two rows, width can be expanded by up to 15 more bytes
-            ((actual_width + 15) / 16) * 16
+            actual_width.next_multiple_of(16)
         }
     }
 }
@@ -337,100 +374,87 @@ pub fn fill_default_mjpeg_tables(
     is_progressive: bool,
     dc_huffman_tables: &mut [Option<HuffmanTable>],
     ac_huffman_tables: &mut [Option<HuffmanTable>],
-) {
+) -> Result<(), DecodeErrors> {
     // Section K.3.3
     trace!("Filling with default mjpeg tables");
 
-    if dc_huffman_tables[0].is_none() {
+    if let Some(slot @ None) = dc_huffman_tables.get_mut(0) {
         // Table K.3
-        dc_huffman_tables[0] = Some(
-            HuffmanTable::new_unfilled(
-                &[
-                    0x00, 0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                ],
-                &[
-                    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
-                ],
-                true,
-                is_progressive,
-            )
-            .unwrap(),
-        );
+        *slot = Some(HuffmanTable::new_unfilled(
+            &[
+                0x00, 0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00,
+            ],
+            &[
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
+            ],
+            true,
+            is_progressive,
+        )?);
     }
-    if dc_huffman_tables[1].is_none() {
+    if let Some(slot @ None) = dc_huffman_tables.get_mut(1) {
         // Table K.4
-        dc_huffman_tables[1] = Some(
-            HuffmanTable::new_unfilled(
-                &[
-                    0x00, 0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                ],
-                &[
-                    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
-                ],
-                true,
-                is_progressive,
-            )
-            .unwrap(),
-        );
+        *slot = Some(HuffmanTable::new_unfilled(
+            &[
+                0x00, 0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+                0x00, 0x00, 0x00,
+            ],
+            &[
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
+            ],
+            true,
+            is_progressive,
+        )?);
     }
-    if ac_huffman_tables[0].is_none() {
+    if let Some(slot @ None) = ac_huffman_tables.get_mut(0) {
         // Table K.5
-        ac_huffman_tables[0] = Some(
-            HuffmanTable::new_unfilled(
-                &[
-                    0x00, 0x00, 0x02, 0x01, 0x03, 0x03, 0x02, 0x04, 0x03, 0x05, 0x05, 0x04, 0x04,
-                    0x00, 0x00, 0x01, 0x7D,
-                ],
-                &[
-                    0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06, 0x13,
-                    0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xA1, 0x08, 0x23, 0x42,
-                    0xB1, 0xC1, 0x15, 0x52, 0xD1, 0xF0, 0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0A,
-                    0x16, 0x17, 0x18, 0x19, 0x1A, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x34, 0x35,
-                    0x36, 0x37, 0x38, 0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A,
-                    0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67,
-                    0x68, 0x69, 0x6A, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x83, 0x84,
-                    0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98,
-                    0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xB2, 0xB3,
-                    0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
-                    0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xE1,
-                    0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF1, 0xF2, 0xF3, 0xF4,
-                    0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
-                ],
-                false,
-                is_progressive,
-            )
-            .unwrap(),
-        );
+        *slot = Some(HuffmanTable::new_unfilled(
+            &[
+                0x00, 0x00, 0x02, 0x01, 0x03, 0x03, 0x02, 0x04, 0x03, 0x05, 0x05, 0x04, 0x04, 0x00,
+                0x00, 0x01, 0x7D,
+            ],
+            &[
+                0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06, 0x13, 0x51,
+                0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xA1, 0x08, 0x23, 0x42, 0xB1, 0xC1,
+                0x15, 0x52, 0xD1, 0xF0, 0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0A, 0x16, 0x17, 0x18,
+                0x19, 0x1A, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+                0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x53, 0x54, 0x55, 0x56, 0x57,
+                0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x73, 0x74, 0x75,
+                0x76, 0x77, 0x78, 0x79, 0x7A, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x92,
+                0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7,
+                0xA8, 0xA9, 0xAA, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xC2, 0xC3,
+                0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8,
+                0xD9, 0xDA, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF1, 0xF2,
+                0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
+            ],
+            false,
+            is_progressive,
+        )?);
     }
-    if ac_huffman_tables[1].is_none() {
+    if let Some(slot @ None) = ac_huffman_tables.get_mut(1) {
         // Table K.6
-        ac_huffman_tables[1] = Some(
-            HuffmanTable::new_unfilled(
-                &[
-                    0x00, 0x00, 0x02, 0x01, 0x02, 0x04, 0x04, 0x03, 0x04, 0x07, 0x05, 0x04, 0x04,
-                    0x00, 0x01, 0x02, 0x77,
-                ],
-                &[
-                    0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41, 0x51,
-                    0x07, 0x61, 0x71, 0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91, 0xA1, 0xB1,
-                    0xC1, 0x09, 0x23, 0x33, 0x52, 0xF0, 0x15, 0x62, 0x72, 0xD1, 0x0A, 0x16, 0x24,
-                    0x34, 0xE1, 0x25, 0xF1, 0x17, 0x18, 0x19, 0x1A, 0x26, 0x27, 0x28, 0x29, 0x2A,
-                    0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
-                    0x4A, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66,
-                    0x67, 0x68, 0x69, 0x6A, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x82,
-                    0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x92, 0x93, 0x94, 0x95, 0x96,
-                    0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA,
-                    0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xC2, 0xC3, 0xC4, 0xC5,
-                    0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9,
-                    0xDA, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF2, 0xF3, 0xF4,
-                    0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
-                ],
-                false,
-                is_progressive,
-            )
-            .unwrap(),
-        );
+        *slot = Some(HuffmanTable::new_unfilled(
+            &[
+                0x00, 0x00, 0x02, 0x01, 0x02, 0x04, 0x04, 0x03, 0x04, 0x07, 0x05, 0x04, 0x04, 0x00,
+                0x01, 0x02, 0x77,
+            ],
+            &[
+                0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41, 0x51, 0x07,
+                0x61, 0x71, 0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91, 0xA1, 0xB1, 0xC1, 0x09,
+                0x23, 0x33, 0x52, 0xF0, 0x15, 0x62, 0x72, 0xD1, 0x0A, 0x16, 0x24, 0x34, 0xE1, 0x25,
+                0xF1, 0x17, 0x18, 0x19, 0x1A, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x35, 0x36, 0x37, 0x38,
+                0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x53, 0x54, 0x55, 0x56,
+                0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x73, 0x74,
+                0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
+                0x8A, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5,
+                0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA,
+                0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6,
+                0xD7, 0xD8, 0xD9, 0xDA, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF2,
+                0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
+            ],
+            false,
+            is_progressive,
+        )?);
     }
+    Ok(())
 }
