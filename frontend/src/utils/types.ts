@@ -1,5 +1,6 @@
 export enum OutputImgFormat {
 	PNG = 'png',
+	JXL = 'jxl',
 	WEBP = 'webp',
 	TIF = 'tif',
 	BMP = 'bmp'
@@ -12,6 +13,7 @@ export interface ImageItemForDB {
 	jpegFileSize: number
 	jpegArrayBuffer: ArrayBuffer
 	outputImgArrayBuffer?: ArrayBuffer
+	previewImgArrayBuffer?: ArrayBuffer
 	outputImgFormat?: OutputImgFormat
 	width: number
 	height: number
@@ -23,6 +25,7 @@ export interface ImageItemForDisplay {
 	size: number
 	jpegBlobUrl: string
 	outputImgBlobUrl?: string
+	previewImgBlobUrl?: string
 	outputImgFormat?: OutputImgFormat
 	width: number
 	height: number

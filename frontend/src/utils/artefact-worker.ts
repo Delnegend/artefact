@@ -61,16 +61,19 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 						return 2
 					case OutputImgFormat.BMP:
 						return 3
+					case OutputImgFormat.JXL:
+						return 4 as OutputFormat
 					default:
 						return 0
 				}
 			})()
 
 			let outputImgDataArray: Uint8Array
+			let previewImgDataArray: Uint8Array | null
 			let timer = Date.now()
 			try {
-				if (config.png16Bit && config.outputFormat !== OutputImgFormat.PNG) {
-					throw new Error('16-bit output is only supported for PNG')
+				if (config.png16Bit && config.outputFormat !== OutputImgFormat.PNG && config.outputFormat !== OutputImgFormat.JXL) {
+					throw new Error('16-bit output is only supported for PNG and JPEG XL')
 				}
 				const useGpu = await canUseGpu()
 				console.info(
@@ -78,7 +81,7 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 						? 'artefact: solving on GPU'
 						: 'artefact: WebGPU unavailable, solving on CPU'
 				)
-				outputImgDataArray = await compute(
+				;[outputImgDataArray, previewImgDataArray] = await compute(
 					new Uint8Array(imageInDB.jpegArrayBuffer),
 					format,
 					config.weight,
@@ -96,6 +99,9 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 						...imageInDB,
 						outputImgArrayBuffer:
 							outputImgDataArray.buffer as ArrayBuffer,
+						previewImgArrayBuffer: previewImgDataArray
+							? previewImgDataArray.buffer as ArrayBuffer
+							: undefined,
 						outputImgFormat: config.outputFormat
 					}
 				])

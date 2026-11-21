@@ -22,10 +22,11 @@ const isDefault = processConfigStoreOps.isDefault()
 		<hr />
 		<div>
 			<div class="mb-2">Output format</div>
-			<div class="grid w-full grid-cols-4 gap-2">
+			<div class="grid w-full grid-cols-5 gap-2">
 				<Button
 					v-for="format in [
 						OutputImgFormat.PNG,
+						OutputImgFormat.JXL,
 						OutputImgFormat.WEBP,
 						OutputImgFormat.TIF,
 						OutputImgFormat.BMP
@@ -39,7 +40,7 @@ const isDefault = processConfigStoreOps.isDefault()
 					@click="
 						() => {
 							processConfig.outputFormat = format
-							if (format !== OutputImgFormat.PNG) {
+							if (format !== OutputImgFormat.PNG && format !== OutputImgFormat.JXL) {
 								processConfig.png16Bit = false
 							}
 						}
@@ -52,9 +53,9 @@ const isDefault = processConfigStoreOps.isDefault()
 				<input
 					v-model="processConfig.png16Bit"
 					type="checkbox"
-					:disabled="processConfig.outputFormat !== OutputImgFormat.PNG"
+					:disabled="processConfig.outputFormat !== OutputImgFormat.PNG && processConfig.outputFormat !== OutputImgFormat.JXL"
 				/>
-				16-bit PNG
+				16-bit PNG / JPEG XL
 			</label>
 		</div>
 		<div>

@@ -9,7 +9,8 @@ declare module 'artefact-wasm' {
 		Png = 0,
 		Webp = 1,
 		Tiff = 2,
-		Bmp = 3
+		Bmp = 3,
+		Jxl = 4
 	}
 
 	export function compute(
@@ -20,8 +21,8 @@ declare module 'artefact-wasm' {
 		iterations: number,
 		separate_components: boolean,
 		use_gpu: boolean,
-		png_16_bit: boolean
-	): Promise<Uint8Array>
+		output_16_bit: boolean
+	): Promise<[Uint8Array, Uint8Array | null]>
 
 	export default function init(): Promise<unknown>
 }

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use artefact_core::{Artefact, ArtefactError, JpegSource, ValueCollection};
+use artefact_core::{Artefact, ArtefactError, JpegSource, OutputFormat, ValueCollection, encode_image};
 use clap::Parser;
 
 /// Version reported by `--version`.
@@ -24,11 +24,11 @@ struct Args {
     #[arg(short, long)]
     output: Option<String>,
 
-    /// Output format (auto, png, webp, tiff, bmp)
+    /// Output format (auto, png, webp, tiff, bmp, jxl)
     #[arg(short, long, default_value = "auto")]
     format: String,
 
-    /// Preserve fractional detail in a 16-bit PNG
+    /// Preserve fractional detail in a 16-bit PNG or JPEG XL
     #[arg(long)]
     sixteen_bit: bool,
 
@@ -73,7 +73,7 @@ struct RunFlags {
     gpu: bool,
 }
 
-const POSSIBLE_FORMATS: [&str; 4] = ["png", "webp", "tiff", "bmp"];
+const POSSIBLE_FORMATS: [&str; 5] = ["png", "webp", "tiff", "bmp", "jxl"];
 
 /// Parse `1` or `3` comma-separated values into a [`ValueCollection`].
 fn parse_values<T>(raw: &str, label: &str) -> Result<ValueCollection<T>, String>
@@ -176,9 +176,17 @@ fn init_tracing() {
 
 fn run(args: &Args) -> Result<(), String> {
     let (output, format) = resolve_output(args)?;
-    if args.sixteen_bit && format != "png" {
-        return Err("--sixteen-bit requires PNG output".into());
+    if args.sixteen_bit && format != "png" && format != "jxl" {
+        return Err("--sixteen-bit requires PNG or JPEG XL output".into());
     }
+    let output_format = match format.as_str() {
+        "png" => OutputFormat::Png,
+        "webp" => OutputFormat::Webp,
+        "tiff" => OutputFormat::Tiff,
+        "bmp" => OutputFormat::Bmp,
+        "jxl" => OutputFormat::Jxl,
+        _ => return Err(format!("invalid output format: {format}")),
+    };
 
     if output.exists() && !args.overwrite && !args.flags.benchmark {
         return Err("output file already exists, use -y to overwrite".into());
@@ -199,9 +207,7 @@ fn run(args: &Args) -> Result<(), String> {
             artefact.process_16()
         };
         return match result {
-            Ok(img) => img
-                .save(&output)
-                .map_err(|e| format!("cannot save {}: {e}", output.display())),
+            Ok(img) => save_image(&output, &img.into(), output_format),
             Err(ArtefactError::Benchmark) => Ok(()),
             Err(e) => Err(e.to_string()),
         };
@@ -214,10 +220,15 @@ fn run(args: &Args) -> Result<(), String> {
     };
 
     match result {
-        Ok(img) => img
-            .save(&output)
-            .map_err(|e| format!("cannot save {}: {e}", output.display())),
+        Ok(img) => save_image(&output, &img.into(), output_format),
         Err(ArtefactError::Benchmark) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
+}
+
+fn save_image(path: &std::path::Path, image: &artefact_core::image::DynamicImage, format: OutputFormat) -> Result<(), String> {
+    let file = std::fs::File::create(path).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+    let mut output = std::io::BufWriter::new(file);
+    encode_image(image, format, &mut output).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+    std::io::Write::flush(&mut output).map_err(|e| format!("cannot save {}: {e}", path.display()))
 }

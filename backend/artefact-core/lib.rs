@@ -89,6 +89,76 @@ impl From<String> for ArtefactError {
     }
 }
 
+/// Supported output formats.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    Png,
+    Webp,
+    Tiff,
+    Bmp,
+    Jxl,
+}
+
+/// Encode an RGB image in the requested format.
+///
+/// # Errors
+/// Returns an error if the image or format cannot be encoded.
+pub fn encode_image<W: std::io::Write + std::io::Seek>(
+    image: &image::DynamicImage,
+    format: OutputFormat,
+    output: &mut W,
+) -> Result<(), ArtefactError> {
+    let image_format = match format {
+        OutputFormat::Jxl => return match image {
+            image::DynamicImage::ImageRgb8(pixels) => encode_jxl(
+                pixels.as_raw(), image.width(), image.height(), zune_core::bit_depth::BitDepth::Eight, output,
+            ),
+            image::DynamicImage::ImageRgb16(pixels) => encode_jxl(
+                bytemuck::cast_slice(pixels.as_raw()), image.width(), image.height(), zune_core::bit_depth::BitDepth::Sixteen, output,
+            ),
+            _ => Err(ArtefactError::Message("JPEG XL requires an RGB image".into())),
+        },
+        OutputFormat::Png => image::ImageFormat::Png,
+        OutputFormat::Webp => image::ImageFormat::WebP,
+        OutputFormat::Tiff => image::ImageFormat::Tiff,
+        OutputFormat::Bmp => image::ImageFormat::Bmp,
+    };
+    image.write_to(output, image_format)
+        .map_err(|e| ArtefactError::Message(format!("image encoding failed: {e}")))
+}
+
+fn encode_jxl<W: std::io::Write>(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    depth: zune_core::bit_depth::BitDepth,
+    output: &mut W,
+) -> Result<(), ArtefactError> {
+    if width == 0 || height == 0 {
+        return Err(ArtefactError::Message("JPEG XL image dimensions must be nonzero".into()));
+    }
+    let width = usize::try_from(width).map_err(|e| ArtefactError::Message(e.to_string()))?;
+    let height = usize::try_from(height).map_err(|e| ArtefactError::Message(e.to_string()))?;
+    let length = width
+        .checked_mul(height)
+        .and_then(|n| n.checked_mul(3))
+        .and_then(|n| n.checked_mul(depth.size_of()))
+        .ok_or_else(|| ArtefactError::Message("JPEG XL image dimensions are too large".into()))?;
+    let data = data
+        .get(..length)
+        .ok_or_else(|| ArtefactError::Message("JPEG XL image data is too short".into()))?;
+    let options = zune_core::options::EncoderOptions::new(
+        width,
+        height,
+        zune_core::colorspace::ColorSpace::RGB,
+        depth,
+    );
+    zune_jpegxl::JxlSimpleEncoder::new(data, options)
+        .encode(output)
+        .map_err(|e| ArtefactError::Message(format!("JPEG XL encoding failed: {e}")))?;
+    Ok(())
+}
+
 #[derive(Debug)]
 pub enum ValueCollection<T> {
     ForAll(T),
