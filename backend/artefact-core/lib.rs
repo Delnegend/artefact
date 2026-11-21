@@ -34,6 +34,32 @@ fn f32_to_u8_clamped(v: f32) -> u8 {
     u8::try_from(int_val).unwrap_or(255)
 }
 
+/// Convert a solver value to the full 16-bit range without discarding fractions.
+#[inline]
+fn f32_to_u16_clamped(v: f32) -> u16 {
+    let scaled = v.clamp(0.0, 255.0).mul_add(257.0, 0.5);
+    let high = f32_to_u8_clamped(scaled / 256.0);
+    let low = f32_to_u8_clamped(f32::from(high).mul_add(-256.0, scaled));
+    u16::from_be_bytes([high, low])
+}
+
+#[cfg(test)]
+mod depth_tests {
+    use super::{f32_to_u16_clamped, f32_to_u8_clamped};
+
+    #[test]
+    fn sixteen_bit_conversion_clamps_scales_and_rounds() {
+        assert_eq!(f32_to_u16_clamped(-1.0), 0);
+        assert_eq!(f32_to_u16_clamped(0.0), 0);
+        assert_eq!(f32_to_u16_clamped(1.0), 257);
+        assert_eq!(f32_to_u16_clamped(1.5), 386);
+        assert_eq!(f32_to_u16_clamped(255.0), 65535);
+        assert_eq!(f32_to_u16_clamped(256.0), 65535);
+        assert_eq!(f32_to_u16_clamped(f32::NAN), 0);
+        assert_eq!(f32_to_u8_clamped(1.5), 1);
+    }
+}
+
 #[cfg(not(feature = "simd"))]
 use pipeline::scalar::solve;
 #[cfg(feature = "simd")]
@@ -137,7 +163,18 @@ impl Artefact {
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
         tracing::info!("solving on CPU pipeline");
         let output = self.solve_cpu(&jpeg, max_rounded_px_w, max_rounded_px_h);
-        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count, f32_to_u8_clamped)
+    }
+
+    /// Process the JPEG into a 16-bit RGB image, preserving fractional precision.
+    ///
+    /// # Errors
+    /// Returns an error if decoding fails, the source is missing, or benchmarking is enabled.
+    pub fn process_16(&self) -> Result<image::ImageBuffer<image::Rgb<u16>, Vec<u16>>, ArtefactError> {
+        let (jpeg, w, h, count) = self.decode()?;
+        tracing::info!("solving on CPU pipeline");
+        let output = self.solve_cpu(&jpeg, w, h);
+        self.finish(&jpeg, output, w, count, f32_to_u16_clamped)
     }
 
     /// Decode the source and compute the padded block-grid dimensions.
@@ -208,13 +245,17 @@ impl Artefact {
     }
 
     /// Turn the per-channel solved rasters into an RGB image.
-    fn finish(
+    fn finish<T: image::Primitive, F: Fn(f32) -> T>(
         &self,
         jpeg: &Jpeg,
         mut output: Vec<AlignedF32>,
         max_rounded_px_w: u32,
         max_rounded_px_count: usize,
-    ) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError> {
+        convert: F,
+    ) -> Result<image::ImageBuffer<image::Rgb<T>, Vec<T>>, ArtefactError>
+    where
+        image::Rgb<T>: image::Pixel<Subpixel = T>,
+    {
         if self.benchmark {
             return Err(ArtefactError::Benchmark);
         }
@@ -235,7 +276,7 @@ impl Artefact {
                     "expected 3 output channels from solver".into(),
                 ));
             };
-            return Ok(image::RgbImage::from_fn(
+            return Ok(image::ImageBuffer::from_fn(
                 jpeg.real_px_w,
                 jpeg.real_px_h,
                 |x, y| {
@@ -255,13 +296,13 @@ impl Artefact {
                         .unwrap_or((0.0, 0.0, 0.0));
 
                     image::Rgb([
-                        f32_to_u8_clamped(mul_add!(1.402_f32, cri, yi)),
-                        f32_to_u8_clamped(mul_add!(
+                        convert(mul_add!(1.402_f32, cri, yi)),
+                        convert(mul_add!(
                             0.71414_f32,
                             -cri,
                             mul_add!(0.34414_f32, -cbi, yi)
                         )),
-                        f32_to_u8_clamped(mul_add!(1.772_f32, cbi, yi)),
+                        convert(mul_add!(1.772_f32, cbi, yi)),
                     ])
                 },
             ));
@@ -270,7 +311,7 @@ impl Artefact {
         let luma = output
             .first()
             .ok_or_else(|| ArtefactError::Message("solver returned no output".into()))?;
-        Ok(image::RgbImage::from_fn(
+        Ok(image::ImageBuffer::from_fn(
             jpeg.real_px_w,
             jpeg.real_px_h,
             |x, y| {
@@ -278,7 +319,7 @@ impl Artefact {
                     .ok()
                     .and_then(|yu| yu.checked_mul(max_w))
                     .and_then(|row| usize::try_from(x).ok().and_then(|xu| row.checked_add(xu)));
-                let v = f32_to_u8_clamped(idx.and_then(|i| luma.get(i).copied()).unwrap_or(0.0));
+                let v = convert(idx.and_then(|i| luma.get(i).copied()).unwrap_or(0.0));
                 image::Rgb([v, v, v])
             },
         ))
@@ -286,9 +327,9 @@ impl Artefact {
 }
 
 #[cfg(feature = "gpu")]
-type GpuProcessFuture<'a> = std::pin::Pin<
+type GpuProcessFuture<'a, T = u8> = std::pin::Pin<
     Box<
-        dyn Future<Output = Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, ArtefactError>>
+        dyn Future<Output = Result<image::ImageBuffer<image::Rgb<T>, Vec<T>>, ArtefactError>>
             + 'a,
     >,
 >;
@@ -328,7 +369,36 @@ impl Artefact {
             let output = self
                 .solve_gpu(ctx, &jpeg, max_rounded_px_w, max_rounded_px_h)
                 .await?;
-            self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count)
+            self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count, f32_to_u8_clamped)
+        })
+    }
+
+    /// Solve on the GPU and return a 16-bit RGB image.
+    ///
+    /// # Errors
+    /// Returns an error if GPU initialization, decoding, or solving fails, or benchmarking is enabled.
+    pub fn process_gpu_16(&self) -> GpuProcessFuture<'_, u16> {
+        Box::pin(async move {
+            let ctx = pipeline::gpu::GpuContext::new()
+                .await
+                .map_err(|e| ArtefactError::Message(e.to_string()))?;
+            self.process_gpu_with_16(&ctx).await
+        })
+    }
+
+    /// Solve with an existing GPU context and return a 16-bit RGB image.
+    ///
+    /// # Errors
+    /// Returns an error if decoding or solving fails, or benchmarking is enabled.
+    pub fn process_gpu_with_16<'a>(
+        &'a self,
+        ctx: &'a pipeline::gpu::GpuContext,
+    ) -> GpuProcessFuture<'a, u16> {
+        Box::pin(async move {
+            let (jpeg, w, h, count) = self.decode()?;
+            tracing::info!("solving on GPU");
+            let output = self.solve_gpu(ctx, &jpeg, w, h).await?;
+            self.finish(&jpeg, output, w, count, f32_to_u16_clamped)
         })
     }
 
@@ -339,27 +409,48 @@ impl Artefact {
     /// Returns the CPU pipeline's error if both paths fail.
     // The wgpu request futures are `!Send` (see `pipeline::gpu`), so this is boxed.
     pub fn process_auto(&self) -> GpuProcessFuture<'_> {
+        self.process_auto_with(f32_to_u8_clamped)
+    }
+
+    /// Try the GPU solver, falling back to the CPU, and return a 16-bit RGB image.
+    ///
+    /// # Errors
+    /// Returns the CPU pipeline's error if both paths fail.
+    pub fn process_auto_16(&self) -> GpuProcessFuture<'_, u16> {
+        self.process_auto_with(f32_to_u16_clamped)
+    }
+
+    fn process_auto_with<T: image::Primitive + 'static, F: Fn(f32) -> T + 'static>(
+        &self,
+        convert: F,
+    ) -> GpuProcessFuture<'_, T>
+    where
+        image::Rgb<T>: image::Pixel<Subpixel = T>,
+    {
         Box::pin(async move {
-            // Only fall back when the GPU device or solve is unavailable; errors from
-            // `finish` (e.g. benchmark mode) are propagated as-is.
             let ctx = match pipeline::gpu::GpuContext::new().await {
-                Ok(ctx) => ctx,
+                Ok(ctx) => Some(ctx),
                 Err(e) => {
                     tracing::warn!(error = %e, "no GPU adapter; falling back to CPU");
-                    return self.process();
+                    None
                 }
             };
             let (jpeg, w, h, count) = self.decode()?;
-            match self.solve_gpu(&ctx, &jpeg, w, h).await {
-                Ok(output) => {
-                    tracing::info!("solving on GPU");
-                    self.finish(&jpeg, output, w, count)
+            let output = if let Some(ctx) = ctx {
+                match self.solve_gpu(&ctx, &jpeg, w, h).await {
+                    Ok(output) => {
+                        tracing::info!("solving on GPU");
+                        output
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "GPU solve failed; falling back to CPU");
+                        self.solve_cpu(&jpeg, w, h)
+                    }
                 }
-                Err(e) => {
-                    tracing::warn!(error = %e, "GPU solve failed; falling back to CPU");
-                    self.process()
-                }
-            }
+            } else {
+                self.solve_cpu(&jpeg, w, h)
+            };
+            self.finish(&jpeg, output, w, count, convert)
         })
     }
 

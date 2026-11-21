@@ -13,6 +13,7 @@ Defined in [`backend/artefact-cli/main.rs:18`](../backend/artefact-cli/main.rs) 
 | `<input>` | - | - | Input JPEG file |
 | `--output <path>` | `-o` | `<input>.png` | Output file (extension infers format when `--format auto`) |
 | `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp` |
+| `--sixteen-bit` | - | `false` | Preserve fractional detail in a 16-bit PNG; other formats are rejected |
 | `--weight <f32>` | `-w` | `0.3` | 2nd-order weight: higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
 | `--pweight <f32>` | `-p` | `0.001` | Fidelity weight: higher = closer to source JPEG |
 | `--iterations <n>` | `-i` | `50` | Solver iterations: higher = better but slower. Single or `Y,Cb,Cr` |
@@ -29,6 +30,9 @@ artefact-cli input.jpg
 
 # choose output and format
 artefact-cli input.jpg -o output.webp --format webp -y
+
+# retain fractional detail in a 16-bit PNG
+artefact-cli input.jpg --sixteen-bit -o output.png
 
 # tune solver (single value for all channels, or Y,Cb,Cr)
 artefact-cli input.jpg --weight 0.3 --pweight 0.001 --iterations 50

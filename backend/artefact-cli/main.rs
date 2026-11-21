@@ -28,6 +28,10 @@ struct Args {
     #[arg(short, long, default_value = "auto")]
     format: String,
 
+    /// Preserve fractional detail in a 16-bit PNG
+    #[arg(long)]
+    sixteen_bit: bool,
+
     /// Overwrite existing output file
     #[arg(short = 'y', long, default_value = "false")]
     overwrite: bool,
@@ -171,7 +175,10 @@ fn init_tracing() {
 }
 
 fn run(args: &Args) -> Result<(), String> {
-    let (output, _format) = resolve_output(args)?;
+    let (output, format) = resolve_output(args)?;
+    if args.sixteen_bit && format != "png" {
+        return Err("--sixteen-bit requires PNG output".into());
+    }
 
     if output.exists() && !args.overwrite && !args.flags.benchmark {
         return Err("output file already exists, use -y to overwrite".into());
@@ -184,6 +191,21 @@ fn run(args: &Args) -> Result<(), String> {
         .iterations(parse_values::<usize>(&args.iterations, "iterations")?)
         .benchmark(args.flags.benchmark)
         .separate_components(args.flags.separate_components);
+
+    if args.sixteen_bit {
+        let result = if args.flags.gpu {
+            pollster::block_on(artefact.process_auto_16())
+        } else {
+            artefact.process_16()
+        };
+        return match result {
+            Ok(img) => img
+                .save(&output)
+                .map_err(|e| format!("cannot save {}: {e}", output.display())),
+            Err(ArtefactError::Benchmark) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        };
+    }
 
     let result = if args.flags.gpu {
         pollster::block_on(artefact.process_auto())

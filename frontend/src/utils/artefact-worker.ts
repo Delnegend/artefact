@@ -69,6 +69,9 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 			let outputImgDataArray: Uint8Array
 			let timer = Date.now()
 			try {
+				if (config.png16Bit && config.outputFormat !== OutputImgFormat.PNG) {
+					throw new Error('16-bit output is only supported for PNG')
+				}
 				const useGpu = await canUseGpu()
 				console.info(
 					useGpu
@@ -82,7 +85,8 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 					config.pWeight,
 					config.iterations,
 					config.separateComponents,
-					useGpu
+					useGpu,
+					config.png16Bit
 				)
 				timer = Date.now() - timer
 

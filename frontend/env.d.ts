@@ -19,7 +19,8 @@ declare module 'artefact-wasm' {
 		pweight: number,
 		iterations: number,
 		separate_components: boolean,
-		use_gpu: boolean
+		use_gpu: boolean,
+		png_16_bit: boolean
 	): Promise<Uint8Array>
 
 	export default function init(): Promise<unknown>

@@ -39,12 +39,23 @@ const isDefault = processConfigStoreOps.isDefault()
 					@click="
 						() => {
 							processConfig.outputFormat = format
+							if (format !== OutputImgFormat.PNG) {
+								processConfig.png16Bit = false
+							}
 						}
 					"
 				>
 					{{ format }}
 				</Button>
 			</div>
+			<label class="mt-3 flex items-center gap-2">
+				<input
+					v-model="processConfig.png16Bit"
+					type="checkbox"
+					:disabled="processConfig.outputFormat !== OutputImgFormat.PNG"
+				/>
+				16-bit PNG
+			</label>
 		</div>
 		<div>
 			<div class="mb-2 flex flex-row items-center gap-2">

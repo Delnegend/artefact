@@ -80,6 +80,23 @@ fn grayscale_stays_gray() {
 }
 
 #[test]
+fn sixteen_bit_output_preserves_fractional_precision() {
+    for name in ["baseline_444.jpg", "gray.jpg"] {
+        let path = fixture(name);
+        let artefact = Artefact::default()
+            .source(JpegSource::File(path.display().to_string()));
+        let eight = artefact.process().unwrap();
+        let sixteen = artefact.process_16().unwrap();
+        assert_eq!(eight.dimensions(), sixteen.dimensions());
+        assert!(sixteen.as_raw().iter().any(|v| v % 257 != 0), "{name}");
+        for (&a, &b) in eight.as_raw().iter().zip(sixteen.as_raw()) {
+            // 16-bit rounds, so values very close to the next integer can cross it.
+            assert!(b >= u16::from(a) * 257 && u32::from(b) <= (u32::from(a) + 1) * 257);
+        }
+    }
+}
+
+#[test]
 fn corrupt_input_is_an_error_not_a_panic() {
     // Truncated baseline: must return an error rather than panic/garbage.
     let bytes = std::fs::read(fixture("baseline_420.jpg")).unwrap();

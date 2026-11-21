@@ -31,6 +31,7 @@ pub fn compute(
     iterations: usize,
     separate_components: bool,
     use_gpu: bool,
+    png_16_bit: bool,
 ) -> wasm_bindgen_futures::js_sys::Promise {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
@@ -51,18 +52,29 @@ pub fn compute(
         .separate_components(separate_components);
 
     wasm_bindgen_futures::future_to_promise(async move {
+        if png_16_bit && output_format != ImageFormat::Png {
+            return Err(JsValue::from_str("16-bit output is only supported for PNG"));
+        }
         // `use_gpu` is decided by the caller: the browser can expose `navigator.gpu`
         // while `requestAdapter()` resolves to `null`, which wgpu 30 mishandles.
-        let image = if use_gpu {
-            artefact.process_auto().await
+        if png_16_bit {
+            let image = if use_gpu {
+                artefact.process_auto_16().await
+            } else {
+                artefact.process_16()
+            }
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            image.write_to(&mut cursor, output_format)
         } else {
-            artefact.process()
+            let image = if use_gpu {
+                artefact.process_auto().await
+            } else {
+                artefact.process()
+            }
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            image.write_to(&mut cursor, output_format)
         }
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-        image
-            .write_to(&mut cursor, output_format)
-            .map_err(|e| JsValue::from_str(&format!("Can't write image to buffer: {e:?}")))?;
+        .map_err(|e| JsValue::from_str(&format!("Can't write image to buffer: {e:?}")))?;
 
         let bytes = cursor.into_inner();
         Ok(wasm_bindgen_futures::js_sys::Uint8Array::from(bytes.as_slice()).into())

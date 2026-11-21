@@ -46,6 +46,7 @@ export type WorkerOutput =
 
 export interface ProcessingConfig {
 	outputFormat: OutputImgFormat
+	png16Bit: boolean
 	iterations: number
 	weight: number
 	pWeight: number

@@ -4,6 +4,7 @@ import { OutputImgFormat, type ProcessingConfig } from '~/utils/types'
 
 const store = ref<ProcessingConfig>({
 	outputFormat: OutputImgFormat.PNG,
+	png16Bit: false,
 	iterations: 50,
 	weight: 0.3,
 	pWeight: 0.001,
@@ -17,9 +18,10 @@ export function useProcessConfigStore(): Ref<ProcessingConfig> {
 export const processConfigStoreOps = {
 	init(): void {
 		const processConfigStore = useProcessConfigStore()
-		processConfigStore.value = JSON.parse(
-			localStorage.getItem('processing-config') ?? '{}'
-		) as ProcessingConfig
+		processConfigStore.value = {
+			...processConfigStore.value,
+			...JSON.parse(localStorage.getItem('processing-config') ?? '{}')
+		}
 
 		watchEffect(() => {
 			localStorage.setItem(
@@ -33,6 +35,7 @@ export const processConfigStoreOps = {
 		const processConfigStore = useProcessConfigStore()
 		processConfigStore.value = {
 			outputFormat: OutputImgFormat.PNG,
+			png16Bit: false,
 			iterations: 50,
 			weight: 0.3,
 			pWeight: 0.001,
@@ -53,6 +56,7 @@ export const processConfigStoreOps = {
 		return computed(() => {
 			return (
 				processConfigStore.value.outputFormat === OutputImgFormat.PNG &&
+				!processConfigStore.value.png16Bit &&
 				processConfigStore.value.iterations === 50 &&
 				processConfigStore.value.weight === 0.3 &&
 				processConfigStore.value.pWeight === 0.001 &&
