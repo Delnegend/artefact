@@ -22,7 +22,7 @@ struct Args {
     #[arg(index = 1)]
     input: String,
 
-    /// The output file
+    /// The output file, or - for standard output
     #[arg(short, long)]
     output: Option<String>,
 
@@ -102,10 +102,12 @@ where
 }
 
 /// Resolve the output path and format, validating explicit formats/extensions.
-fn resolve_output(args: &Args) -> Result<(PathBuf, String), String> {
+fn resolve_output(args: &Args) -> Result<(Option<PathBuf>, String), String> {
+    let stdout = args.output.as_deref() == Some("-");
     let ext = args
         .output
         .as_deref()
+        .filter(|_| !stdout)
         .map(PathBuf::from)
         .and_then(|p| p.extension().map(|e| e.to_string_lossy().to_lowercase()));
 
@@ -138,17 +140,21 @@ fn resolve_output(args: &Args) -> Result<(PathBuf, String), String> {
         args.format.clone()
     };
 
-    let path = args.output.as_ref().map_or_else(
-        || PathBuf::from(&args.input).with_extension(&format),
-        |out| {
-            let p = PathBuf::from(out);
-            if p.extension().is_some() {
-                p
-            } else {
-                p.with_extension(&format)
-            }
-        },
-    );
+    let path = if stdout {
+        None
+    } else {
+        Some(args.output.as_ref().map_or_else(
+            || PathBuf::from(&args.input).with_extension(&format),
+            |out| {
+                let p = PathBuf::from(out);
+                if p.extension().is_some() {
+                    p
+                } else {
+                    p.with_extension(&format)
+                }
+            },
+        ))
+    };
 
     Ok((path, format))
 }
@@ -171,6 +177,7 @@ fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     fmt()
         .with_env_filter(filter)
+        .with_writer(std::io::stderr)
         .with_target(false)
         .without_time()
         .init();
@@ -190,7 +197,10 @@ fn run(args: &Args) -> Result<(), String> {
         _ => return Err(format!("invalid output format: {format}")),
     };
 
-    if output.exists() && !args.overwrite && !args.flags.benchmark {
+    if output.as_ref().is_some_and(|path| path.exists())
+        && !args.overwrite
+        && !args.flags.benchmark
+    {
         return Err("output file already exists, use -y to overwrite".into());
     }
 
@@ -209,7 +219,7 @@ fn run(args: &Args) -> Result<(), String> {
             artefact.process_16()
         };
         return match result {
-            Ok(img) => save_image(&output, &img.into(), output_format),
+            Ok(img) => save_image(output.as_deref(), &img.into(), output_format),
             Err(ArtefactError::Benchmark) => Ok(()),
             Err(e) => Err(e.to_string()),
         };
@@ -222,21 +232,32 @@ fn run(args: &Args) -> Result<(), String> {
     };
 
     match result {
-        Ok(img) => save_image(&output, &img.into(), output_format),
+        Ok(img) => save_image(output.as_deref(), &img.into(), output_format),
         Err(ArtefactError::Benchmark) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
 }
 
 fn save_image(
-    path: &std::path::Path,
+    path: Option<&std::path::Path>,
     image: &artefact_core::image::DynamicImage,
     format: OutputFormat,
 ) -> Result<(), String> {
-    let file =
-        std::fs::File::create(path).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
-    let mut output = std::io::BufWriter::new(file);
-    encode_image(image, format, &mut output)
-        .map_err(|e| format!("cannot save {}: {e}", path.display()))?;
-    std::io::Write::flush(&mut output).map_err(|e| format!("cannot save {}: {e}", path.display()))
+    if let Some(path) = path {
+        let file = std::fs::File::create(path)
+            .map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+        let mut output = std::io::BufWriter::new(file);
+        encode_image(image, format, &mut output)
+            .map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+        std::io::Write::flush(&mut output)
+            .map_err(|e| format!("cannot save {}: {e}", path.display()))
+    } else {
+        // Image encoders may seek (TIFF does), but stdout is not seekable.
+        let mut buffer = std::io::Cursor::new(Vec::new());
+        encode_image(image, format, &mut buffer).map_err(|e| e.to_string())?;
+        let mut stdout = std::io::stdout().lock();
+        std::io::Write::write_all(&mut stdout, buffer.get_ref())
+            .and_then(|()| std::io::Write::flush(&mut stdout))
+            .map_err(|e| format!("cannot write to stdout: {e}"))
+    }
 }

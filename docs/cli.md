@@ -11,7 +11,7 @@ Defined in [`backend/artefact-cli/main.rs:18`](../backend/artefact-cli/main.rs) 
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `<input>` | - | - | Input JPEG file |
-| `--output <path>` | `-o` | `<input>.png` | Output file (extension infers format when `--format auto`) |
+| `--output <path>` | `-o` | `<input>.png` | Output file, or `-` for standard output (format defaults to PNG) |
 | `--format <fmt>` | `-f` | `auto` | `auto` or `png`/`webp`/`tiff`/`bmp`/`jxl` |
 | `--sixteen-bit` | - | `false` | Preserve fractional detail in a 16-bit PNG or lossless JPEG XL |
 | `--weight <f32>` | `-w` | `0.3` | 2nd-order weight: higher = smoother, less staircasing. Single or `Y,Cb,Cr` |
@@ -30,6 +30,9 @@ artefact-cli input.jpg
 
 # choose output and format
 artefact-cli input.jpg -o output.webp --format webp -y
+
+# write an image to standard output (logs go to standard error)
+artefact-cli input.jpg -o - --format jxl > output.jxl
 
 # retain fractional detail in a 16-bit PNG
 artefact-cli input.jpg --sixteen-bit -o output.png
