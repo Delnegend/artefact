@@ -4,7 +4,11 @@
 //   4     per-channel metadata (stride 8)
 //   5     `params` uniform scalars
 //
-// Layout must match `Params` / `meta` offsets in `pipeline/gpu/solver.rs`.
+// Buffer sizes, offsets and dispatch grids come from `pipeline/gpu/layout.rs`;
+// `Params` and `meta` must match `pipeline/gpu/solver.rs`. Dispatches larger
+// than one grid dimension are folded into rows, so kernels recover their linear
+// workgroup with `flat_group`; per-block and resampling kernels put the channel
+// in `z`.
 
 const F_FDATA: u32 = 0u;
 const F_FISTA: u32 = 1u;
@@ -40,7 +44,7 @@ struct Params {
     a_quant: u32,
     a_partials: u32,
     a_l2: u32,
-    num_wg: u32,
+    reduce_groups: u32,
     tv_alpha: f32,
     tgv_alpha: f32,
     step_size: f32,
@@ -81,6 +85,10 @@ fn m(c: u32, k: u32) -> u32 {
 
 fn safe_div(a: f32, d: f32) -> f32 {
     return select(0.0, a / d, d != 0.0);
+}
+
+fn flat_group(wid: vec3<u32>, nwg: vec3<u32>) -> u32 {
+    return wid.y * nwg.x + wid.x;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,8 +164,8 @@ fn idct2d(t: u32) {
 // ---------------------------------------------------------------------------
 
 @compute @workgroup_size(256)
-fn fista(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+fn fista(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let idx = flat_group(wid, nwg) * 256u + lane;
     if (idx >= p.count * p.nchannel) { return; }
     let c = idx / p.count;
     let i = idx % p.count;
@@ -171,8 +179,8 @@ fn fista(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ---------------------------------------------------------------------------
 
 @compute @workgroup_size(256)
-fn tv_prepare(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let i = gid.x;
+fn tv_prepare(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let i = flat_group(wid, nwg) * 256u + lane;
     if (i >= p.count) { return; }
     let x = i % p.max_w;
     let y = i / p.max_w;
@@ -191,8 +199,8 @@ fn tv_prepare(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 @compute @workgroup_size(256)
-fn tv_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+fn tv_apply(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let idx = flat_group(wid, nwg) * 256u + lane;
     if (idx >= p.count * p.nchannel) { return; }
     let c = idx / p.count;
     let i = idx % p.count;
@@ -227,9 +235,9 @@ fn tv_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ---------------------------------------------------------------------------
 
 @compute @workgroup_size(64)
-fn dct_gradient(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
-    let c = wid.y;
-    let local = wid.x;
+fn dct_gradient(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
+    let c = wid.z;
+    let local = flat_group(wid, nwg);
     if (local >= m(c, M_BLOCKS)) { return; }
     let bw = m(c, M_BW);
     let bx = local % bw;
@@ -269,8 +277,8 @@ fn dct_gradient(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation
 // ---------------------------------------------------------------------------
 
 @compute @workgroup_size(256)
-fn tgv_prepare(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let i = gid.x;
+fn tgv_prepare(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let i = flat_group(wid, nwg) * 256u + lane;
     if (i >= p.count) { return; }
     let x = i % p.max_w;
     let y = i / p.max_w;
@@ -298,8 +306,8 @@ fn tgv_prepare(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 @compute @workgroup_size(256)
-fn tgv_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+fn tgv_apply(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let idx = flat_group(wid, nwg) * 256u + lane;
     if (idx >= p.count * p.nchannel) { return; }
     let c = idx / p.count;
     let i = idx % p.count;
@@ -348,7 +356,7 @@ fn reduce1(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) 
     while (i < p.count) {
         let v = ld(c, cfield(c, F_OBJ, i));
         sum = sum + v * v;
-        i = i + p.num_wg * 256u;
+        i = i + p.reduce_groups * 256u;
     }
     // Reduce within the workgroup via shared memory.
     red[lid.x] = sum;
@@ -360,7 +368,7 @@ fn reduce1(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) 
         stride = stride / 2u;
     }
     if (lid.x == 0u) {
-        aux[p.a_partials + c * p.num_wg + chunk] = red[0];
+        aux[p.a_partials + c * p.reduce_groups + chunk] = red[0];
     }
 }
 
@@ -369,8 +377,8 @@ fn reduce2(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) 
     let c = wid.x;
     var sum = 0.0;
     var k = lid.x;
-    while (k < p.num_wg) {
-        sum = sum + aux[p.a_partials + c * p.num_wg + k];
+    while (k < p.reduce_groups) {
+        sum = sum + aux[p.a_partials + c * p.reduce_groups + k];
         k = k + 256u;
     }
     red[lid.x] = sum;
@@ -387,8 +395,8 @@ fn reduce2(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) 
 }
 
 @compute @workgroup_size(256)
-fn descent(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+fn descent(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let idx = flat_group(wid, nwg) * 256u + lane;
     if (idx >= p.count * p.nchannel) { return; }
     let c = idx / p.count;
     let i = idx % p.count;
@@ -405,20 +413,19 @@ fn descent(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ---------------------------------------------------------------------------
 
 @compute @workgroup_size(256)
-fn resample_down(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let wid = gid.x;
-    // 2D: x = component pixel, y = channel
-    let c = gid.y;
+fn resample_down(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let px = flat_group(wid, nwg) * 256u + lane;
+    let c = wid.z;
     if (c >= p.nchannel) { return; }
     let rw = m(c, M_RW);
     let rh = m(c, M_RH);
-    if (wid >= rw * rh) { return; }
+    if (px >= rw * rh) { return; }
     // Full-resolution components are not resampled; leave `fdata` untouched.
     if (rw == p.max_w && rh == p.max_h) { return; }
     let hf = m(c, M_HF);
     let vf = m(c, M_VF);
-    let cx = wid % rw;
-    let cy = wid / rw;
+    let cx = px % rw;
+    let cy = px / rw;
     var sum = 0.0;
     for (var sy = 0u; sy < vf; sy = sy + 1u) {
         for (var sx = 0u; sx < hf; sx = sx + 1u) {
@@ -445,9 +452,9 @@ fn resample_down(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 @compute @workgroup_size(64)
-fn block_transform(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
-    let c = wid.y;
-    let local = wid.x;
+fn block_transform(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
+    let c = wid.z;
+    let local = flat_group(wid, nwg);
     if (local >= m(c, M_BLOCKS)) { return; }
     let rw = m(c, M_RW);
     let rh = m(c, M_RH);
@@ -495,18 +502,18 @@ fn block_transform(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocat
 }
 
 @compute @workgroup_size(256)
-fn resample_up(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let wid = gid.x;
-    let c = gid.y;
+fn resample_up(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) lane: u32) {
+    let px = flat_group(wid, nwg) * 256u + lane;
+    let c = wid.z;
     if (c >= p.nchannel) { return; }
     let rw = m(c, M_RW);
     let rh = m(c, M_RH);
-    if (wid >= rw * rh) { return; }
+    if (px >= rw * rh) { return; }
     if (rw == p.max_w && rh == p.max_h) { return; }
     let hf = m(c, M_HF);
     let vf = m(c, M_VF);
-    let cx = wid % rw;
-    let cy = wid / rw;
+    let cx = px % rw;
+    let cy = px / rw;
     let mean = aux[p.a_mean + c * p.count + cy * rw + cx];
     for (var sy = 0u; sy < vf; sy = sy + 1u) {
         for (var sx = 0u; sx < hf; sx = sx + 1u) {

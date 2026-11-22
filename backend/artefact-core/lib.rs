@@ -43,23 +43,6 @@ fn f32_to_u16_clamped(v: f32) -> u16 {
     u16::from_be_bytes([high, low])
 }
 
-#[cfg(test)]
-mod depth_tests {
-    use super::{f32_to_u16_clamped, f32_to_u8_clamped};
-
-    #[test]
-    fn sixteen_bit_conversion_clamps_scales_and_rounds() {
-        assert_eq!(f32_to_u16_clamped(-1.0), 0);
-        assert_eq!(f32_to_u16_clamped(0.0), 0);
-        assert_eq!(f32_to_u16_clamped(1.0), 257);
-        assert_eq!(f32_to_u16_clamped(1.5), 386);
-        assert_eq!(f32_to_u16_clamped(255.0), 65535);
-        assert_eq!(f32_to_u16_clamped(256.0), 65535);
-        assert_eq!(f32_to_u16_clamped(f32::NAN), 0);
-        assert_eq!(f32_to_u8_clamped(1.5), 1);
-    }
-}
-
 #[cfg(not(feature = "simd"))]
 use pipeline::scalar::solve;
 #[cfg(feature = "simd")]
@@ -109,21 +92,34 @@ pub fn encode_image<W: std::io::Write + std::io::Seek>(
     output: &mut W,
 ) -> Result<(), ArtefactError> {
     let image_format = match format {
-        OutputFormat::Jxl => return match image {
-            image::DynamicImage::ImageRgb8(pixels) => encode_jxl(
-                pixels.as_raw(), image.width(), image.height(), zune_core::bit_depth::BitDepth::Eight, output,
-            ),
-            image::DynamicImage::ImageRgb16(pixels) => encode_jxl(
-                bytemuck::cast_slice(pixels.as_raw()), image.width(), image.height(), zune_core::bit_depth::BitDepth::Sixteen, output,
-            ),
-            _ => Err(ArtefactError::Message("JPEG XL requires an RGB image".into())),
-        },
+        OutputFormat::Jxl => {
+            return match image {
+                image::DynamicImage::ImageRgb8(pixels) => encode_jxl(
+                    pixels.as_raw(),
+                    image.width(),
+                    image.height(),
+                    zune_core::bit_depth::BitDepth::Eight,
+                    output,
+                ),
+                image::DynamicImage::ImageRgb16(pixels) => encode_jxl(
+                    bytemuck::cast_slice(pixels.as_raw()),
+                    image.width(),
+                    image.height(),
+                    zune_core::bit_depth::BitDepth::Sixteen,
+                    output,
+                ),
+                _ => Err(ArtefactError::Message(
+                    "JPEG XL requires an RGB image".into(),
+                )),
+            };
+        }
         OutputFormat::Png => image::ImageFormat::Png,
         OutputFormat::Webp => image::ImageFormat::WebP,
         OutputFormat::Tiff => image::ImageFormat::Tiff,
         OutputFormat::Bmp => image::ImageFormat::Bmp,
     };
-    image.write_to(output, image_format)
+    image
+        .write_to(output, image_format)
         .map_err(|e| ArtefactError::Message(format!("image encoding failed: {e}")))
 }
 
@@ -135,7 +131,9 @@ fn encode_jxl<W: std::io::Write>(
     output: &mut W,
 ) -> Result<(), ArtefactError> {
     if width == 0 || height == 0 {
-        return Err(ArtefactError::Message("JPEG XL image dimensions must be nonzero".into()));
+        return Err(ArtefactError::Message(
+            "JPEG XL image dimensions must be nonzero".into(),
+        ));
     }
     let width = usize::try_from(width).map_err(|e| ArtefactError::Message(e.to_string()))?;
     let height = usize::try_from(height).map_err(|e| ArtefactError::Message(e.to_string()))?;
@@ -233,14 +231,22 @@ impl Artefact {
         let (jpeg, max_rounded_px_w, max_rounded_px_h, max_rounded_px_count) = self.decode()?;
         tracing::info!("solving on CPU pipeline");
         let output = self.solve_cpu(&jpeg, max_rounded_px_w, max_rounded_px_h);
-        self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count, f32_to_u8_clamped)
+        self.finish(
+            &jpeg,
+            output,
+            max_rounded_px_w,
+            max_rounded_px_count,
+            f32_to_u8_clamped,
+        )
     }
 
     /// Process the JPEG into a 16-bit RGB image, preserving fractional precision.
     ///
     /// # Errors
     /// Returns an error if decoding fails, the source is missing, or benchmarking is enabled.
-    pub fn process_16(&self) -> Result<image::ImageBuffer<image::Rgb<u16>, Vec<u16>>, ArtefactError> {
+    pub fn process_16(
+        &self,
+    ) -> Result<image::ImageBuffer<image::Rgb<u16>, Vec<u16>>, ArtefactError> {
         let (jpeg, w, h, count) = self.decode()?;
         tracing::info!("solving on CPU pipeline");
         let output = self.solve_cpu(&jpeg, w, h);
@@ -367,11 +373,7 @@ impl Artefact {
 
                     image::Rgb([
                         convert(mul_add!(1.402_f32, cri, yi)),
-                        convert(mul_add!(
-                            0.71414_f32,
-                            -cri,
-                            mul_add!(0.34414_f32, -cbi, yi)
-                        )),
+                        convert(mul_add!(0.71414_f32, -cri, mul_add!(0.34414_f32, -cbi, yi))),
                         convert(mul_add!(1.772_f32, cbi, yi)),
                     ])
                 },
@@ -398,10 +400,7 @@ impl Artefact {
 
 #[cfg(feature = "gpu")]
 type GpuProcessFuture<'a, T = u8> = std::pin::Pin<
-    Box<
-        dyn Future<Output = Result<image::ImageBuffer<image::Rgb<T>, Vec<T>>, ArtefactError>>
-            + 'a,
-    >,
+    Box<dyn Future<Output = Result<image::ImageBuffer<image::Rgb<T>, Vec<T>>, ArtefactError>> + 'a>,
 >;
 
 #[cfg(feature = "gpu")]
@@ -439,7 +438,13 @@ impl Artefact {
             let output = self
                 .solve_gpu(ctx, &jpeg, max_rounded_px_w, max_rounded_px_h)
                 .await?;
-            self.finish(&jpeg, output, max_rounded_px_w, max_rounded_px_count, f32_to_u8_clamped)
+            self.finish(
+                &jpeg,
+                output,
+                max_rounded_px_w,
+                max_rounded_px_count,
+                f32_to_u8_clamped,
+            )
         })
     }
 
@@ -498,13 +503,23 @@ impl Artefact {
         image::Rgb<T>: image::Pixel<Subpixel = T>,
     {
         Box::pin(async move {
-            let ctx = match pipeline::gpu::GpuContext::new().await {
-                Ok(ctx) => Some(ctx),
-                Err(e) => {
-                    tracing::warn!(error = %e, "no GPU adapter; falling back to CPU");
-                    None
-                }
-            };
+            let ctx = pipeline::gpu::GpuContext::new().await.ok();
+            if ctx.is_none() {
+                tracing::warn!("no GPU adapter; falling back to CPU");
+            }
+            self.process_auto_with_context(ctx, convert).await
+        })
+    }
+
+    fn process_auto_with_context<T: image::Primitive + 'static, F: Fn(f32) -> T + 'static>(
+        &self,
+        ctx: Option<pipeline::gpu::GpuContext>,
+        convert: F,
+    ) -> GpuProcessFuture<'_, T>
+    where
+        image::Rgb<T>: image::Pixel<Subpixel = T>,
+    {
+        Box::pin(async move {
             let (jpeg, w, h, count) = self.decode()?;
             let output = if let Some(ctx) = ctx {
                 match self.solve_gpu(&ctx, &jpeg, w, h).await {
@@ -581,5 +596,66 @@ impl Artefact {
                 Ok(output)
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod depth_tests {
+    use super::{f32_to_u8_clamped, f32_to_u16_clamped};
+
+    #[test]
+    fn sixteen_bit_conversion_clamps_scales_and_rounds() {
+        assert_eq!(f32_to_u16_clamped(-1.0), 0);
+        assert_eq!(f32_to_u16_clamped(0.0), 0);
+        assert_eq!(f32_to_u16_clamped(1.0), 257);
+        assert_eq!(f32_to_u16_clamped(1.5), 386);
+        assert_eq!(f32_to_u16_clamped(255.0), 65535);
+        assert_eq!(f32_to_u16_clamped(256.0), 65535);
+        assert_eq!(f32_to_u16_clamped(f32::NAN), 0);
+        assert_eq!(f32_to_u8_clamped(1.5), 1);
+    }
+}
+
+#[cfg(all(test, feature = "gpu", feature = "simd"))]
+mod auto_fallback_tests {
+    use std::path::PathBuf;
+
+    use super::{
+        Artefact, JpegSource, ValueCollection, f32_to_u8_clamped, f32_to_u16_clamped, pipeline::gpu,
+    };
+
+    fn baseline() -> JpegSource {
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/baseline_420.jpg");
+        JpegSource::File(path.display().to_string())
+    }
+
+    #[test]
+    fn auto_falls_back_to_cpu_when_gpu_rejects_image_limits() {
+        let make = || {
+            Artefact::default()
+                .source(baseline())
+                .iterations(ValueCollection::ForAll(2))
+        };
+        // A 1-workgroup device fits no 128x96 image (it needs 192 blocks), so
+        // `solve_gpu` reliably fails even when the hardware GPU is huge.
+        let Ok(ctx) =
+            pollster::block_on(gpu::GpuContext::with_limits(|adapter| gpu::wgpu::Limits {
+                max_compute_workgroups_per_dimension: 1,
+                ..gpu::solver_limits(adapter)
+            }))
+        else {
+            return;
+        };
+        let cpu8 = make().process().expect("cpu 8-bit");
+        let auto8 =
+            pollster::block_on(make().process_auto_with_context(Some(ctx), f32_to_u8_clamped))
+                .expect("auto 8-bit fallback");
+        assert_eq!(cpu8.as_raw(), auto8.as_raw());
+
+        let cpu16 = make().process_16().expect("cpu 16-bit");
+        let auto16 = pollster::block_on(make().process_auto_with_context(None, f32_to_u16_clamped))
+            .expect("auto 16-bit fallback without adapter");
+        assert_eq!(cpu16.as_raw(), auto16.as_raw());
     }
 }

@@ -65,8 +65,10 @@ roughly linearly and is the first dial to move when the GPU path is already satu
 ## Backend selection
 
 `process()` always uses the CPU pipeline. The CLI's `--gpu` uses `process_auto()`: it logs the
-selected `wgpu` adapter and `solving on GPU` when usable, otherwise it warns and returns to
-`solving on CPU pipeline`. Set `RUST_LOG=debug` for lower-level selection diagnostics.
+selected `wgpu` adapter and `solving on GPU` when usable. Without an adapter, or when the image
+exceeds the adapter's limits (for example 4K on a software adapter capped at 128 MiB per buffer),
+it warns with the reason and falls back to `solving on CPU pipeline`. Set `RUST_LOG=debug` for
+lower-level selection diagnostics.
 
 ```bash
 RUST_LOG=debug artefact-cli input.jpg --gpu --benchmark

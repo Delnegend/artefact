@@ -50,9 +50,15 @@ in `utils/`.
   submits per iteration, and a reusable `GpuContext`; `process_gpu_with` allows repeated solves
   without recreating the device/queue.
 
+`GpuContext` requests the adapter's own buffer and dispatch limits; `wgpu`'s defaults cap one
+storage binding at 128 MiB, while a 4K channel needs about 285 MiB. `pipeline/gpu/layout.rs` plans
+every buffer size, offset and workgroup grid from those limits before allocating. Work beyond
+one dispatch dimension is folded into a second one, so 4K and 8K images fit desktop GPUs. An image
+that still does not fit returns `GpuError::Unsupported` instead of a `wgpu` panic.
+
 Feature selection: `simd` selects the CPU SIMD pipeline (or scalar without it); `gpu` adds
-`process_gpu`, `process_gpu_with`, and `process_auto`, which falls back to CPU when no adapter or
-solver is available.
+`process_gpu`, `process_gpu_with`, and `process_auto`. `process_auto` falls back to CPU when no
+adapter is available, the image exceeds the device's limits, or the GPU solve fails.
 
 [`artefact-cli`](../backend/artefact-cli/Cargo.toml) and
 [`artefact-wasm`](../backend/artefact-wasm/Cargo.toml) enable `simd,gpu`, so both shipped binaries

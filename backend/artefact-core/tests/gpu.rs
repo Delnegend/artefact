@@ -250,3 +250,263 @@ fn gpu_matches_cpu_on_odd_width() {
     assert!(max <= 8, "max channel diff {max}");
     assert!(mean < 1.0, "mean channel diff {mean}");
 }
+
+/// Max and mean absolute per-sample difference between two equally sized buffers.
+#[cfg(feature = "simd")]
+fn diff_stats(a: &[u16], b: &[u16]) -> (u32, f64) {
+    assert_eq!(a.len(), b.len(), "buffer length mismatch");
+    let mut max = 0u32;
+    let mut sum = 0u64;
+    for (&x, &y) in a.iter().zip(b) {
+        let d = u32::from(x.abs_diff(y));
+        max = max.max(d);
+        sum = sum.saturating_add(u64::from(d));
+    }
+    let count = u64::try_from(a.len()).unwrap_or(u64::MAX).max(1);
+    let mean = f64::from(u32::try_from(sum).unwrap_or(u32::MAX))
+        / f64::from(u32::try_from(count).unwrap_or(u32::MAX));
+    (max, mean)
+}
+
+#[cfg(feature = "simd")]
+fn widen(raw: &[u8]) -> Vec<u16> {
+    raw.iter().map(|&v| u16::from(v)).collect()
+}
+
+/// Unwraps a GPU result, or skips (returns `None`) unless `ARTEFACT_REQUIRE_GPU=1`.
+#[cfg(feature = "simd")]
+fn gpu_ok_or_skip<T, E: std::fmt::Display>(test: &str, result: Result<T, E>) -> Option<T> {
+    match result {
+        Ok(value) => Some(value),
+        Err(e) => {
+            assert!(
+                !gpu_is_required(),
+                "{test}: ARTEFACT_REQUIRE_GPU=1 but GPU solve failed: {e}"
+            );
+            eprintln!("skipping {test}: {e}");
+            None
+        }
+    }
+}
+
+#[cfg(feature = "simd")]
+fn file_source(path: &std::path::Path) -> JpegSource {
+    JpegSource::File(path.display().to_string())
+}
+
+/// Every decodable fixture, including grayscale (1 channel) and 4:1:1
+/// (horizontal factor 4), neither of which previously ran on the GPU.
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_matches_cpu_on_every_decodable_fixture() {
+    const TEST: &str = "gpu_matches_cpu_on_every_decodable_fixture";
+    const FIXTURES: [&str; 11] = [
+        "baseline_411.jpg",
+        "baseline_420.jpg",
+        "baseline_422.jpg",
+        "baseline_444.jpg",
+        "gray.jpg",
+        "odd_411.jpg",
+        "odd_420.jpg",
+        "progressive_420.jpg",
+        "progressive_444.jpg",
+        "restart_420.jpg",
+        "progressive_restart_420.jpg",
+    ];
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+    for name in FIXTURES {
+        let Some(path) = fixture_or_skip(TEST, &format!("tests/fixtures/{name}")) else {
+            continue;
+        };
+        let make = || {
+            Artefact::default()
+                .source(file_source(&path))
+                .iterations(ValueCollection::ForAll(3))
+        };
+        let cpu = make().process().expect("cpu pipeline");
+        let Some(gpu) = gpu_ok_or_skip(TEST, pollster::block_on(make().process_gpu_with(&ctx)))
+        else {
+            return;
+        };
+        assert_eq!(gpu.dimensions(), cpu.dimensions(), "{name}: dimensions");
+        let (max, mean) = diff_stats(&widen(cpu.as_raw()), &widen(gpu.as_raw()));
+        eprintln!("{TEST}: {name} max={max} mean={mean:.3}");
+        assert!(max <= 8, "{name}: max channel diff {max}");
+        assert!(mean < 1.0, "{name}: mean channel diff {mean}");
+    }
+}
+
+/// Solves a (possibly subsampled) chroma component alone with nchannel=1 on the
+/// full image grid; distinct per-channel iterations make each channel differ.
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_matches_cpu_with_separate_components() {
+    const TEST: &str = "gpu_matches_cpu_with_separate_components";
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+    for name in [
+        "baseline_420.jpg",
+        "baseline_422.jpg",
+        "odd_420.jpg",
+        "gray.jpg",
+    ] {
+        let Some(path) = fixture_or_skip(TEST, &format!("tests/fixtures/{name}")) else {
+            continue;
+        };
+        let make = || {
+            Artefact::default()
+                .source(file_source(&path))
+                .iterations(ValueCollection::ForEach([1, 3, 5]))
+                .separate_components(true)
+        };
+        let cpu = make().process().expect("cpu pipeline");
+        let Some(gpu) = gpu_ok_or_skip(TEST, pollster::block_on(make().process_gpu_with(&ctx)))
+        else {
+            return;
+        };
+        assert_eq!(gpu.dimensions(), cpu.dimensions(), "{name}: dimensions");
+        let (max, mean) = diff_stats(&widen(cpu.as_raw()), &widen(gpu.as_raw()));
+        eprintln!("{TEST}: {name} max={max} mean={mean:.3}");
+        assert!(max <= 8, "{name}: max channel diff {max}");
+        assert!(mean < 1.0, "{name}: mean channel diff {mean}");
+    }
+}
+
+/// The 16-bit GPU path must match the 16-bit CPU path and keep fractions.
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_sixteen_bit_matches_cpu() {
+    const TEST: &str = "gpu_sixteen_bit_matches_cpu";
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+    for name in ["baseline_420.jpg", "gray.jpg"] {
+        let Some(path) = fixture_or_skip(TEST, &format!("tests/fixtures/{name}")) else {
+            continue;
+        };
+        let make = || {
+            Artefact::default()
+                .source(file_source(&path))
+                .iterations(ValueCollection::ForAll(3))
+        };
+        let cpu = make().process_16().expect("cpu pipeline");
+        let Some(gpu) = gpu_ok_or_skip(TEST, pollster::block_on(make().process_gpu_with_16(&ctx)))
+        else {
+            return;
+        };
+        assert_eq!(gpu.dimensions(), cpu.dimensions(), "{name}: dimensions");
+        let (max, mean) = diff_stats(cpu.as_raw(), gpu.as_raw());
+        eprintln!("{TEST}: {name} max={max} mean={mean:.3}");
+        assert!(max <= 8 * 257, "{name}: max diff {max}");
+        assert!(mean < 257.0, "{name}: mean diff {mean}");
+        assert!(
+            gpu.as_raw().iter().any(|v| v % 257 != 0),
+            "{name}: 16-bit GPU output has no fractional precision"
+        );
+    }
+}
+
+/// Bad input must be an error (never a panic), and the context must stay usable.
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_rejects_corrupt_input_without_panicking() {
+    const TEST: &str = "gpu_rejects_corrupt_input_without_panicking";
+    let Some(good) = fixture_or_skip(TEST, "tests/fixtures/baseline_420.jpg") else {
+        return;
+    };
+    let Some(arithmetic) = fixture_or_skip(TEST, "tests/fixtures/arithmetic_420.jpg") else {
+        return;
+    };
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+
+    let bytes = std::fs::read(&good).expect("read fixture");
+    let truncated = bytes[..bytes.len() / 2].to_vec();
+    let result = pollster::block_on(
+        Artefact::default()
+            .source(JpegSource::Buffer(truncated))
+            .iterations(ValueCollection::ForAll(1))
+            .process_gpu_with(&ctx),
+    );
+    assert!(
+        result.is_err(),
+        "truncated JPEG should fail on the GPU path"
+    );
+
+    let result = pollster::block_on(
+        Artefact::default()
+            .source(file_source(&arithmetic))
+            .iterations(ValueCollection::ForAll(1))
+            .process_gpu_with(&ctx),
+    );
+    assert!(result.is_err(), "arithmetic-coded JPEG should be rejected");
+
+    // The same context must still solve a valid image after the failures.
+    let result = pollster::block_on(
+        Artefact::default()
+            .source(file_source(&good))
+            .iterations(ValueCollection::ForAll(1))
+            .process_gpu_with(&ctx),
+    );
+    assert!(
+        result.is_ok(),
+        "context unusable after error: {:?}",
+        result.err().map(|e| e.to_string())
+    );
+}
+
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_benchmark_mode_returns_benchmark_error() {
+    const TEST: &str = "gpu_benchmark_mode_returns_benchmark_error";
+    let Some(path) = fixture_or_skip(TEST, "tests/fixtures/baseline_420.jpg") else {
+        return;
+    };
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+    let result = pollster::block_on(
+        Artefact::default()
+            .source(file_source(&path))
+            .iterations(ValueCollection::ForAll(1))
+            .benchmark(true)
+            .process_gpu_with(&ctx),
+    );
+    // The criterion GPU bench relies on benchmark mode yielding exactly this error.
+    assert!(
+        matches!(result, Err(artefact_core::ArtefactError::Benchmark)),
+        "benchmark mode must return ArtefactError::Benchmark"
+    );
+}
+
+/// Solving twice on one context must give bit-identical output.
+#[cfg(feature = "simd")]
+#[test]
+fn gpu_context_is_reusable_and_deterministic() {
+    const TEST: &str = "gpu_context_is_reusable_and_deterministic";
+    let Some(path) = fixture_or_skip(TEST, "tests/fixtures/baseline_420.jpg") else {
+        return;
+    };
+    let Some(ctx) = gpu_context_or_skip(TEST) else {
+        return;
+    };
+    let make = || {
+        Artefact::default()
+            .source(file_source(&path))
+            .iterations(ValueCollection::ForAll(3))
+    };
+    let Some(first) = gpu_ok_or_skip(TEST, pollster::block_on(make().process_gpu_with(&ctx)))
+    else {
+        return;
+    };
+    let second = pollster::block_on(make().process_gpu_with(&ctx)).expect("second solve");
+    assert_eq!(first.dimensions(), second.dimensions());
+    assert!(
+        first.as_raw() == second.as_raw(),
+        "repeated GPU solve on one context differs"
+    );
+}
