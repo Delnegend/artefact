@@ -43,9 +43,9 @@ check kind="all":
 		# decode/fixture regression tests (zune-jpeg + pipelines + verify)
 		# GPU smoke/equivalence tests really run on CI's lavapipe; plain
 		# `cargo test` elsewhere may still skip when no adapter is present.
-		# Run `tests/gpu` single-threaded as a precaution after a CI driver crash.
-		ARTEFACT_REQUIRE_GPU=1 cargo test --workspace --all-features -- --skip gpu_smoke --skip gpu_process_matches_cpu --skip gpu_matches_cpu_on_odd_width
-		ARTEFACT_REQUIRE_GPU=1 cargo test -p artefact-core --all-features --test gpu -- --test-threads=1
+		# All GPU unit and integration tests share the driver; serialize them after
+		# a CI lavapipe crash during concurrent device creation.
+		ARTEFACT_REQUIRE_GPU=1 cargo test --workspace --all-features -- --test-threads=1
 	fi
 
 

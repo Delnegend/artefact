@@ -25,7 +25,7 @@ highlights:
   - "**Artifact reduction**: Re-optimizes raw DCT coefficients with a regularized solver rather than making pixel-level guesses."
   - "**High throughput**: Multi-threaded execution with adaptive SIMD vectorization and optional WebGPU acceleration."
   - "**Cross-platform**: Runs as a single static native CLI or entirely client-side in the browser via WebAssembly (zero uploads)."
-  - "**Flexible output**: Ingests standard `.jpg`/`.jpeg` files and exports to PNG, WebP, TIFF, or BMP."
+  - "**Flexible output**: Exports to PNG, JPEG XL, WebP, TIFF, or BMP. Select 16-bit PNG or JPEG XL to preserve fractional detail."
 
 documentation:
   architecture: "Component boundaries, solver pipelines, and repository layout."
