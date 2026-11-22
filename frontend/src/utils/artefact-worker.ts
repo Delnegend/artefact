@@ -72,8 +72,14 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 			let previewImgDataArray: Uint8Array | null
 			let timer = Date.now()
 			try {
-				if (config.png16Bit && config.outputFormat !== OutputImgFormat.PNG && config.outputFormat !== OutputImgFormat.JXL) {
-					throw new Error('16-bit output is only supported for PNG and JPEG XL')
+				if (
+					config.png16Bit &&
+					config.outputFormat !== OutputImgFormat.PNG &&
+					config.outputFormat !== OutputImgFormat.JXL
+				) {
+					throw new Error(
+						'16-bit output is only supported for PNG and JPEG XL'
+					)
 				}
 				const useGpu = await canUseGpu()
 				console.info(
@@ -100,7 +106,7 @@ self.onmessage = async (event: MessageEvent<WorkerInput>): Promise<void> => {
 						outputImgArrayBuffer:
 							outputImgDataArray.buffer as ArrayBuffer,
 						previewImgArrayBuffer: previewImgDataArray
-							? previewImgDataArray.buffer as ArrayBuffer
+							? (previewImgDataArray.buffer as ArrayBuffer)
 							: undefined,
 						outputImgFormat: config.outputFormat
 					}

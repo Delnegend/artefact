@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use artefact_core::{Artefact, ArtefactError, JpegSource, OutputFormat, ValueCollection, encode_image};
+use artefact_core::{
+    Artefact, ArtefactError, JpegSource, OutputFormat, ValueCollection, encode_image,
+};
 use clap::Parser;
 
 /// Version reported by `--version`.
@@ -226,9 +228,15 @@ fn run(args: &Args) -> Result<(), String> {
     }
 }
 
-fn save_image(path: &std::path::Path, image: &artefact_core::image::DynamicImage, format: OutputFormat) -> Result<(), String> {
-    let file = std::fs::File::create(path).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+fn save_image(
+    path: &std::path::Path,
+    image: &artefact_core::image::DynamicImage,
+    format: OutputFormat,
+) -> Result<(), String> {
+    let file =
+        std::fs::File::create(path).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
     let mut output = std::io::BufWriter::new(file);
-    encode_image(image, format, &mut output).map_err(|e| format!("cannot save {}: {e}", path.display()))?;
+    encode_image(image, format, &mut output)
+        .map_err(|e| format!("cannot save {}: {e}", path.display()))?;
     std::io::Write::flush(&mut output).map_err(|e| format!("cannot save {}: {e}", path.display()))
 }

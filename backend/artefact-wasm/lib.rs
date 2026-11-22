@@ -1,6 +1,8 @@
 use std::io::Cursor;
 
-use artefact_core::{Artefact, JpegSource, OutputFormat as CoreFormat, ValueCollection, encode_image};
+use artefact_core::{
+    Artefact, JpegSource, OutputFormat as CoreFormat, ValueCollection, encode_image,
+};
 use wasm_bindgen::prelude::*;
 
 #[allow(clippy::float_cmp)]
@@ -23,7 +25,9 @@ pub use output_format::OutputFormat;
 
 #[wasm_bindgen]
 /// Run JPEG artefact removal on `buffer` and encode the result in `output_format`.
-///
+// A flat list of primitives is the simplest `wasm-bindgen` boundary for the
+// worker; an options object would need its own exported JS class.
+#[allow(clippy::too_many_arguments)]
 pub fn compute(
     buffer: Vec<u8>,
     output_format: OutputFormat,
@@ -53,7 +57,9 @@ pub fn compute(
 
     wasm_bindgen_futures::future_to_promise(async move {
         if output_16_bit && !matches!(output_format, OutputFormat::Png | OutputFormat::Jxl) {
-            return Err(JsValue::from_str("16-bit output is only supported for PNG and JPEG XL"));
+            return Err(JsValue::from_str(
+                "16-bit output is only supported for PNG and JPEG XL",
+            ));
         }
         // `use_gpu` is decided by the caller: the browser can expose `navigator.gpu`
         // while `requestAdapter()` resolves to `null`, which wgpu 30 mishandles.
@@ -62,24 +68,31 @@ pub fn compute(
                 artefact.process_auto_16().await
             } else {
                 artefact.process_16()
-            }.map_err(|e| JsValue::from_str(&e.to_string()))?;
+            }
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
             image.into()
         } else {
             let image = if use_gpu {
                 artefact.process_auto().await
             } else {
                 artefact.process()
-            }.map_err(|e| JsValue::from_str(&e.to_string()))?;
+            }
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
             image.into()
         };
         let mut output = Cursor::new(Vec::new());
         encode_image(&image, format, &mut output).map_err(|e| JsValue::from_str(&e.to_string()))?;
         let result = wasm_bindgen_futures::js_sys::Array::new();
-        result.push(&wasm_bindgen_futures::js_sys::Uint8Array::from(output.into_inner().as_slice()));
+        result.push(&wasm_bindgen_futures::js_sys::Uint8Array::from(
+            output.into_inner().as_slice(),
+        ));
         if format == CoreFormat::Jxl {
             let mut preview = Cursor::new(Vec::new());
-            encode_image(&image, CoreFormat::Png, &mut preview).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            result.push(&wasm_bindgen_futures::js_sys::Uint8Array::from(preview.into_inner().as_slice()));
+            encode_image(&image, CoreFormat::Png, &mut preview)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            result.push(&wasm_bindgen_futures::js_sys::Uint8Array::from(
+                preview.into_inner().as_slice(),
+            ));
         } else {
             result.push(&JsValue::NULL);
         }

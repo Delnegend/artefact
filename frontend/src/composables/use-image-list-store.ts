@@ -30,7 +30,11 @@ export const imageListStoreOps = {
 						)
 					: undefined,
 				previewImgBlobUrl: image.previewImgArrayBuffer
-					? URL.createObjectURL(new Blob([image.previewImgArrayBuffer], { type: 'image/png' }))
+					? URL.createObjectURL(
+							new Blob([image.previewImgArrayBuffer], {
+								type: 'image/png'
+							})
+						)
 					: undefined,
 				outputImgFormat: image.outputImgFormat,
 				width: image.width,

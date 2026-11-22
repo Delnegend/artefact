@@ -173,7 +173,6 @@ fn compute_second_order<const N: usize>(
     }
 }
 
-
 struct TgvRunState<'a, const N: usize> {
     nchannel: usize,
     g_xxs: &'a [Simd<f32, N>; 3],

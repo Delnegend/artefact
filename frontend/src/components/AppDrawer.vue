@@ -40,7 +40,10 @@ const isDefault = processConfigStoreOps.isDefault()
 					@click="
 						() => {
 							processConfig.outputFormat = format
-							if (format !== OutputImgFormat.PNG && format !== OutputImgFormat.JXL) {
+							if (
+								format !== OutputImgFormat.PNG &&
+								format !== OutputImgFormat.JXL
+							) {
 								processConfig.png16Bit = false
 							}
 						}
@@ -53,7 +56,10 @@ const isDefault = processConfigStoreOps.isDefault()
 				<input
 					v-model="processConfig.png16Bit"
 					type="checkbox"
-					:disabled="processConfig.outputFormat !== OutputImgFormat.PNG && processConfig.outputFormat !== OutputImgFormat.JXL"
+					:disabled="
+						processConfig.outputFormat !== OutputImgFormat.PNG &&
+						processConfig.outputFormat !== OutputImgFormat.JXL
+					"
 				/>
 				16-bit PNG / JPEG XL
 			</label>

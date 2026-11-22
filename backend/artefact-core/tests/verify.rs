@@ -22,11 +22,19 @@ fn jpeg_xl_roundtrips_eight_and_sixteen_bit_rgb() {
     let pixels8 = vec![0, 1, 255, 17, 128, 254, 42, 73, 199, 255, 0, 33];
     let image8 = artefact_core::image::RgbImage::from_raw(2, 2, pixels8.clone()).unwrap();
     let mut encoded8 = std::io::Cursor::new(Vec::new());
-    artefact_core::encode_image(&image8.into(), artefact_core::OutputFormat::Jxl, &mut encoded8).unwrap();
+    artefact_core::encode_image(
+        &image8.into(),
+        artefact_core::OutputFormat::Jxl,
+        &mut encoded8,
+    )
+    .unwrap();
     let encoded8 = encoded8.into_inner();
     let decoded8 = jxl_oxide::JxlImage::read_with_defaults(encoded8.as_slice()).unwrap();
     assert_eq!((decoded8.width(), decoded8.height()), (2, 2));
-    assert_eq!(decoded8.image_header().metadata.bit_depth.bits_per_sample(), 8);
+    assert_eq!(
+        decoded8.image_header().metadata.bit_depth.bits_per_sample(),
+        8
+    );
     let render8 = decoded8.render_frame(0).unwrap();
     let mut stream8 = render8.stream();
     assert_eq!(stream8.channels(), 3);
@@ -34,14 +42,33 @@ fn jpeg_xl_roundtrips_eight_and_sixteen_bit_rgb() {
     assert_eq!(stream8.write_to_buffer(&mut output8), pixels8.len());
     assert_eq!(output8, pixels8);
 
-    let pixels16 = vec![0, 1, 65535, 257, 32768, 65534, 42, 12345, 54321, 65535, 0, 256];
-    let image16 = artefact_core::image::ImageBuffer::<artefact_core::image::Rgb<u16>, _>::from_raw(2, 2, pixels16.clone()).unwrap();
+    let pixels16 = vec![
+        0, 1, 65535, 257, 32768, 65534, 42, 12345, 54321, 65535, 0, 256,
+    ];
+    let image16 = artefact_core::image::ImageBuffer::<artefact_core::image::Rgb<u16>, _>::from_raw(
+        2,
+        2,
+        pixels16.clone(),
+    )
+    .unwrap();
     let mut encoded16 = std::io::Cursor::new(Vec::new());
-    artefact_core::encode_image(&image16.into(), artefact_core::OutputFormat::Jxl, &mut encoded16).unwrap();
+    artefact_core::encode_image(
+        &image16.into(),
+        artefact_core::OutputFormat::Jxl,
+        &mut encoded16,
+    )
+    .unwrap();
     let encoded16 = encoded16.into_inner();
     let decoded16 = jxl_oxide::JxlImage::read_with_defaults(encoded16.as_slice()).unwrap();
     assert_eq!((decoded16.width(), decoded16.height()), (2, 2));
-    assert_eq!(decoded16.image_header().metadata.bit_depth.bits_per_sample(), 16);
+    assert_eq!(
+        decoded16
+            .image_header()
+            .metadata
+            .bit_depth
+            .bits_per_sample(),
+        16
+    );
     let render16 = decoded16.render_frame(0).unwrap();
     let mut stream16 = render16.stream();
     assert_eq!(stream16.channels(), 3);
@@ -53,9 +80,24 @@ fn jpeg_xl_roundtrips_eight_and_sixteen_bit_rgb() {
 #[test]
 fn jpeg_xl_rejects_empty_dimensions() {
     let image8 = artefact_core::image::RgbImage::new(0, 2);
-    let image16 = artefact_core::image::ImageBuffer::<artefact_core::image::Rgb<u16>, Vec<u16>>::new(2, 0);
-    assert!(artefact_core::encode_image(&image8.into(), artefact_core::OutputFormat::Jxl, &mut std::io::Cursor::new(Vec::new())).is_err());
-    assert!(artefact_core::encode_image(&image16.into(), artefact_core::OutputFormat::Jxl, &mut std::io::Cursor::new(Vec::new())).is_err());
+    let image16 =
+        artefact_core::image::ImageBuffer::<artefact_core::image::Rgb<u16>, Vec<u16>>::new(2, 0);
+    assert!(
+        artefact_core::encode_image(
+            &image8.into(),
+            artefact_core::OutputFormat::Jxl,
+            &mut std::io::Cursor::new(Vec::new())
+        )
+        .is_err()
+    );
+    assert!(
+        artefact_core::encode_image(
+            &image16.into(),
+            artefact_core::OutputFormat::Jxl,
+            &mut std::io::Cursor::new(Vec::new())
+        )
+        .is_err()
+    );
 }
 
 fn try_process(name: &str) -> Result<artefact_core::image::RgbImage, String> {
@@ -124,8 +166,7 @@ fn grayscale_stays_gray() {
 fn sixteen_bit_output_preserves_fractional_precision() {
     for name in ["baseline_444.jpg", "gray.jpg"] {
         let path = fixture(name);
-        let artefact = Artefact::default()
-            .source(JpegSource::File(path.display().to_string()));
+        let artefact = Artefact::default().source(JpegSource::File(path.display().to_string()));
         let eight = artefact.process().unwrap();
         let sixteen = artefact.process_16().unwrap();
         assert_eq!(eight.dimensions(), sixteen.dimensions());
@@ -221,6 +262,7 @@ fn matches_libjpeg_reference_when_available() {
 }
 
 /// Minimal P5/P6 reader (djpeg output), avoiding an extra `image` format.
+#[cfg(feature = "simd")]
 fn read_pnm(data: &[u8]) -> (usize, usize, Vec<[u8; 3]>) {
     let mut pos = 0usize;
     let mut token = || {

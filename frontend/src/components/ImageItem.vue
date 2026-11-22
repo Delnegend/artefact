@@ -79,7 +79,11 @@ function process(): void {
 				)
 			: undefined
 		targetImg.previewImgBlobUrl = resultImgFromDb?.previewImgArrayBuffer
-			? URL.createObjectURL(new Blob([resultImgFromDb.previewImgArrayBuffer], { type: 'image/png' }))
+			? URL.createObjectURL(
+					new Blob([resultImgFromDb.previewImgArrayBuffer], {
+						type: 'image/png'
+					})
+				)
 			: undefined
 
 		targetImg.outputImgFormat = result.outputFormat
@@ -114,7 +118,8 @@ function compare(): void {
 	}
 
 	imgCompStore.value.jpegBlobUrl = props.info.jpegBlobUrl
-	imgCompStore.value.outputImgBlobUrl = props.info.previewImgBlobUrl ?? props.info.outputImgBlobUrl
+	imgCompStore.value.outputImgBlobUrl =
+		props.info.previewImgBlobUrl ?? props.info.outputImgBlobUrl
 }
 
 function remove(): void {
