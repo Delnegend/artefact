@@ -52,10 +52,13 @@ check kind="all":
 # build: native CLI, wasm, or web
 build target="native":
 	#!/usr/bin/env bash
+	set -euo pipefail
 
 	if [[ "{{target}}" = "wasm" ]]; then
 		rm -rf frontend/src/utils/artefact-wasm
-		(cd backend/artefact-wasm && wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm)
+		# `strip = true` drops the `target_features` section `wasm-opt` needs to
+		# accept SIMD and bulk-memory instructions; strip only native builds.
+		(cd backend/artefact-wasm && CARGO_PROFILE_RELEASE_STRIP=false wasm-pack build --target web --out-dir ../../frontend/src/utils/artefact-wasm)
 		rm -f frontend/src/utils/artefact-wasm/.gitignore
 		exit 0
 	fi

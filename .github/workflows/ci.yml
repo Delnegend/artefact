@@ -38,6 +38,11 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq mesa-vulkan-drivers
 
+      # `just check` only type-checks wasm32; the real build runs wasm-opt, whose
+      # failure shipped an unoptimized engine to the site unnoticed.
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@beda8a7e291cd4b2b176088ad5ca765328a991a5 # wasm-pack
+
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
@@ -45,6 +50,9 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
         working-directory: ./frontend
+
+      - name: Build wasm (release, with wasm-opt)
+        run: just build wasm
 
       - name: Run verification
         run: just check

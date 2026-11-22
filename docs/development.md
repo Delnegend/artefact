@@ -36,7 +36,9 @@ just build
 
 # WASM lib (generates frontend/src/utils/artefact-wasm)
 just build wasm
-# or: wasm-pack build backend/artefact-wasm --target web --out-dir frontend/src/utils/artefact-wasm
+# or: CARGO_PROFILE_RELEASE_STRIP=false wasm-pack build backend/artefact-wasm --target web \
+#       --out-dir frontend/src/utils/artefact-wasm
+# (stripping removes the feature section `wasm-opt` needs to accept SIMD)
 
 # web (static build for GitHub Pages -> frontend/dist)
 just build web
