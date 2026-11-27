@@ -30,7 +30,7 @@
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.3.5",
-		"@vitejs/plugin-vue": "^6.0.10",
+		"@vitejs/plugin-vue": "^6.0.11",
 		"@vue/tsconfig": "^0.9.1",
 		"oxfmt": "^0.67.0",
 		"oxlint": "^1.93.0",
